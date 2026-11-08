@@ -19,7 +19,9 @@ export const T = {
   match: beat(20),    // 21.0: rangoli ring → first firework
   bless: 20.95,
   hush: 25.2,         // silence 2
-  kuber: 11.6,        // Kuber ji appears in the arch
+  ganesha: 10.9,      // Ganesha ji appears first
+  kuber: 11.6,        // then Kuber ji in the centre
+  lakshmi: 12.3,      // then Lakshmi ji
   card: 25.6,
   coins: 26.6,        // coins from Kuber ji's pot
   brand: 27.0,

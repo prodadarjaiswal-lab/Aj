@@ -3,6 +3,7 @@ import * as D from './engine/deco.js';
 import * as TY from './engine/type.js';
 import { T, PAIRS, RANG, BURSTS, DUR, B, beat, OPEN } from './timeline.js';
 import { kuber } from './kuber.js';
+import { ganesha, lakshmi } from './deities.js';
 const { C, TAU, clamp, lerp, seg, ss, eio, eo, ei, back, mix, rgba, gline, airbrush, glow, sparkle, sunburst, toPath, arcPts, goldGrad, hash, mulberry } = D;
 
 const W = 1080, H = 1350;
@@ -48,7 +49,7 @@ const BARS = [];
 [5, 4, 3].forEach((n, row) => { for (let i = 0; i < n; i++) BARS.push([540 + (i - (n - 1) / 2) * BAR_R * 2.04, BASE - BAR_R - row * BAR_R * 1.76]); });
 const CUT_Y = -720;                           // the bar the saw cuts (above the card, out of the final frame)
 const SPARK_PATH = catmull([[540, CUT_Y + 62], [770, -470], [300, -170], [790, 140], [330, 420], [600, 600], [540, 712]], 22);
-const ARCH_OUT = D.stepArchPts(540, 1092, 1000, 700, { steps: 3, crown: 'round' });
+const ARCH_OUT = D.stepArchPts(540, 1092, 1000, 700, { steps: 2, crown: 'round' });
 const ARCH_DIYAS = (() => { // 16 lamps on the outer arch, in pairs from the crown outward
   const o = []; for (let k = 0; k < 8; k++) { const f = .045 + k * .062; o.push([at(ARCH_OUT, .5 - f), at(ARCH_OUT, .5 + f)]); } return o;
 })();
@@ -240,20 +241,23 @@ function worldA(t, cam, opt = {}) {
   // ---- the arch and its lamps ----
   if (t > T.arch || opt.archFull) {
     const part = opt.archFull ? 1 : eio(seg(t, T.arch, T.arch + 1.1));
-    D.archFrame(g, 540, 1092, 1000, 700, { rings: 2, gap: 16, steps: 3, part, burst: false, lw: 2.4, sheen: .45 });
+    D.archFrame(g, 540, 1092, 1000, 700, { rings: 2, gap: 16, steps: 2, part, burst: false, lw: 2.4, sheen: .45 });
     ARCH_DIYAS.forEach((pr, k2) => pr.forEach(([x, y]) => { if (part > .98 || opt.archFull) smallDiya(x, y - 6, .34, t, opt.archFull ? -10 : PAIRS[k2]); }));
   }
   const kp = opt.archFull ? 1 : seg(t, T.kuber, T.kuber + 1.6);
-  if (kp > 0) {
-    kuber(g, 540, 650, .82, kp, t);
-    for (const sx of [-1, 1]) { const px = 540 + sx * 150, py = 676; gline(g, D.stepArchPts(px, py + 40, 64, 40, { steps: 2, crown: 'flat' }), { w: 1.6, alpha: ss(kp) }); smallDiya(px, py, .46, t, opt.archFull ? -10 : T.kuber + 1.4 + (sx > 0 ? .08 : 0)); }
+  if (opt.archFull || t > T.ganesha) {
+    // the three deities, in puja order as the viewer sees it: Ganesha ji, Kuber ji, Lakshmi ji
+    ganesha(g, 395, 650, .58, opt.archFull ? 1 : seg(t, T.ganesha, T.ganesha + 1.6), t);
+    lakshmi(g, 685, 650, .58, opt.archFull ? 1 : seg(t, T.lakshmi, T.lakshmi + 1.6), t, opt.archFull ? -10 : T.lakshmi + 1.3);
+    kuber(g, 540, 650, .58, kp, t);
+    for (const sx of [-1, 1]) { const px = 540 + sx * 242, py = 690; gline(g, D.stepArchPts(px, py + 40, 64, 40, { steps: 2, crown: 'flat' }), { w: 1.6, alpha: ss(kp) }); smallDiya(px, py, .46, t, opt.archFull ? -10 : T.kuber + 1.4 + (sx > 0 ? .08 : 0)); }
   }
   if (opt.coins) coins(t);
 }
 function coins(t) { // a shower of gold coins from Kuber ji's pot onto the steel
   for (let i = 0; i < 12; i++) {
     const t0 = T.coins + i * .11, a = t - t0; if (a < 0) continue;
-    const x0 = 540 + 66, y0 = 640 - 75, vx = (i % 2 ? 1 : -1) * (40 + 30 * hash(i)) + 30, land = 770 + 30 * hash(i + 9);
+    const x0 = 540 + 80 * .58, y0 = 650 - 80 * .58, vx = (i % 2 ? 1 : -1) * (40 + 30 * hash(i)) + 30, land = 770 + 30 * hash(i + 9);
     let x = x0 + vx * Math.min(a, .7), y = y0 - 120 * a + 520 * a * a; if (y > land) y = land;
     const spin = Math.abs(Math.cos(a * 14 + i)), fade = 1 - ss(seg(a, 1.4, 2.4)); if (fade <= 0) continue;
     g.save(); g.globalAlpha = fade; g.fillStyle = goldGrad(g, x - 9, y - 9, x + 9, y + 9, { sheen: .6 }); g.beginPath(); g.ellipse(x, y, 9 * Math.max(.15, spin), 9, 0, 0, TAU); g.fill();
@@ -565,7 +569,7 @@ EV.push({ t: RANG.petals - .6, type: 'powder' }, { t: RANG.lotus - 1.2, type: 's
 for (const b of BURSTS) { if (!b.match) EV.push({ t: b.t - .6, type: 'rocket', pan: (b.x - 540) / 540 }); EV.push({ t: b.t, type: 'burst', pan: (b.x - 540) / 540, r: b.r }); }
 EV.push({ t: 19.6, type: 'crackleBed' });
 EV.push({ t: T.card, type: 'reveal' }, { t: T.brand, type: 'brand' }, { t: T.sheen, type: 'sheen' });
-EV.push({ t: T.kuber, type: 'kuber' }, { t: T.kuber + 1.4, type: 'diya', pan: -.3, k: 9 }, { t: T.kuber + 1.48, type: 'diya', pan: .3, k: 9 });
+EV.push({ t: T.ganesha, type: 'ganesha' }, { t: T.lakshmi, type: 'lakshmi' }, { t: T.kuber, type: 'kuber' }, { t: T.kuber + 1.4, type: 'diya', pan: -.3, k: 9 }, { t: T.kuber + 1.48, type: 'diya', pan: .3, k: 9 });
 for (let i = 0; i < 8; i++) EV.push({ t: T.lock + .06 * i, type: 'diya', pan: Math.cos(i * TAU / 8 + TAU / 16) * .6, k: 10 });
 for (let i = 0; i < 12; i++) EV.push({ t: T.coins + i * .11 + .45, type: 'coin', pan: (i % 2 ? .3 : -.1), i });
 for (const e of EV) e.t += OPEN;

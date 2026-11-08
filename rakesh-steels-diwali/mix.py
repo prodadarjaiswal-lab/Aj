@@ -212,6 +212,13 @@ def shankh(d=1.8, v=1.0):
     y = sum(np.sin(k * ph) * a for k, a in [(1, 1), (2, .7), (3, .5), (4, .25), (5, .18), (6, .1)])
     y = bp(y, 250, 3200) + bp(noise(d), 600, 2500) * .08
     return m2(norm(y) * np.minimum(1, tq / .3) * np.minimum(1, (d - tq) / .5) * v)
+# Ganesha ji: a temple bell; Lakshmi ji: chimes and a soft stream of coins
+e = evs('ganesha')[0]
+music += S.render([(e['t'] + .5, 'nepal_bells', None, None, .55, -.4), (e['t'] + .5, 'tubular_bells', 'D5', 3, .4, -.3)], dur=N / SR, master=False)[:N] * .9
+add(fol, shimmer(1.4, .5), e['t'] + .2, .22, -.4)
+e = evs('lakshmi')[0]
+music += S.render([(e['t'] + .5 + i * .06, 'hand_chimes', m, 1.6, .42, .2 + .05 * i) for i, m in enumerate([81, 83, 86, 88, 90, 93])], dur=N / SR, master=False)[:N] * .9
+for i in range(14): add(fol, metal([4200 + 250 * (i % 5), 6600 + 180 * (i % 3), 9100], .3, [.1, .06, .03], .4, .2), e['t'] + 1.35 + i * .18 + .05 * (i % 3), .07, .45)
 e = evs('kuber')[0]
 add(fol, shankh(1.9, 1), e['t'], .32, 0)
 music += S.render([(e['t'] + .9, 'nepal_bells', None, None, .5, -.3), (e['t'] + .9, 'tubular_bells', 'A4', 3, .45, .2)], dur=N / SR, master=False)[:N] * .9
