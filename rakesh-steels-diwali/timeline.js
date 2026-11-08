@@ -10,13 +10,13 @@ export const T = {
   sp0: 4.0, sp1: 8.0, // the spark's path
   ign: IGN,           // diya lights (after a near-silence 8.0 → 8.5)
   arch: 10.0,         // the arch draws on
-  title: 10.4,        // शुभ धनतेरस
-  greet: 11.1,        // धनतेरस की हार्दिक शुभकामनाएँ
+  title: 10.4,        // शुभ दीपावली
+  greet: 11.1,        // दीपावली की हार्दिक शुभकामनाएँ
   door: beat(11),     // 15.375: leaves meet on the seam
   open: beat(11) + .32,
   lock: beat(19),     // 20.375: the rangoli locks
   match: beat(20),    // 21.0: rangoli ring → first firework
-  bless: 21.0,
+  bless: 20.95,
   hush: 25.2,         // silence 2
   card: 25.6,
   brand: 27.0,

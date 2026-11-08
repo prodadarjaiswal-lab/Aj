@@ -1,4 +1,6 @@
-# Rakesh Steels: Dhanteras & Diwali greeting, a treatment
+# Rakesh Steels: Diwali greeting, a treatment
+
+> **Revision 2 (client note):** all texts switched from Dhanteras to Diwali. Title "शुभ दीपावली", line "दीपावली की हार्दिक शुभकामनाएँ", quote "दीपों की रोशनी आपके जीवन में / सुख, समृद्धि और नई उम्मीदों का उजाला भर दे ।" over the fireworks, end card "शुभ दीपावली / दीपावली की हार्दिक शुभकामनाएँ / HAPPY DIWALI". The shloka over the rangoli is kept. Text timings below were adjusted for reading time.
 
 **Style:** Art Deco (gold lines on warm black, everything around one centre axis, lights that switch on in counted order).
 **Format:** 1080×1350 (4:5, the poster's shape), 24 fps, 32 s. Music and sound effects, no voice. All text is drawn into the picture (no subtitles needed; no `.srt`).

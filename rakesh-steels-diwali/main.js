@@ -259,14 +259,14 @@ function sparkAt(t) {
 function devText(text, x, y, size, font, a = 1, sheen = .4) { if (a <= 0) return; TY.goldText(g, text, x, y, { size, font, track: 0, sheen, alpha: a }); }
 function riseIn(t, t0, d = .7) { return ss(seg(t, t0, t0 + d)); }
 const TXT = {
-  title: 'शुभ धनतेरस',
-  greet: 'धनतेरस की हार्दिक शुभकामनाएँ',
+  title: 'शुभ दीपावली',
+  greet: 'दीपावली की हार्दिक शुभकामनाएँ',
   sh1: 'शुभं करोति कल्याणम् आरोग्यं धनसम्पदा ।',
   sh2: 'दीपज्योतिर्नमोऽस्तुते ॥',
-  b1: 'यह दीप का प्रकाश आपके जीवन में',
-  b2: 'मंगल, समृद्धि और आरोग्य का प्रसार करे ।',
-  card: 'धनतेरस एवं दीपावली की हार्दिक शुभकामनाएँ',
-  en: 'HAPPY DHANTERAS & DIWALI',
+  b1: 'दीपों की रोशनी आपके जीवन में',
+  b2: 'सुख, समृद्धि और नई उम्मीदों का उजाला भर दे ।',
+  card: 'दीपावली की हार्दिक शुभकामनाएँ',
+  en: 'HAPPY DIWALI',
   brand: 'RAKESH STEELS',
   contact: 'Howrah  •  8013626232',
 };
@@ -422,7 +422,7 @@ function textsB(t) { // shloka over the rangoli
   diamond(540, 312, 10, a2 * out);
 }
 function textsC(t) { // blessing over the fireworks
-  const a1 = riseIn(t, T.bless, .5), a2 = riseIn(t, T.bless + .05, .5), out = 1 - ss(seg(t, T.hush, T.hush + .3));
+  const a1 = riseIn(t, T.bless, .35), a2 = riseIn(t, T.bless + .02, .35), out = 1 - ss(seg(t, T.hush + .25, T.card));
   if (a1 <= 0 || out <= 0) return;
   textBack(80, 330, a1 * out);
   topRules(116, a1 * out, 220, 40); diamond(540, 116, 9, a1 * out);
@@ -450,7 +450,7 @@ function card(t) { // shot 7: the poster
   const a = riseIn(t, T.card + .9), a2 = riseIn(t, T.card + 1.25);
   say('card', TXT.card, 540, 286 + (1 - a) * 16, fitText(TXT.card, 44, 'TiroH', 960), 'TiroH', a, lerp(-.2, 1.2, seg(t, T.card + 1, T.card + 2.4)));
   if (a2 > 0) { TY.goldText(g, TXT.en, 540, 334 + (1 - a2) * 10, { size: 26, font: 'Josefin', weight: 600, track: 7, alpha: a2, shadow: false });
-    if (a2 > .98) shown.push({ id: 'en', text: TXT.en, x0: 330, y0: 314, x1: 750, y1: 340 }); }
+    if (a2 > .98) shown.push({ id: 'en', text: TXT.en, x0: 430, y0: 314, x1: 650, y1: 340 }); }
   // brand
   textBack(1112, 1350, ss(seg(t, T.brand - .3, T.brand + .3)));
   const pb = seg(t, T.brand, T.brand + 1.2);
@@ -515,4 +515,4 @@ EV.push({ t: T.card, type: 'reveal' }, { t: T.brand, type: 'brand' }, { t: T.she
 window.EV = EV.sort((a, b) => a.t - b.t);
 
 const fams = ['92px Rozha', '50px TiroS', '50px TiroH', '70px Limelight', '600 30px Josefin', '30px Poiret'];
-Promise.all(fams.map(f => document.fonts.load(f, f.includes('Rozha') || f.includes('Tiro') ? 'शुभ धनतेरस' : 'RAKESH'))).then(() => document.fonts.ready).then(() => { window.render(0); window.READY = true; });
+Promise.all(fams.map(f => document.fonts.load(f, f.includes('Rozha') || f.includes('Tiro') ? 'शुभ दीपावली' : 'RAKESH'))).then(() => document.fonts.ready).then(() => { window.render(0); window.READY = true; });
