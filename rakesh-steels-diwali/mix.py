@@ -10,7 +10,10 @@ from core.audio.sfx import SR, add, limit, lp, hp, bp, noise, brown, norm, t_, e
 
 S.seed(11)
 EV = json.load(open(os.path.join(HERE, 'events.json')))
-DUR = EV['dur']; EV = EV['ev']
+DUR_ALL = EV['dur']; EVA = EV['ev']
+OPEN = next(e['len'] for e in EVA if e['type'] == 'open')     # the opening brand card comes before the main film
+EV = [dict(e, t=e['t'] - OPEN) for e in EVA if e['t'] >= OPEN - 1e-6]
+DUR = DUR_ALL - OPEN
 N = int(DUR * SR) + SR
 IGN, Bt = 8.5, 60 / 96
 beat = lambda n: IGN + n * Bt
@@ -202,8 +205,36 @@ add(fol, shimmer(1.6, .7), evs('sheen')[0]['t'], .35)
 for a, b in [(25.2, 25.6)]:
     gg = np.interp(tt, [a - .1, a, b, b + .2], [1, .1, .1, 1]); amb *= gg[:, None]
 
+# Kuber ji appears: a conch (shankh) call with temple bells
+def shankh(d=1.8, v=1.0):
+    tq = t_(d); f = 293.66 * (1 + .012 * np.minimum(1, tq / .5)) * (1 + .004 * np.sin(2 * np.pi * 5.5 * tq))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    y = sum(np.sin(k * ph) * a for k, a in [(1, 1), (2, .7), (3, .5), (4, .25), (5, .18), (6, .1)])
+    y = bp(y, 250, 3200) + bp(noise(d), 600, 2500) * .08
+    return m2(norm(y) * np.minimum(1, tq / .3) * np.minimum(1, (d - tq) / .5) * v)
+e = evs('kuber')[0]
+add(fol, shankh(1.9, 1), e['t'], .32, 0)
+music += S.render([(e['t'] + .9, 'nepal_bells', None, None, .5, -.3), (e['t'] + .9, 'tubular_bells', 'A4', 3, .45, .2)], dur=N / SR, master=False)[:N] * .9
+add(fol, shimmer(1.6, .6), e['t'] + .2, .25)
+for e in evs('coin'): add(fol, metal([3800 + 300 * (e['i'] % 4), 6100 + 200 * (e['i'] % 3), 8700], .35, [.12, .07, .04], .5, .2), e['t'], .16, e['pan'])
+
 out = music * .9 + fol * 1.0 + amb * .8
 end = int(DUR * SR); out = out[:end]
+# ---- the opening brand card (0 → OPEN), then the main film after it
+o0 = int(OPEN * SR); op = np.zeros((o0 + end, 2), np.float32); op[o0:] = out
+ob = np.zeros((o0 + 2 * SR, 2), np.float32)
+for k, f in enumerate([73.42, 146.83, 110.0, 146.83]): add(ob, tanpura(f, 4.0, .18), .15 + k * 1.25, 1, [-.2, .2, 0, .1][k])
+oe = [(.1 + i * .06, 'harp', m, 2.0, .5, -.4 + .1 * i) for i, m in enumerate([62, 66, 69, 74, 78, 81, 86, 90])]
+oe += [(.75, 'tubular_bells', 'D5', 3, .7, 0), (.75, 'timpani', 'D3', 2, .55, 0), (.75, 'nepal_bells', None, None, .35, .3)]
+oe += [dict(t=.75, inst='violins', pitch=p, dur=4.3, vel=.38, pan=pn, attack=.6) for p, pn in [('D4', -.3), ('A4', .3), ('F#5', 0)]]
+oe += [(1.25 + i * .05, 'hand_chimes', m, 1.4, .38, -.5 + i * .1) for i, m in enumerate([74, 76, 78, 81, 83, 86, 88, 90, 93, 95])]
+oe += [(2.2 + i * .05, 'hand_chimes', m, 1.4, .3, .5 - i * .1) for i, m in enumerate([86, 88, 90, 93, 95, 98])]
+ob += S.room(S.render(oe, dur=len(ob) / SR, master=False)[:len(ob)], size=.5, mix=.22)
+add(ob, metal([520, 1460, 2890, 4610, 6900], 2.6, [1.3, .9, .6, .4, .25], 1, .5), .75, .28)      # the steel ring as the name opens
+add(ob, shimmer(1.2, .5), .1, .22); add(ob, m2(whoosh(.5, 1)), OPEN - .5, .3)
+fo = np.ones(len(ob)); fo[int((OPEN - .3) * SR):] = np.linspace(1, 0, len(ob) - int((OPEN - .3) * SR)) ** 2   # tails fade under the saw
+op[:len(ob)] += ob * fo[:, None]
+out = op
 fade = int(1.2 * SR); out[-fade:] *= (np.linspace(1, 0, fade) ** 1.5)[:, None]
 out = np.stack([limit(out[:, 0], .95), limit(out[:, 1], .95)], 1)
 os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)

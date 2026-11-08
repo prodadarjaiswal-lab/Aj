@@ -1,7 +1,8 @@
 // One timeline for picture, foley and score. Music grid: 96 bpm from IGN (beat n lands at IGN + n * B).
 export const BPM = 96, B = 60 / BPM, IGN = 8.5;
 export const beat = n => IGN + n * B;
-export const DUR = 32.0;
+export const DUR = 32.0;              // main film; the opening brand card adds OPEN seconds before it
+export const OPEN = 5.5;
 
 export const T = {
   bite: 0.5,          // saw touches the bar
@@ -18,7 +19,9 @@ export const T = {
   match: beat(20),    // 21.0: rangoli ring → first firework
   bless: 20.95,
   hush: 25.2,         // silence 2
+  kuber: 11.6,        // Kuber ji appears in the arch
   card: 25.6,
+  coins: 26.6,        // coins from Kuber ji's pot
   brand: 27.0,
   sheen: 27.6,
   contact: 27.9,

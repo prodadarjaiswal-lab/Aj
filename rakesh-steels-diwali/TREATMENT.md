@@ -1,5 +1,7 @@
 # Rakesh Steels: Diwali greeting, a treatment
 
+> **Revision 3 (client note):** the film now opens on Rakesh Steels: a 5.5 s brand card (gold title bar, HOWRAH, "की ओर से दीपावली की शुभकामनाएँ", a spark sweeps the name) that parts along its centre seam into the saw shot; every time below is after this card (add 5.5 s for the film clock). Shri Kuber ji is drawn in the deco manner (seated on a lotus, halo of rays, stepped crown, right hand in blessing, left holding the pot of wealth) inside the arch above the diya, appearing at 11.6 s with a conch and temple bells, flanked by two more diyas; on the final card coins tumble from his pot onto the steel. Eight more diyas light around the rangoli as it locks. Total length 37.5 s.
+>
 > **Revision 2 (client note):** all texts switched from Dhanteras to Diwali. Title "शुभ दीपावली", line "दीपावली की हार्दिक शुभकामनाएँ", quote "दीपों की रोशनी आपके जीवन में / सुख, समृद्धि और नई उम्मीदों का उजाला भर दे ।" over the fireworks, end card "शुभ दीपावली / दीपावली की हार्दिक शुभकामनाएँ / HAPPY DIWALI". The shloka over the rangoli is kept. Text timings below were adjusted for reading time.
 
 **Style:** Art Deco (gold lines on warm black, everything around one centre axis, lights that switch on in counted order).

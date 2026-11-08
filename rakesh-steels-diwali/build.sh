@@ -13,5 +13,5 @@ node core/render/events.mjs "$HERE" --size $SIZE
 node core/render/video.mjs "$HERE" --fps 24 --workers 6 --size $SIZE --out "$HERE/out/video.mp4"
 "$LIB/.venv/bin/python" "$HERE/mix.py"
 sh core/render/mux.sh "$HERE/out/video.mp4" "$HERE/out/mix.wav" "$HERE/rakesh-steels-diwali.mp4" 24 1
-node core/render/still.mjs "$HERE" 30 --size $SIZE --out "$HERE/out" --prefix poster_
-cp "$HERE/out/poster_30.jpg" "$HERE/poster.jpg"
+node core/render/still.mjs "$HERE" 36 --size $SIZE --out "$HERE/out" --prefix poster_
+cp "$HERE/out/poster_36.jpg" "$HERE/poster.jpg"

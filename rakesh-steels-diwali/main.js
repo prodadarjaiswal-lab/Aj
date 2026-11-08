@@ -1,12 +1,13 @@
 // Rakesh Steels · Dhanteras & Diwali — Art Deco, 1080×1350, deterministic in t.
 import * as D from './engine/deco.js';
 import * as TY from './engine/type.js';
-import { T, PAIRS, RANG, BURSTS, DUR, B, beat } from './timeline.js';
+import { T, PAIRS, RANG, BURSTS, DUR, B, beat, OPEN } from './timeline.js';
+import { kuber } from './kuber.js';
 const { C, TAU, clamp, lerp, seg, ss, eio, eo, ei, back, mix, rgba, gline, airbrush, glow, sparkle, sunburst, toPath, arcPts, goldGrad, hash, mulberry } = D;
 
 const W = 1080, H = 1350;
 const cv = document.getElementById('c'); cv.width = W; cv.height = H;
-const g = cv.getContext('2d');
+let g = cv.getContext('2d');
 
 // ---------- palette additions ----------
 const SAF = '#ff9a2e', SAF_L = '#ffd27a', SAF_D = '#c2530f';           // the one colour: fire
@@ -242,6 +243,23 @@ function worldA(t, cam, opt = {}) {
     D.archFrame(g, 540, 1092, 1000, 700, { rings: 2, gap: 16, steps: 3, part, burst: false, lw: 2.4, sheen: .45 });
     ARCH_DIYAS.forEach((pr, k2) => pr.forEach(([x, y]) => { if (part > .98 || opt.archFull) smallDiya(x, y - 6, .34, t, opt.archFull ? -10 : PAIRS[k2]); }));
   }
+  const kp = opt.archFull ? 1 : seg(t, T.kuber, T.kuber + 1.6);
+  if (kp > 0) {
+    kuber(g, 540, 650, .82, kp, t);
+    for (const sx of [-1, 1]) { const px = 540 + sx * 150, py = 676; gline(g, D.stepArchPts(px, py + 40, 64, 40, { steps: 2, crown: 'flat' }), { w: 1.6, alpha: ss(kp) }); smallDiya(px, py, .46, t, opt.archFull ? -10 : T.kuber + 1.4 + (sx > 0 ? .08 : 0)); }
+  }
+  if (opt.coins) coins(t);
+}
+function coins(t) { // a shower of gold coins from Kuber ji's pot onto the steel
+  for (let i = 0; i < 12; i++) {
+    const t0 = T.coins + i * .11, a = t - t0; if (a < 0) continue;
+    const x0 = 540 + 66, y0 = 640 - 75, vx = (i % 2 ? 1 : -1) * (40 + 30 * hash(i)) + 30, land = 770 + 30 * hash(i + 9);
+    let x = x0 + vx * Math.min(a, .7), y = y0 - 120 * a + 520 * a * a; if (y > land) y = land;
+    const spin = Math.abs(Math.cos(a * 14 + i)), fade = 1 - ss(seg(a, 1.4, 2.4)); if (fade <= 0) continue;
+    g.save(); g.globalAlpha = fade; g.fillStyle = goldGrad(g, x - 9, y - 9, x + 9, y + 9, { sheen: .6 }); g.beginPath(); g.ellipse(x, y, 9 * Math.max(.15, spin), 9, 0, 0, TAU); g.fill();
+    g.strokeStyle = C.gold0; g.lineWidth = 1; g.stroke(); g.restore();
+    if (y >= land && a < 1.6) sparkle(g, x, y - 6, 10 * pulse(a, (land - y0) / 400, .1), { glow: 0 });
+  }
 }
 function speedLines(x, y, t) { // blur ring around the spinning blade
   g.save(); g.globalAlpha = .25; g.strokeStyle = C.gold2; g.lineWidth = 2;
@@ -327,6 +345,9 @@ function rangoli(t) {
   airbrush(g, ell(cx, cy, 34 * z, 34 * z), { base: CLAY, light: '#d27a48', dark: '#240b04', radial: [cx - 10, cy - 10, 40] }); gline(g, ell(cx, cy, 34 * z, 34 * z), { w: 2 });
   glow(g, cx, cy, 160, '#ff9e3a', .55); glow(g, cx, cy, 50, '#fff1c4', .9);
   sparkle(g, cx, cy, 30 + 8 * Math.sin(t * 7), { color: '#fff4d0' });
+  for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + TAU / 16, R0 = 505 * z, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0; if (t < RANG.petals) continue;
+    airbrush(g, ell(x, y, 22, 22), { base: CLAY, light: '#d27a48', dark: '#240b04', radial: [x - 6, y - 6, 26] }); gline(g, ell(x, y, 22, 22), { w: 1.6 });
+    const k = ignite(t, T.lock + .06 * i); if (k > 0) { glow(g, x, y, 70 * k, '#ff9e3a', .5); glow(g, x, y, 22, '#fff1c4', .9 * Math.min(1, k)); sparkle(g, x, y, 14 * Math.min(1.4, k), { color: '#fff4d0', glow: 0 }); } }
   // the lock: ring of light runs round + glints
   if (t > T.lock) {
     const rp = eo(seg(t, T.lock, T.lock + .55));
@@ -435,7 +456,7 @@ function card(t) { // shot 7: the poster
   const rev = eio(seg(t, T.card, T.card + .8));
   background(t, 1);
   g.save(); g.beginPath(); g.rect(W / 2 - W / 2 * rev, 0, W * rev, H); g.clip();
-  worldA(t, { x: 540, y: 675, z: 1 }, { archFull: true });
+  worldA(t, { x: 540, y: 675, z: 1 }, { archFull: true, coins: true });
   g.restore();
   if (rev < 1) gline(g, [[W / 2 - W / 2 * rev, 0], [W / 2 - W / 2 * rev, H]], { w: 2, glow: 1, alpha: 1 - rev }), gline(g, [[W / 2 + W / 2 * rev, 0], [W / 2 + W / 2 * rev, H]], { w: 2, glow: 1, alpha: 1 - rev });
   // falling sparks from the last bursts become the rules
@@ -477,10 +498,42 @@ function fallSparks(t) {
 }
 
 // ---------- render ----------
-window.DUR = DUR;
-window.render = (t) => {
+window.DUR = DUR + OPEN;
+const off = document.createElement('canvas'); off.width = W; off.height = H;
+function brandCard(gg, t) { // the film opens on Rakesh Steels
+  const keep = g; g = gg;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  D.ground(g, W, H, { top: '#140e08', bot: C.ink, vig: 0 });
+  glow(g, W / 2, 640, 700, '#ff8a2a', .07 + .07 * ss(seg(t, .2, 1.2)));
+  sunburst(g, 540, 640, { rays: 72, r0: 160, r1: 1300, mode: 'both', w: 1.3, alpha: .1 + .2 * ss(seg(t, .3, 1.4)), colorA: 'rgba(201,162,75,.06)' });
+  lotus(540, 470, 1.1, seg(t, .9, 1.9));
+  topRules(470, eio(seg(t, 1.0, 1.8)), 230, 150);
+  const p = seg(t, .1, 1.3);
+  TY.titleBar(g, TXT.brand, 540, 640, { p, size: 92, font: 'Limelight', track: 8, wings: true, sheen: p < 1 ? null : lerp(-.2, 1.2, eio(seg(t, 2.2, 3.4))) });
+  if (p >= 1 && gg === cv.getContext('2d')) shown.push({ id: 'brand0', text: TXT.brand, x0: 160, y0: 580, x1: 920, y1: 700 });
+  const a = riseIn(t, .95, .5);
+  if (a > 0) { TY.goldText(g, 'HOWRAH', 540, 780 + (1 - a) * 10, { size: 32, font: 'Josefin', weight: 600, track: 14, alpha: a, shadow: false }); diamond(540, 818, 9, a); }
+  const a2 = riseIn(t, 1.25, .5);
+  say('pres', 'की ओर से दीपावली की शुभकामनाएँ', 540, 890 + (1 - a2) * 12, 44, 'TiroH', a2);
+  topRules(930, eio(seg(t, 1.8, 2.6)), 260, 40);
+  if (t > 2.2 && t < 3.5) { const x = lerp(170, 910, eio(seg(t, 2.2, 3.3))); glow(g, x, 636, 110, '#ff9a2e', .45); sparkle(g, x, 630, 24, { color: '#fff4d0', rot: t * 4 }); }
+  D.vignette(g, W, H, .5);
+  g = keep;
+}
+window.render = (T0) => {
   shown.length = 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  const SPLIT = OPEN - .45;
+  if (T0 < SPLIT) { brandCard(g, T0); return; }
+  renderMain(T0 - OPEN);
+  if (T0 < OPEN) { // the card parts along its centre seam
+    const k = eio(seg(T0, SPLIT, OPEN)); brandCard(off.getContext('2d'), SPLIT);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(off, 0, 0, W / 2, H, -W / 2 * k, 0, W / 2, H); g.drawImage(off, W / 2, 0, W / 2, H, W / 2 + W / 2 * k, 0, W / 2, H);
+    for (const x of [W / 2 - W / 2 * k, W / 2 + W / 2 * k]) gline(g, [[x, 0], [x, H]], { w: 2.4, glow: 1 });
+  }
+};
+function renderMain(t) {
   if (t < T.door + .02) {
     const cam = camAt(t), warm = ss(seg(t, T.ign, T.ign + 1));
     background(t, warm);
@@ -496,7 +549,7 @@ window.render = (t) => {
   // match-cut flash
   if (Math.abs(t - T.match) < .12) { g.fillStyle = `rgba(255,236,190,${.22 * (1 - Math.abs(t - T.match) / .12)})`; g.fillRect(0, 0, W, H); }
   D.vignette(g, W, H, .5);
-};
+}
 window.TEXTS = (t) => { window.render(t); return shown.slice(); };
 
 // ---------- sound events (for mix.py) ----------
@@ -512,6 +565,11 @@ EV.push({ t: RANG.petals - .6, type: 'powder' }, { t: RANG.lotus - 1.2, type: 's
 for (const b of BURSTS) { if (!b.match) EV.push({ t: b.t - .6, type: 'rocket', pan: (b.x - 540) / 540 }); EV.push({ t: b.t, type: 'burst', pan: (b.x - 540) / 540, r: b.r }); }
 EV.push({ t: 19.6, type: 'crackleBed' });
 EV.push({ t: T.card, type: 'reveal' }, { t: T.brand, type: 'brand' }, { t: T.sheen, type: 'sheen' });
+EV.push({ t: T.kuber, type: 'kuber' }, { t: T.kuber + 1.4, type: 'diya', pan: -.3, k: 9 }, { t: T.kuber + 1.48, type: 'diya', pan: .3, k: 9 });
+for (let i = 0; i < 8; i++) EV.push({ t: T.lock + .06 * i, type: 'diya', pan: Math.cos(i * TAU / 8 + TAU / 16) * .6, k: 10 });
+for (let i = 0; i < 12; i++) EV.push({ t: T.coins + i * .11 + .45, type: 'coin', pan: (i % 2 ? .3 : -.1), i });
+for (const e of EV) e.t += OPEN;
+EV.push({ t: 0, type: 'open', len: OPEN }, { t: .1, type: 'brandOpen' }, { t: .75, type: 'brandBar' }, { t: 2.2, type: 'sheen' }, { t: OPEN - .45, type: 'split' });
 window.EV = EV.sort((a, b) => a.t - b.t);
 
 const fams = ['92px Rozha', '50px TiroS', '50px TiroH', '70px Limelight', '600 30px Josefin', '30px Poiret'];

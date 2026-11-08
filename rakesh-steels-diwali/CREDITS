@@ -23,4 +23,5 @@ Synthesised in code (no third-party audio)
   saw, sparks, flame, fireworks and all other sound effects
 
 Drawing engine
+  Shri Kuber ji figure drawn in code for this film (kuber.js)
   Art Deco engine (engine/deco.js, engine/type.js) from the Lemo-Opuscar style library, MIT licence
