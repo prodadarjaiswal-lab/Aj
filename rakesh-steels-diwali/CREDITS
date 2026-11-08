@@ -1,0 +1,27 @@
+Rakesh Steels · Diwali greeting (2026)
+Picture, music and sound effects made in code. No video generation, no stock footage, no voice.
+
+Client material
+  ref/poster.png — Rakesh Steels' own Dhanteras poster, used as the design reference (supplied by the client)
+
+Fonts (SIL Open Font License 1.1, from Google Fonts)
+  Rozha One — Indian Type Foundry
+  Tiro Devanagari Sanskrit, Tiro Devanagari Hindi — Tiro Typeworks
+  Limelight — Sorkin Type
+  Josefin Sans — Santiago Orozco
+  Poiret One — Denis Masharov
+  Italiana — Santiago Orozco
+
+Music samples (CC0 1.0)
+  VS Chamber Orchestra: Community Edition — Versilian Studios
+  Versilian Community Sample Library (VCSL) — Versilian Studios
+  Instruments used: harp, tubular bells, hand chimes, glockenspiel, violins (sustain, tremolo, pizzicato),
+  cellos (sustain, pizzicato), flute, trumpet staccato, French horn, timpani, crash cymbals, Nepalese bells
+
+Synthesised in code (no third-party audio)
+  tanpura-style drone, tabla, plucked "sitar" voice (Karplus–Strong string model with a buzzing bridge),
+  saw, sparks, flame, fireworks and all other sound effects
+
+Drawing engine
+  Shri Ganesha ji, Shri Kuber ji and Maa Lakshmi ji drawn in code for this film (deities.js, kuber.js)
+  Art Deco engine (engine/deco.js, engine/type.js) from the Lemo-Opuscar style library, MIT licence
