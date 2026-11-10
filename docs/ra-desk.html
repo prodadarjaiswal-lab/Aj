@@ -1089,7 +1089,7 @@ function ghText(res){
   }
   const p=res.payload;if(p&&typeof p==="object"&&p.schema)return JSON.stringify(p);
   if(p&&typeof p==="object"&&typeof p.content==="string"){try{return decodeURIComponent(escape(atob(p.content.replace(/\s/g,""))))}catch(e){}}
-  for(const b of res.content||[]){if(b.type==="text"&&/^\s*\{/.test(b.text))return b.text}
+  for(const b of res.content||[]){if(b.type!=="text"||typeof b.text!=="string")continue;const i=b.text.indexOf('{"schema"');if(i>=0)return b.text.slice(i)}
   return null}
 function mergeSeries(old,nw,keys){
   if(!nw||!nw.d||!nw.d.length)return old;const first=nw.d[0],last=nw.d[nw.d.length-1],out={};
