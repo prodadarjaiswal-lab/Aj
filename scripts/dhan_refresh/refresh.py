@@ -92,23 +92,60 @@ def _retry(fn, tries=3, waits=(60, 120, 240)):
             time.sleep(waits[i])
 
 
+def clean_secrets(client_id: str, pin: str, totp_secret: str) -> tuple[str, str, str]:
+    """Strip the spaces, dashes and line breaks that copy-paste adds."""
+    cid = re.sub(r"\s", "", client_id or "")
+    p = re.sub(r"\s", "", pin or "")
+    sec = re.sub(r"[\s\-]", "", totp_secret or "").upper().rstrip("=")
+    return cid, p, sec
+
+
+def describe_secrets(cid: str, pin: str, sec: str) -> list[str]:
+    """Safe format checks. Never prints the values themselves."""
+    import base64
+    try:
+        base64.b32decode(sec + "=" * (-len(sec) % 8))
+        b32 = True
+    except Exception:
+        b32 = False
+    notes = [f"client id: {len(cid)} chars, {'all digits' if cid.isdigit() else 'NOT all digits'}",
+             f"pin: {len(pin)} chars, {'all digits' if pin.isdigit() else 'NOT all digits'}",
+             f"totp secret: {len(sec)} chars, {'valid' if b32 else 'NOT valid'} base32 (A-Z, 2-7)"]
+    return notes
+
+
 def login(client_id: str, pin: str, totp_secret: str) -> str:
     import pyotp
     import requests
 
+    cid, pin, sec = clean_secrets(client_id, pin, totp_secret)
+    for n in describe_secrets(cid, pin, sec):
+        print("  check " + n, flush=True)
+    tries = {"n": 0}
+
     def once():
-        code = pyotp.TOTP(totp_secret).now()
-        r = requests.post(AUTH, params={"dhanClientId": client_id, "pin": pin, "totp": code}, timeout=30)
+        tries["n"] += 1
+        code = pyotp.TOTP(sec).now()
+        r = requests.post(AUTH, params={"dhanClientId": cid, "pin": pin, "totp": code}, timeout=30)
         if r.status_code >= 500:
             raise TransientError(f"auth {r.status_code}")
-        j = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
-        tok = j.get("accessToken")
-        if not tok:
-            # A TOTP code can be rejected right at the 30-second boundary, so retry once more.
-            raise TransientError(f"no token in auth reply ({r.status_code}): {str(j)[:160]}")
-        return tok
+        try:
+            j = r.json()
+        except ValueError:
+            j = {"raw": r.text[:160]}
+        tok = j.get("accessToken") or (j.get("data") or {}).get("accessToken") if isinstance(j, dict) else None
+        if tok:
+            return tok
+        msg = str(j)[:200]
+        # A code can be rejected right at the 30-second boundary: retry once with the next code.
+        if tries["n"] == 1:
+            raise TransientError(f"login refused ({r.status_code}): {msg}")
+        raise RefreshError(
+            f"Dhan refused the login ({r.status_code}): {msg}. Check: DHAN_PIN is the Dhan login PIN "
+            "(not the CDSL T-PIN), DHAN_TOTP_SECRET is the setup key from Dhan's API TOTP setup, "
+            "and TOTP is enabled on the account.")
 
-    return _retry(once, waits=(35, 60, 120))
+    return _retry(once, tries=2, waits=(31, 0))
 
 
 # ---------------------------------------------------------------- symbol map

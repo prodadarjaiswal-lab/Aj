@@ -134,3 +134,11 @@ def test_symbol_map_prefers_nse_eq_and_aliases():
     eq, ix = R.build_maps(scrip_csv(nset), ["M&M", "BAJAJ-AUTO"], list(nset["idx"]))
     assert eq == {"M&M": "1000", "BAJAJ-AUTO": "1001"}
     assert set(ix) == {"Nifty 50", "Nifty Bank", "Nifty Financial Services"}
+
+
+def test_secrets_cleaned_and_described_without_values():
+    cid, pin, sec = R.clean_secrets(" 1100123456\n", "1234 \n", "jbsw y3dp-ehpk 3pxp\n")
+    assert (cid, pin, sec) == ("1100123456", "1234", "JBSWY3DPEHPK3PXP")
+    notes = " ".join(R.describe_secrets(cid, pin, sec))
+    assert "valid base32" in notes and "1100123456" not in notes and "1234" not in notes.replace("4 chars", "")
+    assert "NOT valid" in " ".join(R.describe_secrets(cid, pin, "NOT-BASE32-189"))
