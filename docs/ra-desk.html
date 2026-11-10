@@ -166,7 +166,7 @@ tbody tr{cursor:pointer} tbody tr:hover td{background:var(--raise)}
     <span class="clocks"><span>IST <b id="c-ist"></b></span><span class="x">NY <b id="c-ny"></b></span><span class="x">LDN <b id="c-ldn"></b></span><span class="x">TYO <b id="c-tyo"></b></span></span>
     <label class="search"><input id="sym" list="symlist" placeholder="Symbol or name…" autocomplete="off" aria-label="Search symbol"><kbd>Ctrl K</kbd></label>
     <datalist id="symlist"></datalist>
-    <span class="feeds"><span>prices <b>Dhan</b> · <b id="asof"></b></span><span>news <b id="nasof"></b></span><span id="live"></span></span>
+    <span class="feeds"><span>prices <b>Dhan</b> · <b id="asof"></b></span><span>news <b id="nasof"></b></span><span id="live"></span><span id="ghs"></span></span>
   </header>
   <nav class="rail" aria-label="Functions">
     <button data-v="market" class="big">MARKET<span>brief · global · flows · events</span></button>
@@ -1078,6 +1078,56 @@ async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
     const wait=LV.err&&LV.err!=="login"?15000:mktOpen()?5000:300000;LV.timer=setTimeout(loop,wait)};
   document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!LV.stop&&!LV.busy){clearTimeout(LV.timer);loop()}});
   loop();})();
+
+/* ===== Nightly data from GitHub (docs/radesk-latest.json), read through the viewer's GitHub connector ===== */
+const GH={owner:"prodadarjaiswal-lab",repo:"Aj",path:"docs/radesk-latest.json",ref:"refs/heads/main",server:"GitHub"};
+function ghStatus(h){const el=$("ghs");if(el)el.innerHTML=h}
+function ghText(res){
+  if(!res)return null;
+  for(const b of res.content||[]){
+    const r=b&&b.resource;if(r){if(typeof r.text==="string")return r.text;if(typeof r.blob==="string"){try{return decodeURIComponent(escape(atob(r.blob)))}catch(e){}}}
+  }
+  const p=res.payload;if(p&&typeof p==="object"&&p.schema)return JSON.stringify(p);
+  if(p&&typeof p==="object"&&typeof p.content==="string"){try{return decodeURIComponent(escape(atob(p.content.replace(/\s/g,""))))}catch(e){}}
+  for(const b of res.content||[]){if(b.type==="text"&&/^\s*\{/.test(b.text))return b.text}
+  return null}
+function mergeSeries(old,nw,keys){
+  if(!nw||!nw.d||!nw.d.length)return old;const first=nw.d[0],last=nw.d[nw.d.length-1],out={};
+  const pre=old.d.map((d,i)=>d<first?i:-1).filter(i=>i>=0),post=old.d.map((d,i)=>d>last?i:-1).filter(i=>i>=0);
+  for(const k of keys){if(!old[k]&&!nw[k])continue;const o=old[k]||[],n=nw[k]||[];out[k]=[...pre.map(i=>o[i]),...n,...post.map(i=>o[i])].slice(-286)}
+  return out}
+function applyLatest(L){
+  if(!L||L.schema!==1||!L.bar_today)return 0;
+  const cur=N.bar_today||"";if(L.bar_today<cur||(L.bar_today===cur&&!N.partial_today&&N.refreshed_by==="dhan-nightly"&&N.asof>=L.asof))return 0;
+  let k=0;
+  for(const[nm,o]of Object.entries(L.idx||{})){const r=N.idx[nm];if(!r)continue;const m=mergeSeries(r,o,["d","o","h","l","c"]);for(const key of Object.keys(m))r[key]=m[key];k++}
+  for(const[s,x]of Object.entries(L.stocks||{})){const t=S[s];if(!t)continue;
+    t.ohlc=mergeSeries(t.ohlc,x.ohlc,["d","o","h","l","c","v"]);
+    for(const f of["prev","vol","avgvol3m","hi52","lo52","dhan_fund"])if(x[f]!=null)t[f]=x[f];
+    if(x.tech)Object.assign(t.tech,x.tech);k++}
+  for(const sc of L.sectors||[]){const d=(N.sectors||[]).find(z=>z.name===sc.name);if(d&&sc.ltp!=null){d.ltp=sc.ltp;d.prev=sc.prev}}
+  if(N.breadth){const T=SYMS.map(s=>S[s].tech);N.breadth.adv=T.filter(t=>t.r1>0).length;N.breadth.dec=T.filter(t=>t.r1<0).length;
+    N.breadth.a50=Math.round(100*T.filter(t=>(t.vs50||0)>0).length/T.length);N.breadth.a200=Math.round(100*T.filter(t=>(t.vs200||0)>0).length/T.length)}
+  N.bar_today=L.bar_today;N.asof=L.asof||N.asof;N.partial_today=!!L.partial_today;N.refreshed_by="dhan-nightly";
+  return k}
+(async()=>{let mcp=null;try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}
+  if(!mcp){ghStatus(`<span>data saved ${esc(N.bar_today||"")}</span>`);return}
+  ghStatus(`<span>GitHub: checking…</span>`);
+  try{
+    const res=await mcp.callTool(GH.server,"get_file_contents",{owner:GH.owner,repo:GH.repo,path:GH.path,ref:GH.ref},{cache:{staleTime:600000,gcTime:3600000}});
+    const txt=ghText(res);if(!txt)throw{code:"bad_payload",message:"file content not found in reply"};
+    const k=applyLatest(JSON.parse(txt));
+    const when=res.cache&&res.cache.storedAt?new Date(res.cache.storedAt).toLocaleTimeString("en-GB",{timeZone:"Asia/Kolkata",hour12:false,hour:"2-digit",minute:"2-digit"})+" IST":"now";
+    ghStatus(`<b style="color:var(--up)">GitHub ✓</b> <span>close ${esc(N.bar_today)} · checked ${when}</span>`);
+    if(k){$("asof").textContent=N.asof+" IST";try{drawWL();go(view)}catch(e){}}
+  }catch(e){const c=e&&e.code;
+    const msg=c==="server_not_connected"?"add the GitHub connector in claude.ai Settings → Connectors":
+      c==="needs_reauth"?"reconnect GitHub in claude.ai Settings → Connectors":
+      c==="not_in_manifest"||c==="consent_required"||c==="approval_required"?"GitHub not allowed for this page":
+      c==="selection_required"?"choose which GitHub connector to use":
+      c==="tool_error"?"file not readable (repo access?)":(c||"error");
+    ghStatus(`<b style="color:var(--amber)">GitHub ✗</b> <span>${esc(msg)} · showing saved ${esc(N.bar_today||"")} data</span>`)}
+})();
 
 applyBrand();drawWL();
 let start="plans";{const h=location.hash.slice(1);if(["market","sectors","screener","desk","research","valuation","news","macro","basis","report","cbrief","setup","plans"].includes(h))start=h;}

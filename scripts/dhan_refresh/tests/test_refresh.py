@@ -142,3 +142,13 @@ def test_secrets_cleaned_and_described_without_values():
     notes = " ".join(R.describe_secrets(cid, pin, sec))
     assert "valid base32" in notes and "1100123456" not in notes and "1234" not in notes.replace("4 chars", "")
     assert "NOT valid" in " ".join(R.describe_secrets(cid, pin, "NOT-BASE32-189"))
+
+
+def test_latest_file_written_small_and_current(page):
+    nset = R.read_nset(page.read_text())
+    R.run(page, FakeDhan(nset), scrip_csv(nset), now())
+    lat = json.loads(page.with_name("radesk-latest.json").read_text())
+    assert lat["bar_today"] == "2026-11-11" and lat["schema"] == 1
+    assert lat["stocks"]["TCS"]["ohlc"]["d"][-1] == "2026-11-11"
+    assert len(lat["stocks"]["TCS"]["ohlc"]["c"]) == R.LATEST_BARS
+    assert page.with_name("radesk-latest.json").stat().st_size < 600_000

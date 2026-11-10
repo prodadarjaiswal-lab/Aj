@@ -284,6 +284,29 @@ def merge(nset: dict, new_idx: dict, new_stk: dict, fund: dict, last: str, now: 
     return nset
 
 
+LATEST_BARS = 25  # bars per series in the small file the page loads from GitHub
+
+
+def latest_payload(nset: dict) -> dict:
+    """A small file (well under GitHub's 1 MB contents limit) holding what changes nightly."""
+    cut = lambda o, keys: {k: o[k][-LATEST_BARS:] for k in keys if k in o}
+    stk = {}
+    for sym, x in nset["stocks"].items():
+        stk[sym] = {"ohlc": cut(x["ohlc"], ("d", "o", "h", "l", "c", "v")),
+                    **{k: x[k] for k in ("prev", "vol", "avgvol3m", "hi52", "lo52", "tech", "dhan_fund") if k in x}}
+    return {"schema": 1, "asof": nset.get("asof"), "bar_today": nset.get("bar_today"),
+            "partial_today": nset.get("partial_today", False),
+            "idx": {n: cut(o, ("d", "o", "h", "l", "c")) for n, o in nset["idx"].items()},
+            "sectors": [{"name": s.get("name"), "ltp": s.get("ltp"), "prev": s.get("prev")} for s in nset.get("sectors", [])],
+            "stocks": stk}
+
+
+def write_latest(path: Path, nset: dict) -> int:
+    blob = json.dumps(latest_payload(nset), separators=(",", ":"), ensure_ascii=False)
+    path.write_text(blob, encoding="utf-8")
+    return len(blob.encode())
+
+
 def read_nset(html: str) -> dict:
     m = DATA_RE.search(html)
     if not m:
@@ -325,8 +348,11 @@ def run(page: Path, dhan, scrip_csv: str, now: dt.datetime, with_fund: bool = Tr
     last = check(new_idx, new_stk, nset, now.date())
     if last <= old_last and nset.get("partial_today") is False:
         return f"no new session (latest bar {last}); page unchanged"
-    page.write_text(write_nset(html, merge(nset, new_idx, new_stk, fund, last, now)), encoding="utf-8")
-    return f"updated to {last}: {len(new_stk)} stocks, {len(new_idx)} indices, {len(fund)} fundamentals"
+    merged = merge(nset, new_idx, new_stk, fund, last, now)
+    page.write_text(write_nset(html, merged), encoding="utf-8")
+    size = write_latest(page.with_name("radesk-latest.json"), merged)
+    return (f"updated to {last}: {len(new_stk)} stocks, {len(new_idx)} indices, {len(fund)} fundamentals; "
+            f"latest file {size // 1024} KB")
 
 
 def main(argv=None) -> int:
