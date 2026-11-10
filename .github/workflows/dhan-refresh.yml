@@ -1,0 +1,40 @@
+name: Dhan nightly refresh
+
+on:
+  schedule:
+    - cron: "45 10 * * 1-5"   # 16:15 IST, Monday to Friday (after the 15:30 close)
+  workflow_dispatch: {}        # "Run workflow" button for a manual run
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dhan-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 pytest==8.3.3
+      - name: Offline tests
+        run: python -m pytest -q scripts/dhan_refresh/tests
+      - name: Pull from Dhan and update RA Desk
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html
+      - name: Commit if changed
+        run: |
+          if git diff --quiet docs/ra-desk.html; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git add docs/ra-desk.html
+          git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
+          git push

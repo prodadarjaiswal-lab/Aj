@@ -1,0 +1,321 @@
+"""Nightly Dhan refresh for RA Desk.
+
+Logs in with TOTP, pulls daily candles for every stock and index in the page,
+plus company fundamentals, checks the data, and patches the embedded data
+in docs/ra-desk.html. If anything looks wrong, the page is left untouched.
+
+Secrets (environment variables): DHAN_CLIENT_ID, DHAN_PIN, DHAN_TOTP_SECRET.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import datetime as dt
+import io
+import json
+import os
+import re
+import statistics as st
+import sys
+import time
+from pathlib import Path
+
+IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
+API = "https://api.dhan.co/v2"
+AUTH = "https://auth.dhan.co/app/generateAccessToken"
+SCRIP_MASTER = "https://images.dhan.co/api-data/api-scrip-master.csv"
+BARS = 286            # bars kept per series (same as the page today)
+LOOKBACK_DAYS = 430   # calendar days requested, enough for 286 trading days
+DATA_RE = re.compile(r"(<script>window\.NSET=)(\{.*?\})(;?</script>)", re.S)
+
+INDEX_ALIASES = {
+    "Nifty 50": ["NIFTY", "NIFTY 50"],
+    "Nifty Bank": ["BANKNIFTY", "NIFTY BANK"],
+    "India VIX": ["INDIA VIX", "INDIAVIX"],
+    "Nifty Financial Services": ["FINNIFTY", "NIFTY FIN SERVICE", "NIFTY FINANCIAL SERVICES"],
+    "Nifty Midcap 100": ["NIFTY MIDCAP 100", "NIFTY MIDCAP100", "MIDCAP 100"],
+    "Nifty Infrastructure": ["NIFTY INFRA", "NIFTY INFRASTRUCTURE"],
+    "Nifty PSU Bank": ["NIFTY PSU BANK", "PSUBANK"],
+}
+
+
+class RefreshError(Exception):
+    """Raised when the data fails a check. The page is not written."""
+
+
+# ---------------------------------------------------------------- Dhan client
+class Dhan:
+    def __init__(self, client_id: str, token: str):
+        import requests  # imported here so tests can run without it
+        self.s = requests.Session()
+        self.s.headers.update({"access-token": token, "client-id": client_id,
+                               "Content-Type": "application/json", "Accept": "application/json"})
+        self.client_id = client_id
+
+    def post(self, path: str, body: dict) -> dict:
+        return _retry(lambda: self._post(path, body))
+
+    def _post(self, path, body):
+        time.sleep(0.25)  # data APIs allow 5 requests a second
+        r = self.s.post(API + path, json=body, timeout=30)
+        if r.status_code == 429 or "RL001" in r.text or '"805"' in r.text:
+            raise TransientError(f"rate limited on {path}")
+        if r.status_code >= 500:
+            raise TransientError(f"{r.status_code} on {path}")
+        if r.status_code != 200:
+            raise RefreshError(f"{path} returned {r.status_code}: {r.text[:200]}")
+        return r.json()
+
+    def daily(self, security_id: str, segment: str, instrument: str, start: dt.date, end: dt.date) -> dict:
+        return self.post("/charts/historical", {
+            "securityId": str(security_id), "exchangeSegment": segment, "instrument": instrument,
+            "expiryCode": 0, "oi": False,
+            "fromDate": start.isoformat(), "toDate": (end + dt.timedelta(days=1)).isoformat()})
+
+    def company(self, security_id: str) -> dict:
+        return self.post("/data/companyinfo", {"securityId": str(security_id), "exchangeSegment": "NSE_EQ",
+                                               "instrument": "EQUITY", "metrics": ["CO", "RATIOS", "SHP"]})
+
+
+class TransientError(Exception):
+    pass
+
+
+def _retry(fn, tries=3, waits=(60, 120, 240)):
+    for i in range(tries):
+        try:
+            return fn()
+        except TransientError as e:
+            if i == tries - 1:
+                raise RefreshError(f"gave up after {tries} tries: {e}")
+            print(f"  retry in {waits[i]}s ({e})", flush=True)
+            time.sleep(waits[i])
+
+
+def login(client_id: str, pin: str, totp_secret: str) -> str:
+    import pyotp
+    import requests
+
+    def once():
+        code = pyotp.TOTP(totp_secret).now()
+        r = requests.post(AUTH, params={"dhanClientId": client_id, "pin": pin, "totp": code}, timeout=30)
+        if r.status_code >= 500:
+            raise TransientError(f"auth {r.status_code}")
+        j = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        tok = j.get("accessToken")
+        if not tok:
+            # A TOTP code can be rejected right at the 30-second boundary, so retry once more.
+            raise TransientError(f"no token in auth reply ({r.status_code}): {str(j)[:160]}")
+        return tok
+
+    return _retry(once, waits=(35, 60, 120))
+
+
+# ---------------------------------------------------------------- symbol map
+def norm(s: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", (s or "").upper())
+
+
+def build_maps(scrip_csv: str, symbols: list[str], indices: list[str]) -> tuple[dict, dict]:
+    eq, ix = {}, {}
+    rows = list(csv.DictReader(io.StringIO(scrip_csv)))
+    want = set(symbols)
+    for r in rows:
+        if r.get("SEM_EXM_EXCH_ID") != "NSE":
+            continue
+        inst = r.get("SEM_INSTRUMENT_NAME", "")
+        if inst == "EQUITY" and r.get("SEM_SEGMENT") == "E":
+            sym = r.get("SEM_TRADING_SYMBOL", "")
+            if sym in want and (sym not in eq or r.get("SEM_SERIES") == "EQ"):
+                eq[sym] = r["SEM_SMST_SECURITY_ID"]
+        elif inst == "INDEX":
+            keys = {norm(r.get("SEM_TRADING_SYMBOL")), norm(r.get("SM_SYMBOL_NAME")), norm(r.get("SEM_CUSTOM_SYMBOL"))}
+            for name in indices:
+                cands = {norm(a) for a in INDEX_ALIASES.get(name, [])} | {norm(name)}
+                if name not in ix and keys & cands:
+                    ix[name] = r["SEM_SMST_SECURITY_ID"]
+    return eq, ix
+
+
+# ---------------------------------------------------------------- data shaping
+def to_series(resp: dict) -> dict:
+    ts = resp.get("timestamp") or []
+    if not ts:
+        raise RefreshError("empty candle reply")
+    d = [dt.datetime.fromtimestamp(t, IST).date().isoformat() for t in ts]
+    out = {"d": d, "o": resp["open"], "h": resp["high"], "l": resp["low"], "c": resp["close"]}
+    if "volume" in resp:
+        out["v"] = [float(x) for x in resp["volume"]]
+    return {k: v[-BARS:] for k, v in out.items()}
+
+
+def sma(a, n):
+    return st.mean(a[-n:]) if len(a) >= n else None
+
+
+def ema_series(a, n):
+    k, e, out = 2 / (n + 1), a[0], []
+    for x in a:
+        e = x * k + e * (1 - k)
+        out.append(e)
+    return out
+
+
+def rsi(c, n=14):
+    g = [max(c[i] - c[i - 1], 0) for i in range(1, len(c))]
+    l_ = [max(c[i - 1] - c[i], 0) for i in range(1, len(c))]
+    if len(g) < n:
+        return None
+    ag, al = st.mean(g[:n]), st.mean(l_[:n])
+    for i in range(n, len(g)):
+        ag, al = (ag * (n - 1) + g[i]) / n, (al * (n - 1) + l_[i]) / n
+    return 100.0 if al == 0 else 100 - 100 / (1 + ag / al)
+
+
+def tech(o: dict, nifty_c: list[float]) -> dict:
+    """Recompute the price-based fields the page shows. Same definitions as before."""
+    c, h, l_, v = o["c"], o["h"], o["l"], o.get("v") or []
+    last = c[-1]
+    ret = lambda k: last / c[-1 - k] - 1 if len(c) > k else None
+    vs = lambda k: (last / sma(c, k) - 1) if sma(c, k) else None
+    tr = [max(h[i] - l_[i], abs(h[i] - c[i - 1]), abs(l_[i] - c[i - 1])) for i in range(1, len(c))]
+    macd = [a - b for a, b in zip(ema_series(c, 12), ema_series(c, 26))]
+    sig = ema_series(macd, 9)
+    n20 = nifty_c[-1] / nifty_c[-21] - 1 if len(nifty_c) > 20 else 0
+    r = {"r1": ret(1), "r5": ret(5), "r21": ret(21), "r63": ret(63), "r252": ret(252),
+         "rs20": (ret(20) or 0) - n20, "rsi": rsi(c), "atr_pct": st.mean(tr[-14:]) / last if tr else None,
+         "vs20": vs(20), "vs50": vs(50), "vs200": vs(200), "hi52": last / max(h[-250:]) - 1,
+         "macd_up": macd[-1] > sig[-1], "volr": (v[-1] / st.mean(v[-21:-1])) if len(v) > 21 and st.mean(v[-21:-1]) else None}
+    v50, v200 = r["vs50"] or 0, r["vs200"] or 0
+    r["trend"] = "Uptrend" if v50 > 0 and v200 > 0 else "Downtrend" if v50 < 0 and v200 < 0 else "Mixed"
+    return r
+
+
+# ---------------------------------------------------------------- checks
+def check(new_idx: dict, new_stk: dict, old: dict, today: dt.date) -> str:
+    """Raise RefreshError if the pull looks wrong. Return the new last bar date."""
+    if "Nifty 50" not in new_idx:
+        raise RefreshError("Nifty 50 not fetched")
+    last = new_idx["Nifty 50"]["d"][-1]
+    if last > today.isoformat():
+        raise RefreshError(f"bar dated in the future: {last}")
+    missing = [s for s in old["stocks"] if s not in new_stk]
+    if len(missing) > 2:
+        raise RefreshError(f"{len(missing)} stocks missing: {missing[:5]}")
+    stale = [s for s, o in new_stk.items() if o["d"][-1] != last]
+    if len(stale) > 5:
+        raise RefreshError(f"{len(stale)} stocks not updated to {last}: {stale[:5]}")
+    flat = [s for s, o in new_stk.items() if len(o["c"]) > 1 and o["c"][-1] == o["c"][-2] and o["d"][-1] != o["d"][-2]]
+    if len(flat) > len(new_stk) * 0.6:
+        raise RefreshError(f"{len(flat)} stocks show an unchanged close; feed looks stale")
+    for s, o in new_stk.items():
+        if len(o["c"]) < 200:
+            raise RefreshError(f"{s}: only {len(o['c'])} bars")
+        jump = abs(o["c"][-1] / o["c"][-2] - 1)
+        if jump > 0.25:
+            raise RefreshError(f"{s}: {jump:.0%} one-day move; check for a split before publishing")
+        if min(o["c"][-5:]) <= 0:
+            raise RefreshError(f"{s}: non-positive price")
+    return last
+
+
+# ---------------------------------------------------------------- merge
+def merge(nset: dict, new_idx: dict, new_stk: dict, fund: dict, last: str, now: dt.datetime) -> dict:
+    nifty_c = new_idx["Nifty 50"]["c"]
+    for name, o in new_idx.items():
+        nset["idx"][name] = {k: o[k] for k in ("d", "o", "h", "l", "c")}
+    for sym, o in new_stk.items():
+        x = nset["stocks"][sym]
+        x["ohlc"] = o
+        x["prev"] = o["c"][-2]
+        x["vol"] = o["v"][-1] if o.get("v") else x.get("vol")
+        if o.get("v"):
+            x["avgvol3m"] = st.mean(o["v"][-63:])
+        x["hi52"], x["lo52"] = max(o["h"][-250:]), min(o["l"][-250:])
+        x["tech"].update({k: v for k, v in tech(o, nifty_c).items() if v is not None})
+        if sym in fund:
+            x["dhan_fund"] = fund[sym]
+    # sector strip uses ltp/prev
+    for sec in nset.get("sectors", []):
+        o = nset["idx"].get(sec.get("name"))
+        if o and len(o["c"]) > 1:
+            sec["ltp"], sec["prev"] = o["c"][-1], o["c"][-2]
+    nset["asof"] = now.strftime("%Y-%m-%d %H:%M")
+    nset["bar_today"] = last
+    nset["partial_today"] = False
+    nset["refreshed_by"] = "dhan-nightly"
+    return nset
+
+
+def read_nset(html: str) -> dict:
+    m = DATA_RE.search(html)
+    if not m:
+        raise RefreshError("could not find window.NSET in the page")
+    return json.loads(m.group(2))
+
+
+def write_nset(html: str, nset: dict) -> str:
+    blob = json.dumps(nset, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+    return DATA_RE.sub(lambda m: m.group(1) + blob + m.group(3), html, count=1)
+
+
+# ---------------------------------------------------------------- main
+def run(page: Path, dhan, scrip_csv: str, now: dt.datetime, with_fund: bool = True) -> str:
+    html = page.read_text(encoding="utf-8")
+    nset = read_nset(html)
+    old_last = max(o["d"][-1] for o in nset["idx"].values())
+    symbols, indices = list(nset["stocks"]), list(nset["idx"])
+    eq, ix = build_maps(scrip_csv, symbols, indices)
+    for name in indices:
+        if name not in ix:
+            print(f"  warning: index '{name}' not found in scrip master; keeping old data")
+    start = now.date() - dt.timedelta(days=LOOKBACK_DAYS)
+
+    new_idx, new_stk, fund = {}, {}, {}
+    for name, sid in ix.items():
+        new_idx[name] = to_series(dhan.daily(sid, "IDX_I", "INDEX", start, now.date()))
+    for sym, sid in eq.items():
+        try:
+            new_stk[sym] = to_series(dhan.daily(sid, "NSE_EQ", "EQUITY", start, now.date()))
+        except RefreshError as e:
+            print(f"  warning: {sym}: {e}")
+        if with_fund:
+            try:
+                fund[sym] = dhan.company(sid)
+            except RefreshError as e:
+                print(f"  warning: company info {sym}: {e}")
+
+    last = check(new_idx, new_stk, nset, now.date())
+    if last <= old_last and nset.get("partial_today") is False:
+        return f"no new session (latest bar {last}); page unchanged"
+    page.write_text(write_nset(html, merge(nset, new_idx, new_stk, fund, last, now)), encoding="utf-8")
+    return f"updated to {last}: {len(new_stk)} stocks, {len(new_idx)} indices, {len(fund)} fundamentals"
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--page", default="docs/ra-desk.html")
+    ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
+    a = ap.parse_args(argv)
+    try:
+        cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
+    except KeyError as e:
+        print(f"missing secret {e}", file=sys.stderr)
+        return 2
+    import requests
+    now = dt.datetime.now(IST)
+    if now.weekday() >= 5:
+        print("weekend; nothing to do")
+        return 0
+    try:
+        token = login(cid, pin, sec)
+        scrip = requests.get(SCRIP_MASTER, timeout=60).text
+        print(run(Path(a.page), Dhan(cid, token), scrip, now, with_fund=not a.no_fund))
+        return 0
+    except RefreshError as e:
+        print(f"REFRESH FAILED, page left unchanged: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
