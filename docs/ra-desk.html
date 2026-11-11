@@ -1018,12 +1018,15 @@ function parseDhan(txt){const out={eq:{},idx:{}};let seg=null;
     if(!m||!seg)continue;const q={ltp:+m[2].replace(/,/g,""),o:+m[3],h:+m[4],l:+m[5],pc:+m[6]};if(!(q.ltp>0))continue;
     if(seg==="NSE_EQ"&&LIVE_SID[m[1]])out.eq[LIVE_SID[m[1]]]=q;else if(seg==="IDX_I"&&LIVE_IDX[m[1]])out.idx[LIVE_IDX[m[1]]]=q;}
   return out}
-function liveBar(r,q,today){const c=r.c,n=c.length;if(!n)return false;
-  if(r.d[n-1]===today){ if(n>1&&q.pc&&Math.abs(q.pc/c[n-2]-1)>0.004)return false;
-    c[n-1]=q.ltp;if(q.o>0)r.o[n-1]=q.o;r.h[n-1]=Math.max(q.h>0?q.h:q.ltp,q.ltp);r.l[n-1]=Math.min(q.l>0?q.l:q.ltp,q.ltp);return true}
-  if(q.pc&&Math.abs(q.pc/c[n-1]-1)>0.004)return false;           // reply is not for the session after our last bar (holiday / pre-open)
-  if(q.o>0&&q.o===q.pc&&q.ltp===q.pc)return false;                // no trade yet today
-  r.d.push(today);r.o.push(q.o>0?q.o:q.ltp);r.h.push(Math.max(q.h||q.ltp,q.ltp));r.l.push(Math.min(q.l||q.ltp,q.ltp));c.push(q.ltp);if(r.v)r.v.push(0);return true}
+function liveBar(r,q,today){const c=r.c,n=c.length;if(!n||!(q.ltp>0))return false;
+  const setBar=k=>{c[k]=q.ltp;if(q.o>0)r.o[k]=q.o;r.h[k]=Math.max(q.h>0?q.h:q.ltp,q.ltp,r.h[k]||0);r.l[k]=Math.min(q.l>0?q.l:q.ltp,q.ltp,r.l[k]||q.ltp)};
+  if(r.d[n-1]===today){setBar(n-1);return true}
+  // Dhan's "C" is yesterday's close during the session but today's close after it, so it is not used to match days.
+  // The same open and high as our last stored bar means Dhan is replaying that session (holiday, pre-open): skip.
+  if(q.o>0&&r.o[n-1]>0&&Math.abs(q.o/r.o[n-1]-1)<2e-4&&q.h>0&&r.h[n-1]>0&&Math.abs(q.h/r.h[n-1]-1)<2e-4)return false;
+  const t=istNow(),wd=t.getDay(),mins=t.getHours()*60+t.getMinutes();if(wd===0||wd===6||mins<555)return false;
+  if(!(q.o>0))return false;                                        // no trade yet today
+  r.d.push(today);r.o.push(q.o);r.h.push(Math.max(q.h||q.ltp,q.ltp));r.l.push(Math.min(q.l||q.ltp,q.ltp));c.push(q.ltp);if(r.v)r.v.push(0);return true}
 function liveTech(x,niR21){const c=x.ohlc.c,n=c.length,t=x.tech;const ret=k=>n>k?c[n-1]/c[n-1-k]-1:null;const ma=k=>n>=k?c.slice(-k).reduce((a,b)=>a+b,0)/k:null;
   t.r1=ret(1);t.r5=ret(5);t.r21=ret(21);t.r63=ret(63);t.r252=ret(250);
   const m20=ma(20),m50=ma(50),m200=ma(200);t.vs20=m20?c[n-1]/m20-1:null;t.vs50=m50?c[n-1]/m50-1:null;t.vs200=m200?c[n-1]/m200-1:null;
