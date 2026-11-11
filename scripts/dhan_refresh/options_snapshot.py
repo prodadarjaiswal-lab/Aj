@@ -141,7 +141,7 @@ def snapshot(client, underlyings: dict, today: dt.date) -> dict:
 def save_snapshot(dhan, scrip_csv: str, root: Path = Path(".")) -> str:
     """Use an already logged-in client: Dhan allows one new token per 2 minutes."""
     nset = R.read_nset((root / "docs/ra-desk.html").read_text(encoding="utf-8"))
-    day = nset.get("bar_today") or dt.datetime.now(R.IST).date().isoformat()
+    day = dt.datetime.now(R.IST).date().isoformat()   # the day the chain was captured
     outdir = root / "data/options"
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / f"{day}.json"
