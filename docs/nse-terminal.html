@@ -882,13 +882,13 @@ const SU_L={breakout:["Breaking out","New 20-day high while above the 50-day ave
  coiled:["Coiled near highs","Range is in the tightest quarter of the last 6 months, within 10% of the 52-week high and just under the 20-day high."],
  pullback:["Pullback in uptrend","Rising 200-day trend and ahead of the Nifty over 3 months; now 3–10% off its 20-day high, resting near the 20-day average."],
  turn:["Turning up early","Not yet stretched above the 200-day; back above a rising 50-day, beating the Nifty this month, strength line at a 3-month high."]};
-function suEdge(k){const b=SETUP_BT&&SETUP_BT.setups&&SETUP_BT.setups[k],B=SETUP_BT&&SETUP_BT.base;if(!b||!B||b.m21==null)return null;
+function suEdge(k,bt=SETUP_BT){const b=bt&&bt.setups&&bt.setups[k],B=bt&&bt.base;if(!b||!B||b.m21==null)return null;
   const g=WEAK?b.weak:b.up,G=WEAK?B.weak:B.up;const use=g&&g.m21!=null&&G&&G.m21!=null;
   return {n:use?g.n:b.n,e21:(use?g.m21-G.m21:b.m21-B.m21),e10:(use?g.m10-G.m10:b.m10-B.m10),hit:use?g.hit21:b.hit21,all:b,base:B,mk:WEAK?"weak":"rising"}}
-function suVerdict(k){const e=suEdge(k);if(!e)return ["untested",""];return e.e21>=.003&&e.n>=50?["small edge","g"]:e.e10>=.003&&e.n>=50?["short-term edge","a"]:["no edge found",""]}
-function suStat(k,short){const e=suEdge(k);if(!e)return "Back-test pending.";const v=suVerdict(k);
-  return short?`<span class="pill ${v[1]}" style="margin:0 0 3px">${v[0]}</span><br>${e.n} cases in ${e.mk} markets: ${v[0]==="short-term edge"?pp(e.e10,1)+" vs a typical Nifty 50 stock after 10 days":pp(e.e21,1)+" vs a typical Nifty 50 stock after 21 days"}`
-   :`Test on ${SETUP_BT.stocks} Nifty 50 stocks, ${SETUP_BT.from.slice(0,4)}–${SETUP_BT.asof.slice(0,4)}: in ${e.mk} markets like now, ${e.n} cases returned ${pp(e.e10,1)} more than a typical Nifty 50 stock after 10 days and ${pp(e.e21,1)} after 21 days; ${pctx(e.hit)} beat the Nifty. All ${e.all.n} cases: ${pp(e.all.m21-e.base.m21,1)} after 21 days. Verdict: ${v[0]}.`}
+function suVerdict(k,bt=SETUP_BT){const e=suEdge(k,bt);if(!e)return ["untested",""];return e.e21>=.003&&e.n>=50?["small edge","g"]:e.e10>=.003&&e.n>=50?["short-term edge","a"]:["no edge found",""]}
+function suStat(k,short,bt=SETUP_BT){const e=suEdge(k,bt);if(!e)return "Back-test pending.";const v=suVerdict(k,bt);
+  return short?`<span class="pill ${v[1]}" style="margin:0 0 3px">${v[0]}</span><br>${e.n} cases in ${e.mk} markets: ${v[0]==="short-term edge"?pp(e.e10,1)+" vs a typical stock after 10 days":pp(e.e21,1)+" vs a typical stock after 21 days"}`
+   :`Test on ${bt.stocks} ${bt.universe||"Nifty 50"} stocks, ${bt.from.slice(0,4)}–${bt.asof.slice(0,4)}: in ${e.mk} markets like now, ${e.n} cases returned ${pp(e.e10,1)} more than a typical stock after 10 days and ${pp(e.e21,1)} after 21 days; ${pctx(e.hit)} beat the Nifty. All ${e.all.n} cases: ${pp(e.all.m21-e.base.m21,1)} after 21 days. Verdict: ${v[0]}.`}
 function sparkS(s,n=40,w=76,h=28){const c=S[s].ohlc.c.slice(-n);if(c.length<2)return "";const lo=Math.min(...c),hi=Math.max(...c),sp=hi-lo||1;
   const pts=c.map((v,i)=>`${(i/(c.length-1)*w).toFixed(1)},${(h-2-(v-lo)/sp*(h-4)).toFixed(1)}`).join(" ");
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(${c[c.length-1]>=c[0]?"--up":"--down"})" stroke-width="1.4"/></svg>`}
@@ -909,7 +909,67 @@ function stockSheet(s){setSym(s);const mount=el=>{el.querySelectorAll("[data-sg]
   openSheet(s,stockSheetHTML(s),mount);SHEET_SYM=s;SHEET_MOUNT=mount}
 let SHEET_MOUNT=null;
 function sheetTick(){if(!SHEET_SYM||!$("sheet"))return;const b=$("sheet").querySelector(".sh-b"),t=b.scrollTop;b.innerHTML=stockSheetHTML(SHEET_SYM);if(SHEET_MOUNT)SHEET_MOUNT(b);b.scrollTop=t}
-function board(el){const ev=s=>S[s].events[0],m=s=>LM[s]||{},su=s=>m(s).setup;
+/* ===== Nifty 500 board (ranked at the last close, live prices on top for the stocks on screen) ===== */
+const N5=window.N500||null,N5L={},N5S={at:0,busy:false,timer:null,err:null};
+SU_L.volbreak=["Breakout on volume","New 20-day high on at least 1.5 times normal volume, above the 50-day average."];
+const n5px=r=>N5L[r.sid]?N5L[r.sid].ltp:r.last,n5d1=r=>N5L[r.sid]&&N5L[r.sid].pc?N5L[r.sid].ltp/N5L[r.sid].pc-1:r.r1;
+function uniRow(){if(!N5)return "";const u=BD.u||"n50";
+  return `<div class="opt-row" style="margin:0"><button class="b" data-uni="n50" aria-pressed="${u==="n50"}">NIFTY 50 · live rank</button><button class="b" data-uni="n500" aria-pressed="${u==="n500"}">NIFTY 500 · ${N5.n} stocks</button></div>`}
+function uniWire(el){el.querySelectorAll("[data-uni]").forEach(b=>b.onclick=()=>{BD.u=b.dataset.uni;BD.f="all";BD.n=60;PREF.uni=BD.u;savePref();renderSub("board")})}
+function sparkA(c,w=76,h=28){if(!c||c.length<2)return "";const lo=Math.min(...c),hi=Math.max(...c),sp=hi-lo||1;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${c.map((v,i)=>`${(i/(c.length-1)*w).toFixed(1)},${(h-2-(v-lo)/sp*(h-4)).toFixed(1)}`).join(" ")}" fill="none" stroke="var(${c[c.length-1]>=c[0]?"--up":"--down"})" stroke-width="1.4"/></svg>`}
+function n5Trig(r){if(!r.setup||!N5L[r.sid])return "";const p=n5px(r);return p<r.fail?`<span class="pill r">below fail level</span>`:(r.setup!=="breakout"&&r.setup!=="volbreak"&&p>r.trig)?`<span class="pill g">above trigger now</span>`:""}
+function n5SheetHTML(r){const L=LM_L[r.status]||["–",""],p=n5px(r),d=n5d1(r),bt=N5.bt;
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="color:var(--dim)">${esc(r.name)}${r.ind?" · "+esc(r.ind):""}</span><span><b style="font-family:var(--f-mono);font-size:20px;color:var(--bright)">${f2(p)}</b> <span class="${ud(d)}">${pp(d,2)}</span></span></div>
+   <div style="margin:6px 0"><span class="pill ${L[1]}">${L[0]}</span><span class="pill">rank ${r.rank} of ${N5.n}</span><span class="pill a">score ${r.score}</span>${r.setup?`<span class="pill b">${SU_L[r.setup][0]}</span>`:""}${n5Trig(r)}</div>
+   <div>${sparkA(r.sp.concat(N5L[r.sid]?[p]:[]),520,70).replace('width="520"','width="100%"')}</div>
+   ${r.setup?`<div class="box"><small>SETUP · ${SU_L[r.setup][0].toUpperCase()}</small>${SU_L[r.setup][1]}<br><b>Watch:</b> ${r.setup==="breakout"||r.setup==="volbreak"?`holding above ${f2(r.trig)} (the old 20-day high)`:`a move above ${f2(r.trig)}`}. <b>Setup fails</b> below ${f2(r.fail)}.<br><span style="color:var(--dim)">${suStat(r.setup,0,bt)}</span></div>`:`<div class="box"><small>SETUP</small>No setup at the last close.</div>`}
+   <dl class="qt"><dt>1 week</dt><dd class="${ud(r.r5)}">${pp(r.r5,1)}</dd><dt>1 month</dt><dd class="${ud(r.r21)}">${pp(r.r21,1)}</dd><dt>3 months</dt><dd class="${ud(r.r63)}">${pp(r.r63,1)}</dd><dt>6 months</dt><dd class="${ud(r.r126)}">${pp(r.r126,1)}</dd>
+    <dt>vs Nifty 1M</dt><dd class="${ud(r.rs1)}">${pp(r.rs1,1)}</dd><dt>vs Nifty 3M</dt><dd class="${ud(r.rs3)}">${pp(r.rs3,1)}</dd><dt>vs 20-day</dt><dd>${pp(r.vs20,1)}</dd><dt>vs 50-day</dt><dd>${pp(r.vs50,1)}</dd>
+    <dt>vs 200-day</dt><dd>${pp(r.vs200,1)}</dd><dt>From 52w high</dt><dd>${pp(r.hi52,1)}</dd><dt>RSI 14</dt><dd>${r.rsi??"–"}</dd><dt>Volume vs normal</dt><dd>${r.volr==null?"–":f2(r.volr,1)+"×"}</dd>
+    <dt>Daily turnover</dt><dd>${r.turn_cr==null?"–":"₹"+f2(r.turn_cr,0)+" cr"}</dd></dl>
+   <div class="sh-row">${S[r.s]?`<button class="b" data-sg="desk">Full stock page</button>`:""}</div>
+   <p class="note" style="padding:8px 0 0">Rank, status and setup are from the ${esc(N5.asof)} close; the price is live when Dhan is connected. Full research pages exist for Nifty 50 stocks only. Not investment advice.</p>`}
+function n5Sheet(r){const mount=el=>{el.querySelectorAll("[data-sg]").forEach(b=>b.onclick=()=>{closeSheet();setSym(r.s);go("desk")})};openSheet(r.s,n5SheetHTML(r),mount)}
+async function n5Poll(){clearTimeout(N5S.timer);const el=$("sv-board");const vis=N5&&BD.u==="n500"&&el&&el.offsetParent!==null&&!document.hidden&&OPT.mcp;
+  if(vis&&!N5S.busy&&N5S.ids&&N5S.ids.length){N5S.busy=true;
+    try{const r=await OPT.mcp.callTool("DHAN","market_data_agent_tool",{action:"ohlc",payload:JSON.stringify({NSE_EQ:N5S.ids.slice(0,150)})},{cache:false});let n=0;
+      for(const line of optTxt(r).split("\n")){const m=line.match(/^\s*(\d+):\s*LTP\s*₹?\s*([\d,\.]+)(?:\s*\|\s*O\s*([\d\.]+)\s*H\s*([\d\.]+)\s*L\s*([\d\.]+)\s*C\s*([\d\.]+))?/);if(!m)continue;const ltp=+m[2].replace(/,/g,"");if(ltp>0){N5L[m[1]]={ltp,pc:+m[6]||null};n++}}
+      N5S.err=n?null:"no prices in reply";N5S.at=Date.now()}
+    catch(e){const c=e&&e.code;N5S.err=c==="needs_reauth"?"log in to the Dhan connector again":c==="server_not_connected"?"connect Dhan in claude.ai connectors":(c||"error")}
+    N5S.busy=false;const ae=document.activeElement;if(!(ae&&el.contains(ae)&&ae.tagName==="INPUT")){try{renderSub("board")}catch(e){}}}
+  N5S.timer=setTimeout(n5Poll,vis&&mktOpen()?10000:20000)}
+function board500(el){const R=N5.rows,bt=N5.bt,q=(BD.q||"").trim().toUpperCase();
+  const F={all:()=>true,setup:r=>!!r.setup,lead:r=>r.status==="lead",improve:r=>r.status==="improve",fade:r=>r.status==="fade",weak:r=>r.status==="weak"};
+  for(const k of Object.keys(SU_L))F[k]=r=>r.setup===k;if(!F[BD.f])BD.f="all";
+  const keys=Object.keys(SU_L).sort((a,b)=>((suEdge(b,bt)||{}).e21??-9)-((suEdge(a,bt)||{}).e21??-9));
+  const srt={rank:(a,b)=>a.rank-b.rank,day:(a,b)=>(n5d1(b)??-9)-(n5d1(a)??-9),vol:(a,b)=>(b.volr??0)-(a.volr??0),rs1:(a,b)=>(b.rs1??-9)-(a.rs1??-9)}[BD.s5||"rank"];
+  const list=R.filter(F[BD.f]).filter(r=>!q||r.s.includes(q)||r.name.toUpperCase().includes(q)).sort(srt),show=list.slice(0,BD.n||60);
+  N5S.ids=show.map(r=>r.sid).filter(Boolean);const cnt=k=>R.filter(F[k]).length;
+  const card=r=>{const L=LM_L[r.status]||["–",""],d=n5d1(r);return `<button class="card" data-r="${r.s}"><div><div class="cs">${r.s} <span style="color:var(--dim);font-weight:400;font-size:10px">#${r.rank}</span></div>
+     <div><span class="pill ${L[1]}">${L[0]}</span>${r.setup?`<span class="pill b">${SU_L[r.setup][0]}</span>`:""}${n5Trig(r)}</div><div class="cm">score ${r.score} · vs Nifty 1M ${pp(r.rs1,1)}${r.volr!=null?` · vol ${f2(r.volr,1)}×`:""}</div></div>
+     <div>${sparkA(r.sp)}</div><div class="cp"><b>${f2(n5px(r))}</b><span class="${ud(d)}">${pp(d,2)}</span></div></button>`};
+  const _sl=el.querySelector(".setups")?.scrollLeft||0,_op=[...el.querySelectorAll("details")].map(d=>d.open);
+  el.innerHTML=`${uniRow()}<section class="pnl"><div class="ph"><h2>WHAT IS SETTING UP <em>NIFTY 500</em></h2><span class="sub">setups at the ${esc(N5.asof)} close · tap a group</span></div>
+   <div class="setups">${keys.map(k=>`<button class="su" data-bf="${k}" aria-pressed="${BD.f===k}"><b>${SU_L[k][0]}<em>${cnt(k)}</em></b><span>${suStat(k,1,bt)}</span></button>`).join("")}</div>
+   <details class="how"><summary>WHAT THESE MEAN AND HOW THEY TESTED</summary><div class="brief" style="padding:0">${keys.map(k=>`<p><b>${SU_L[k][0]}.</b> ${SU_L[k][1]} <span style="color:var(--dim)">${suStat(k,0,bt)}</span></p>`).join("")}<p style="color:var(--dim)">${bt?esc(bt.note||""):"The Nifty 500 back-test has not run yet."} "Typical stock" is the average of all stock-days in the same kind of market. A setup says a stock is in position; it is not a forecast.</p></div></details></section>
+  <section class="pnl"><div class="ph"><h2>RANK <em>NIFTY 500</em></h2><span class="sub">ranked at the ${esc(N5.asof)} close · prices ${N5S.at?`live ${Math.round((Date.now()-N5S.at)/1000)}s ago`:N5S.err?esc(N5S.err):"at the close"}</span></div>
+   <div class="tb"><div class="g">${[["all","ALL"],["setup","ANY SETUP"],["lead","LEADERS"],["improve","IMPROVING"],["fade","FADING"],["weak","WEAK"]].map(([k,l])=>`<button class="b" aria-pressed="${BD.f===k}" data-bf="${k}">${l} <span style="color:var(--dim)">${cnt(k)}</span></button>`).join("")}</div>
+    <div class="g">${[["rank","BY RANK"],["day","TODAY %"],["vol","VOLUME ×"],["rs1","vs NIFTY 1M"]].map(([k,l])=>`<button class="b" aria-pressed="${(BD.s5||"rank")===k}" data-s5="${k}">${l}</button>`).join("")}</div></div>
+   <div style="padding:8px 10px 0"><input id="n5-q" value="${esc(BD.q||"")}" placeholder="Find a stock in the Nifty 500…" aria-label="Find a stock" style="width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bright);font:inherit;padding:8px 10px;border-radius:var(--r)"></div>
+   <div class="cards">${show.map(card).join("")||`<p class="note">No stocks match.</p>`}</div>
+   ${list.length>show.length?`<div style="padding:0 10px 10px"><button class="b" id="n5-more" style="width:100%;text-align:center;padding:9px 0;box-sizing:border-box">Show more (${list.length-show.length} left)</button></div>`:""}
+   <p class="note">Same score and status rules as the Nifty 50 board, ranked within the Nifty 500. Rank and setups update after each close; live prices cover the stocks shown on screen. Not investment advice.</p></section>`;
+  uniWire(el);const byS=Object.fromEntries(R.map(r=>[r.s,r]));
+  el.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{BD.f=BD.f===b.dataset.bf&&SU_L[b.dataset.bf]?"all":b.dataset.bf;BD.n=60;renderSub("board")});
+  el.querySelectorAll("[data-s5]").forEach(b=>b.onclick=()=>{BD.s5=b.dataset.s5;renderSub("board")});
+  el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>n5Sheet(byS[b.dataset.r]));
+  const m=$("n5-more");if(m)m.onclick=()=>{BD.n=(BD.n||60)+60;renderSub("board")};
+  const qi=$("n5-q");qi.oninput=()=>{BD.q=qi.value;BD.n=60;clearTimeout(N5S.qt);N5S.qt=setTimeout(()=>{renderSub("board");const z=$("n5-q");z.focus();z.setSelectionRange(z.value.length,z.value.length)},350)};
+  el.querySelectorAll("details").forEach((d,i)=>{if(_op[i])d.open=true});const _s=el.querySelector(".setups");if(_s)_s.scrollLeft=_sl;
+  if(!N5S.timer)n5Poll()}
+
+function board(el){if(BD.u==null)BD.u=PREF.uni||"n50";if(BD.u==="n500"&&N5)return board500(el);const ev=s=>S[s].events[0],m=s=>LM[s]||{},su=s=>m(s).setup;
   const F={all:()=>true,lead:s=>m(s).status==="lead",improve:s=>m(s).status==="improve",fade:s=>m(s).status==="fade",weak:s=>m(s).status==="weak",cheap:s=>(RX(s).models_rank?.book3??0)>=.67&&["lead","improve"].includes(m(s).status),
     setup:s=>!!su(s),breakout:s=>su(s)?.k==="breakout",coiled:s=>su(s)?.k==="coiled",pullback:s=>su(s)?.k==="pullback",turn:s=>su(s)?.k==="turn"};
   if(!F[BD.f])BD.f="all";
@@ -934,7 +994,7 @@ function board(el){const ev=s=>S[s].events[0],m=s=>LM[s]||{},su=s=>m(s).setup;
      <div><span class="pill ${L[1]}">${L[0]}</span>${x.setup?`<span class="pill b">${SU_L[x.setup.k][0]}</span>`:""}</div><div class="cm">score ${x.score} · vs Nifty 1M ${pp(x.rs1,1)}</div></div>
      <div>${sparkS(s)}</div><div class="cp"><b>${f2(x.last)}</b><span class="${ud(x.r1)}">${pp(x.r1,2)}</span></div></button>`};
   const _sl=el.querySelector(".setups")?.scrollLeft||0,_op=[...el.querySelectorAll("details")].map(d=>d.open),_ct=el.querySelector(".tw")?.scrollTop||0;
-  el.innerHTML=`<section class="pnl"><div class="ph"><h2>WHAT IS SETTING UP <em>MAY MOVE NEXT</em></h2><span class="sub">tap a group to filter</span></div>
+  el.innerHTML=`${uniRow()}<section class="pnl"><div class="ph"><h2>WHAT IS SETTING UP <em>MAY MOVE NEXT</em></h2><span class="sub">tap a group to filter</span></div>
    <div class="setups">${["turn","pullback","coiled","breakout"].map(k=>`<button class="su" data-bf="${k}" aria-pressed="${BD.f===k}"><b>${SU_L[k][0]}<em>${cnt(k)}</em></b><span>${suStat(k,1)}</span></button>`).join("")}</div>
    <details class="how"><summary>WHAT THESE MEAN AND HOW THEY TESTED</summary><div class="brief" style="padding:0">${["turn","pullback","coiled","breakout"].map(k=>`<p><b>${SU_L[k][0]}.</b> ${SU_L[k][1]} <span style="color:var(--dim)">${suStat(k)}</span></p>`).join("")}<p style="color:var(--dim)">${SETUP_BT?esc(SETUP_BT.note||""):""} "Typical stock" is the average of all Nifty 50 stock-days in the same kind of market, so the numbers show what the setup adds. A setup says a stock is in position; it is not a forecast. Each has a level to watch and a level where the setup fails.</p></div></details></section>
   <section class="pnl"><div class="ph"><h2>LIVE RANK <em>NIFTY 50</em></h2><span class="sub">re-ranked from prices${age!=null?` ${age}s ago`:""} · bars to ${esc(RM.asof||"")}</span></div>
@@ -946,7 +1006,7 @@ function board(el){const ev=s=>S[s].events[0],m=s=>LM[s]||{},su=s=>m(s).setup;
    <details class="how"><summary>HOW THE RANK WORKS</summary><p class="note" style="padding:0">SCORE (0–100) is the average of six percentile ranks within the Nifty 50, recomputed on every price tick: 200-day average slope 20%, 12-month momentum skipping the last month 20%, 6-month strength vs Nifty 20%, distance above the 200-day 15%, 3-month strength vs Nifty 15%, closeness to the 52-week high 10%. The weights follow this terminal's own test on 167 NSE stocks. STATUS is a live gate: Leader = above its 20, 50 and 200-day averages, ahead of the Nifty over 1 and 3 months, within 15% of its high, score 60+. Improving = above the 20 and 50-day and ahead of the Nifty this month. Fading = a strong longer record but more than 2% behind the Nifty over the last month (or behind it and below the 20-day average): 20 points are taken off. Weak = below the 50 and 200-day (score capped at 35). The Fading rule is a judgement rule, not a tested one. ▲▼ = places moved since the previous close. VALUE RANK (100 = cheapest) comes from the monthly valuation models and is not in the score. Not investment advice.</p></details></section>`;
   el.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{BD.f=BD.f===b.dataset.bf&&SU_L[b.dataset.bf]?"all":b.dataset.bf;renderSub("board")});
   el.querySelectorAll("th[data-bk]").forEach(h=>h.onclick=()=>{const k=h.dataset.bk;BD.d=BD.k===k?-BD.d:(k==="sym"||k==="evt"?1:-1);BD.k=k;renderSub("board")});
-  el.querySelectorAll("[data-s]").forEach(r=>r.onclick=()=>stockSheet(r.dataset.s));
+  el.querySelectorAll("[data-s]").forEach(r=>r.onclick=()=>stockSheet(r.dataset.s));uniWire(el);
   el.querySelectorAll("details").forEach((d,i)=>{if(_op[i])d.open=true});const _s=el.querySelector(".setups");if(_s)_s.scrollLeft=_sl;const _t=el.querySelector(".tw");if(_t)_t.scrollTop=_ct;}
 
 /* ---------- PICKS (regime-aware, with reasons) ---------- */
