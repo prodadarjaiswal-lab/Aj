@@ -138,6 +138,67 @@ tbody tr{cursor:pointer} tbody tr:hover td{background:var(--raise)}
 .pcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:8px}
 .pkl{display:flex;flex-direction:column}
 .pk{padding:8px 10px;border-bottom:1px solid var(--line);font-family:var(--f-text);font-size:14px;line-height:1.4;color:var(--text)}
+
+/* ===== themes, mobile app layout, accordions, cards, sheet ===== */
+:root{--r:0px}
+:root[data-theme="light"]{--ink:#f2f4f7;--panel:#ffffff;--raise:#eaeef2;--line:#d5dbe2;--dim:#687585;--text:#26303a;--bright:#0a1016;--amber:#b56500;--up:#0f8a4b;--down:#cf3532;--blue:#1c6db3;--violet:#7a4fd0;--cyan:#0f8f86;color-scheme:light}
+:root[data-theme="black"]{--ink:#000;--panel:#060708;--raise:#101317;--line:#1b2026}
+:root[data-accent="blue"]{--amber:#5aa9e6}:root[data-accent="green"]{--amber:#3fbf6f}:root[data-accent="violet"]{--amber:#b58cf0}
+:root[data-theme="light"][data-accent="blue"]{--amber:#1c6db3}:root[data-theme="light"][data-accent="green"]{--amber:#0f8a4b}:root[data-theme="light"][data-accent="violet"]{--amber:#7a4fd0}
+.pnl,.acc-h,.card,.b,.search input{border-radius:var(--r)}
+.mob{display:none!important}
+#theme-btn{padding:3px 8px}
+.acc{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.acc-h{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;background:var(--panel);border:1px solid var(--line);color:var(--bright);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;border-radius:var(--r)}
+.acc-h:hover{border-color:var(--dim)} .acc-h:focus-visible{outline:1px solid var(--amber)}
+.acc-h i{font-style:normal;color:var(--amber);transition:transform .15s} .acc-h[aria-expanded="false"] i{transform:rotate(-90deg)}
+.acc-h small{color:var(--dim);font-weight:400;letter-spacing:.04em;text-transform:none;font-size:11px;margin-left:auto}
+.setups{display:flex;gap:8px;overflow-x:auto;padding:8px 10px 2px;scrollbar-width:none}
+.setups::-webkit-scrollbar{display:none}
+.su{all:unset;cursor:pointer;flex:0 0 auto;min-width:150px;max-width:230px;border:1px solid var(--line);background:var(--raise);padding:8px 10px;border-radius:var(--r)}
+.su[aria-pressed="true"]{border-color:var(--amber)} .su b{display:block;color:var(--bright);font-size:12px} .su b em{font-style:normal;color:var(--amber);margin-left:6px}
+.su .pill{display:inline-block!important;color:inherit}.su .pill.g{color:var(--up)}.su .pill.a{color:var(--amber)}
+.su span{display:block;color:var(--dim);font-size:10px;line-height:1.35;margin-top:3px;white-space:normal}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:6px;padding:8px 10px}
+.card{all:unset;cursor:pointer;display:grid;grid-template-columns:minmax(0,1.25fr) 76px minmax(0,.9fr);gap:8px;align-items:center;border:1px solid var(--line);background:var(--raise);padding:9px 10px;border-radius:var(--r)}
+.card:hover,.card:focus-visible{border-color:var(--amber)}
+.card .cs{font-weight:600;color:var(--bright);font-size:13px;letter-spacing:.04em}
+.card .cm{color:var(--dim);font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .cp{text-align:right} .card .cp b{display:block;color:var(--bright);font-size:13px;font-weight:500} .card .cp span{font-size:12px}
+.card .pill{margin-top:4px}
+.pill.b{border-color:var(--blue);color:var(--blue)}
+#sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+#sheet .sh-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#sheet .sh-card{position:relative;width:min(100%,560px);max-height:86vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;padding:0 0 max(12px,env(safe-area-inset-bottom))}
+@media (min-width:701px){#sheet{align-items:center}#sheet .sh-card{border-bottom:1px solid var(--line);border-radius:10px}}
+.sh-h{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
+.sh-h b{color:var(--amber);letter-spacing:.1em} .sh-h button{all:unset;cursor:pointer;padding:4px 10px;color:var(--dim);font-size:16px}
+.sh-b{padding:10px 12px;font-family:var(--f-text);font-size:14px;line-height:1.45;color:var(--text)}
+.sh-b .qt{font-family:var(--f-mono);margin:8px 0} .sh-b .box{border:1px solid var(--line);background:var(--raise);padding:8px 10px;margin:8px 0;border-radius:var(--r)}
+.sh-b .box small{display:block;color:var(--amber);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;margin-bottom:3px}
+.sh-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px} .sh-row .b{flex:1;text-align:center;padding:9px 8px}
+.opt-row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px} .opt-row .b[aria-pressed="true"]{border-color:var(--amber);color:var(--amber)}
+details.how{padding:0 10px 8px} details.how summary{cursor:pointer;color:var(--amber);font-size:11px;letter-spacing:.08em;padding:6px 0}
+@media (max-width:700px){
+  :root{--r:12px}
+  body{font-size:13px}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;height:100dvh;min-height:0}
+  #ws{grid-column:1;grid-row:2}
+  .rail{grid-row:3;flex-direction:row;justify-content:space-around;align-items:stretch;border-top:1px solid var(--line);border-bottom:0;padding:0 0 env(safe-area-inset-bottom,0px);overflow:visible;gap:0}
+  .rail small,.rail button:not(.big),.rail .wl{display:none}
+  .mob{display:flex!important}
+  .rail button.big{flex:1 1 0;align-items:center;justify-content:center;padding:8px 2px 7px;font-size:10px;letter-spacing:.08em;box-shadow:none}
+  .rail button.big::before{content:attr(data-ic);font-size:18px;line-height:1;margin-bottom:3px}
+  .rail button.big span{display:none}
+  .rail button[aria-current="true"]{background:none;box-shadow:inset 0 2px 0 var(--amber)}
+  .top{gap:6px 10px;padding:7px 10px} .clocks{display:none} .search{flex:1 1 50px;min-width:50px;max-width:none} .search kbd{display:none}
+  .feeds{margin-left:0;width:100%;font-size:10px;gap:8px}
+  .ws{padding:8px;gap:8px} .chips{position:static;margin:0;padding:2px 2px 6px}
+  .acc-h{padding:12px 14px;font-size:12px}
+  th,td{padding:7px 8px} .brief{font-size:15px}
+  .cards{padding:8px}
+}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -148,13 +209,15 @@ tbody tr{cursor:pointer} tbody tr:hover td{background:var(--raise)}
     <span class="clocks"><span>IST <b id="c-ist"></b></span><span class="x">NY <b id="c-ny"></b></span><span class="x">LDN <b id="c-ldn"></b></span><span class="x">TYO <b id="c-tyo"></b></span></span>
     <label class="search"><input id="sym" list="symlist" placeholder="Symbol or name…" autocomplete="off" aria-label="Search symbol"><kbd>Ctrl K</kbd></label>
     <datalist id="symlist"></datalist>
+    <button id="theme-btn" class="b" aria-label="Display settings" title="Display: light, dark, colours">◐</button>
     <span class="feeds"><span>prices <b>Dhan</b> · <b id="asof"></b></span><span>news <b id="nasof"></b></span><span id="live"></span></span>
   </header>
   <nav class="rail" aria-label="Functions">
-    <button data-v="market" class="big">TODAY<span>brief · flows · events</span></button>
-    <button data-v="screener" class="big">BOARD<span>live rank · shortlists · options</span></button>
-    <button data-v="desk" class="big">STOCK<span>chart · why · valuation · results</span></button>
-    <button data-v="news" class="big">NEWS<span>stock · market · NSE filings</span></button>
+    <button data-v="market" class="big" data-ic="◉">TODAY<span>brief · flows · events</span></button>
+    <button data-v="screener" class="big" data-ic="▤">BOARD<span>live rank · shortlists · options</span></button>
+    <button data-v="desk" class="big" data-ic="◭">STOCK<span>chart · why · valuation · results</span></button>
+    <button data-v="news" class="big" data-ic="✉">NEWS<span>stock · market · NSE filings</span></button>
+    <button id="more-btn" class="big mob" data-ic="⋯">MORE</button>
     <small>MORE</small>
     <button data-v="sectors">SECTORS</button>
     <button data-v="deep">TABLES &amp; TESTS</button>
@@ -211,13 +274,13 @@ function go(v){
   if(v==="chart"&&tab==="desk"&&$("sv-chart")){renderSub("chart");return}
   if(v==="chart")v="desk";if(v==="sus"&&!$("sv-sus"))v="deep";
   if(v==="chg")v="chgs";if(v==="research"||v==="valuation")v="desk";
-  if(SUBF&&SUBF[v]&&v!=="chart"&&$("sv-"+v)){renderSub(v);return}
+  if(SUBF&&SUBF[v]&&v!=="chart"&&$("sv-"+v)){openSub(v);return}
   view=v;document.querySelectorAll(".rail button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v?"true":"false"));
   killCharts();const ws=$("ws");
   if(v.startsWith("o:"))v="desk";
   if(TABS[v]){tab=v;layout(v);ws.scrollTop=0;return}
   tab=v;ws.className="ws";({macro,basis})[v](ws);ws.scrollTop=0;}
-document.querySelectorAll(".rail button").forEach(b=>b.onclick=()=>go(b.dataset.v));
+document.querySelectorAll(".rail button[data-v]").forEach(b=>b.onclick=()=>go(b.dataset.v));
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go3]");if(b)go(b.dataset.go3)});
 
 /* indicators */
@@ -620,11 +683,6 @@ function chgSec(el){chg(el);}
 function killIn(el){for(let i=charts.length-1;i>=0;i--){const c=charts[i];if(!c.__el||el.contains(c.__el)){try{c.remove()}catch(e){}charts.splice(i,1)}}}
 let SUBF;
 function renderSub(k){const el=$("sv-"+k);if(!el)return false;killIn(el);SUBF[k](el);return true}
-function layout(t){const ws=$("ws");ws.className="ws";const L=TABS[t];
-  ws.innerHTML=`<nav class="chips" aria-label="Sections">${L.map(([k,l])=>`<a href="#" data-j="${k}">${l}</a>`).join("")}${["desk","research","valuation"].includes(t)?`<span class="deskname"><b>${sym}</b> ${esc(S[sym].name)} </span>`:""}</nav>`+L.map(([k])=>`<div class="sv" id="sv-${k}"></div>`).join("");
-  ws.querySelectorAll("[data-j]").forEach(a=>a.onclick=e=>{e.preventDefault();$("sv-"+a.dataset.j).scrollIntoView({behavior:"smooth",block:"start"})});
-  ws.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
-  for(const [k] of L){try{SUBF[k]($("sv-"+k))}catch(e){console.error(k,e);$("sv-"+k).innerHTML=`<p class="note">${k}: ${esc(e.message)}</p>`}}}
 /* desk sub-views */
 function kv(items){return `<div class="kpis">${items.map(([a,b,c])=>`<div title="${esc(c||"")}"><small>${a}</small><b>${b}</b></div>`).join("")}</div>`}
 function dval(el){const f=(N.fund?.stk||{})[sym]||{},v=S[sym].val,x=S[sym];const TD=(window.TERMDATA?.val?.stocks||{})[sym]||{};
@@ -700,7 +758,19 @@ function lmCalc(off){
       rs1:rs(21),rs3:rs(63),rs6:rs(126),rs12:rs(250),
       mom:n>252?c[n-22]/c[n-253]-1:(n>60?c[n-22]/c[0]-1:null),
       vs20:m20?last/m20-1:null,vs50:m50?last/m50-1:null,vs200:m200?last/m200-1:null,
-      sl200:m200&&m200p?m200/m200p-1:null,golden:m50&&m200?m50>m200:null,hi52:last/hi-1}}
+      sl200:m200&&m200p?m200/m200p-1:null,golden:m50&&m200?m50>m200:null,hi52:last/hi-1};
+    if(off===0&&n>221&&m200&&m200p){const h=o.h||c,l=o.l||c,x=M[s];
+      const prevHi=Math.max(...h.slice(n-21,n-1)),lo10=Math.min(...l.slice(n-10,n));
+      const bb=i=>{if(i<20)return null;const w=c.slice(i-20,i),mu=w.reduce((a,b)=>a+b,0)/20;return 4*Math.sqrt(w.reduce((a,b)=>a+(b-mu)*(b-mu),0)/20)/mu};
+      const bnow=bb(n);let lt=0,tot=0;for(let i=n-119;i<=n;i++){const v=bb(i);if(v==null)continue;tot++;if(v<bnow)lt++}const bbp=tot?lt/tot:1;
+      let ag=0,al=0;for(let i=1;i<=14;i++){const d=c[i]-c[i-1];ag+=Math.max(d,0);al+=Math.max(-d,0)}ag/=14;al/=14;for(let i=15;i<n;i++){const d=c[i]-c[i-1];ag=(ag*13+Math.max(d,0))/14;al=(al*13+Math.max(-d,0))/14}
+      x.rsi=al===0?100:100-100/(1+ag/al);
+      const a20=last>m20,a50=last>m50,a200=last>m200,pull=last/Math.max(...c.slice(n-20,n))-1,m50p=ma(50,n-10);
+      const nn=nc.length,rl=[];for(let k=0;k<63;k++){const a=c[n-1-k],b=nc[nn-1-k];if(a&&b)rl.push(a/b)}
+      const k=(last>prevHi&&a50)?"breakout":(a50&&(a200||x.sl200>0)&&x.hi52>-.10&&bbp<=.25&&last>=prevHi*.96)?"coiled"
+        :(a50&&a200&&x.sl200>0&&(x.rs3??-1)>0&&pull>=-.10&&pull<=-.03&&x.vs20>=-.04&&x.vs20<=.01&&x.rsi>=38&&x.rsi<=58)?"pullback"
+        :((x.vs200??1)<=.03&&a50&&a20&&m50p&&m50>m50p&&(x.rs1??0)>.02&&rl.length&&rl[0]>=.995*Math.max(...rl))?"turn":null;
+      if(k)x.setup={k,trig:k==="pullback"?h[n-2]:prevHi,fail:k==="turn"?m50:k==="pullback"?Math.min(lo10,m50):lo10}}}
   const P=f=>{const v=Object.entries(M).map(([s,m])=>[s,m[f]]).filter(a=>a[1]!=null&&isFinite(a[1])).sort((a,b)=>a[1]-b[1]);const o={};v.forEach(([s],i)=>o[s]=v.length>1?i/(v.length-1):.5);return o};
   const W=[["sl200",.20],["mom",.20],["rs6",.20],["vs200",.15],["rs3",.15],["hi52",.10]],R={};W.forEach(([f])=>R[f]=P(f));
   for(const[s,m]of Object.entries(M)){
@@ -772,13 +842,81 @@ function regimeStrip(){const B=N.breadth||{};return kv([["Nifty 50",f2(RM.nifty,
   ["From recent top",RM.peak?pp(RM.from_peak,1)+" (since "+RM.peak.slice(5)+")":pp(RM.from_52wh,1)],["From 52-week high",pp(RM.from_52wh,1)],["India VIX",f2(RM.vix,1)+" (1y median "+f2(RM.vix_1y_med,1)+")"],["USD/INR",f2(RM.inr,2)],["Rupee 3M / 1Y",pp(-RM.inr_3m,1)+" / "+pp(-RM.inr_1y,1),"Positive = rupee stronger"],["Above 200-DMA",(B.a200??"–")+" of "+(B.n??50)]])}
 function regimeText(){const e=EV.detect?.to_trough||{};return WEAK?`<b>The Nifty is in a weak market</b>: ${regTxt(RM.reg)} for ${RM.days_in_reg} trading days, ${pp(RM.from_peak,1)} from its ${RM.peak} top and ${pp(RM.from_52wh,1)} from its 52-week high. In markets like this, since 2007: <b>stocks that held up in earlier falls kept holding up until the low</b> (${e.pos} of ${e.n} falls; top fifth ${pp(e.top,1)} vs Nifty, bottom fifth ${pp(e.bot,1)}), but <b>leadership flips in the rebound</b> and ordinary momentum ranks stop working (3-month rank correlation ${f2(EV.signals?.mom12_1?.down_3?.ic,3)} in weak months vs ${f2(EV.signals?.mom12_1?.up_3?.ic,3)} in uptrends). So the board ranks by the fall record, how the stock is doing in this fall, and the tested valuation trio — not by recent momentum alone.`
   :`<b>The Nifty is in an uptrend</b> (${regTxt(RM.reg)}). In uptrends since 2008, momentum and strength vs the Nifty have predicted the next 3 months (rank correlation ${f2(EV.signals?.mom12_1?.up_3?.ic,3)}, t ${f2(EV.signals?.mom12_1?.up_3?.t,1)}), so the board ranks by 6-month strength, the 200-day trend and the valuation trio.`}
-function board(el){const f=(N.fund?.stk||{}),ev=s=>S[s].events[0],m=s=>LM[s]||{};
-  const F={all:()=>true,lead:s=>m(s).status==="lead",improve:s=>m(s).status==="improve",fade:s=>m(s).status==="fade",weak:s=>m(s).status==="weak",cheap:s=>(RX(s).models_rank?.book3??0)>=.67&&["lead","improve"].includes(m(s).status)};
+const SETUP_BT=/*BT*/{"setups":{"breakout":{"n":2929,"m10":0.00266,"m21":0.00681,"hit10":0.4998,"hit21":0.5121,"t21":5.01,"up":{"n":2381,"m10":0.00316,"m21":0.00846,"hit10":0.4994,"hit21":0.522,"t21":5.64},"weak":{"n":548,"m10":0.00053,"m21":-0.00034,"hit10":0.5018,"hit21":0.469,"t21":-0.11}},"coiled":{"n":1367,"m10":0.00363,"m21":0.0063,"hit10":0.5304,"hit21":0.5238,"t21":3.64,"up":{"n":1173,"m10":0.00367,"m21":0.00741,"hit10":0.5234,"hit21":0.5226,"t21":3.97},"weak":{"n":194,"m10":0.00339,"m21":-0.00042,"hit10":0.5722,"hit21":0.5309,"t21":-0.09}},"pullback":{"n":1486,"m10":0.00542,"m21":0.00534,"hit10":0.5195,"hit21":0.5027,"t21":2.93,"up":{"n":1153,"m10":0.00795,"m21":0.00815,"hit10":0.5325,"hit21":0.5048,"t21":3.97},"weak":{"n":333,"m10":-0.00334,"m21":-0.00439,"hit10":0.4745,"hit21":0.4955,"t21":-1.12}},"turn":{"n":167,"m10":0.00488,"m21":0.01031,"hit10":0.5269,"hit21":0.5749,"t21":1.7,"up":{"n":68,"m10":0.0063,"m21":0.01624,"hit10":0.5882,"hit21":0.6765,"t21":2.21},"weak":{"n":99,"m10":0.0039,"m21":0.00623,"hit10":0.4848,"hit21":0.5051,"t21":0.7}}},"base":{"n":12719,"m10":0.00337,"m21":0.00704,"hit10":0.505,"hit21":0.5217,"t21":11.32,"up":{"n":9346,"m10":0.0042,"m21":0.00817,"hit10":0.5076,"hit21":0.5229,"t21":11.31},"weak":{"n":3373,"m10":0.00105,"m21":0.00391,"hit10":0.4978,"hit21":0.5185,"t21":3.21}},"asof":"2026-11-11","from":"2020-10-13","stocks":50,"note":"Excess return vs Nifty after the first day a setup appears. Today's Nifty 50 members (survivorship bias). t is naive."}/*BT*/;
+/* ===== theme, bottom sheet, accordions ===== */
+const PREF=(()=>{try{return JSON.parse(localStorage.getItem("nset-ui")||"{}")}catch(e){return {}}})();
+const savePref=()=>{try{localStorage.setItem("nset-ui",JSON.stringify(PREF))}catch(e){}};
+function applyTheme(){const r=document.documentElement;r.dataset.theme=PREF.theme||"dark";r.dataset.accent=PREF.accent||"amber"}
+applyTheme();
+function openSheet(title,html,mount){closeSheet();const d=document.createElement("div");d.id="sheet";
+  d.innerHTML=`<div class="sh-bg"></div><div class="sh-card" role="dialog" aria-label="${esc(title)}"><div class="sh-h"><b>${esc(title)}</b><button aria-label="Close">✕</button></div><div class="sh-b">${html}</div></div>`;
+  document.body.appendChild(d);d.querySelector(".sh-bg").onclick=closeSheet;d.querySelector(".sh-h button").onclick=closeSheet;if(mount)mount(d.querySelector(".sh-b"));}
+function closeSheet(){const d=$("sheet");if(d)d.remove();SHEET_SYM=null}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+function themeSheet(){const T=[["dark","Dark"],["light","Light"],["black","Black (OLED)"]],A=[["amber","Amber"],["blue","Blue"],["green","Green"],["violet","Violet"]];
+  const body=()=>`<div><b>Background</b></div><div class="opt-row">${T.map(([k,l])=>`<button class="b" data-th="${k}" aria-pressed="${(PREF.theme||"dark")===k}">${l}</button>`).join("")}</div>
+   <div><b>Accent colour</b></div><div class="opt-row">${A.map(([k,l])=>`<button class="b" data-ac="${k}" aria-pressed="${(PREF.accent||"amber")===k}">${l}</button>`).join("")}</div>
+   <div><b>Board layout</b></div><div class="opt-row">${[["auto","Auto"],["cards","Cards"],["table","Table"]].map(([k,l])=>`<button class="b" data-bv="${k}" aria-pressed="${(PREF.board||"auto")===k}">${l}</button>`).join("")}</div>
+   <p class="note" style="padding:0">Saved on this device.</p>`;
+  const mount=el=>{el.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{PREF.theme=b.dataset.th;savePref();applyTheme();el.innerHTML=body();mount(el);go(view)});
+    el.querySelectorAll("[data-ac]").forEach(b=>b.onclick=()=>{PREF.accent=b.dataset.ac;savePref();applyTheme();el.innerHTML=body();mount(el);go(view)});
+    el.querySelectorAll("[data-bv]").forEach(b=>b.onclick=()=>{PREF.board=b.dataset.bv;savePref();el.innerHTML=body();mount(el);if($("sv-board"))renderSub("board")})};
+  openSheet("DISPLAY",body(),mount)}
+function moreSheet(){openSheet("MORE",`<div class="sh-row" style="flex-direction:column">${[["sectors","Sectors: heatmap, valuation, what changed"],["deep","Tables & tests: screener, technicals, valuation tables, scoreboard"],["macro","Macro: rupee, yields, crude, inflation"],["basis","Method & sources"]].map(([k,l])=>`<button class="b" data-mv="${k}" style="text-align:left">${l}</button>`).join("")}<button class="b" id="mv-theme" style="text-align:left">Display: light, dark, colours</button></div>`,
+  el=>{el.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>{closeSheet();go(b.dataset.mv)});el.querySelector("#mv-theme").onclick=themeSheet})}
+const foldOpen=(t,k,i)=>{const v=(PREF.fold||{})[t+":"+k];return v==null?(i===0||(i===1&&innerWidth>1000)):!!v};
+function setFold(t,k,on){PREF.fold=PREF.fold||{};PREF.fold[t+":"+k]=on?1:0;savePref()}
+function openSub(k){const el=$("sv-"+k);if(!el)return false;const h=el.previousElementSibling;
+  if(el.hidden){el.hidden=false;if(h)h.setAttribute("aria-expanded","true");setFold(tab,k,true)}
+  try{renderSub(k)}catch(e){console.error(k,e)}(h||el).scrollIntoView({behavior:"smooth",block:"start"});return true}
+function layout(t){const ws=$("ws");ws.className="ws";const L=TABS[t];
+  ws.innerHTML=(t==="desk"?`<div class="chips"><span class="deskname" style="margin-left:0"><b>${sym}</b> ${esc(S[sym].name)}</span>${symSel("pg-sel")}</div>`:"")+
+    L.map(([k,l],i)=>{const o=foldOpen(t,k,i);return `<section class="acc"><button class="acc-h" data-acc="${k}" aria-expanded="${o}"><span>${l}</span><i>▾</i></button><div class="sv" id="sv-${k}"${o?"":" hidden"}></div></section>`}).join("");
+  const ps=$("pg-sel");if(ps)ps.onchange=e=>{setSym(e.target.value);go("desk")};
+  ws.querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>{const k=b.dataset.acc,el=$("sv-"+k),on=el.hidden;el.hidden=!on;b.setAttribute("aria-expanded",String(on));setFold(t,k,on);
+    if(on){try{renderSub(k)}catch(e){console.error(k,e);el.innerHTML=`<p class="note">${k}: ${esc(e.message)}</p>`}}else killIn(el)});
+  for(const [k] of L){const el=$("sv-"+k);if(el.hidden)continue;try{SUBF[k](el)}catch(e){console.error(k,e);el.innerHTML=`<p class="note">${k}: ${esc(e.message)}</p>`}}}
+
+const SU_L={breakout:["Breaking out","New 20-day high while above the 50-day average."],
+ coiled:["Coiled near highs","Range is in the tightest quarter of the last 6 months, within 10% of the 52-week high and just under the 20-day high."],
+ pullback:["Pullback in uptrend","Rising 200-day trend and ahead of the Nifty over 3 months; now 3–10% off its 20-day high, resting near the 20-day average."],
+ turn:["Turning up early","Not yet stretched above the 200-day; back above a rising 50-day, beating the Nifty this month, strength line at a 3-month high."]};
+function suEdge(k){const b=SETUP_BT&&SETUP_BT.setups&&SETUP_BT.setups[k],B=SETUP_BT&&SETUP_BT.base;if(!b||!B||b.m21==null)return null;
+  const g=WEAK?b.weak:b.up,G=WEAK?B.weak:B.up;const use=g&&g.m21!=null&&G&&G.m21!=null;
+  return {n:use?g.n:b.n,e21:(use?g.m21-G.m21:b.m21-B.m21),e10:(use?g.m10-G.m10:b.m10-B.m10),hit:use?g.hit21:b.hit21,all:b,base:B,mk:WEAK?"weak":"rising"}}
+function suVerdict(k){const e=suEdge(k);if(!e)return ["untested",""];return e.e21>=.003&&e.n>=50?["small edge","g"]:e.e10>=.003&&e.n>=50?["short-term edge","a"]:["no edge found",""]}
+function suStat(k,short){const e=suEdge(k);if(!e)return "Back-test pending.";const v=suVerdict(k);
+  return short?`<span class="pill ${v[1]}" style="margin:0 0 3px">${v[0]}</span><br>${e.n} cases in ${e.mk} markets: ${v[0]==="short-term edge"?pp(e.e10,1)+" vs a typical Nifty 50 stock after 10 days":pp(e.e21,1)+" vs a typical Nifty 50 stock after 21 days"}`
+   :`Test on ${SETUP_BT.stocks} Nifty 50 stocks, ${SETUP_BT.from.slice(0,4)}–${SETUP_BT.asof.slice(0,4)}: in ${e.mk} markets like now, ${e.n} cases returned ${pp(e.e10,1)} more than a typical Nifty 50 stock after 10 days and ${pp(e.e21,1)} after 21 days; ${pctx(e.hit)} beat the Nifty. All ${e.all.n} cases: ${pp(e.all.m21-e.base.m21,1)} after 21 days. Verdict: ${v[0]}.`}
+function sparkS(s,n=40,w=76,h=28){const c=S[s].ohlc.c.slice(-n);if(c.length<2)return "";const lo=Math.min(...c),hi=Math.max(...c),sp=hi-lo||1;
+  const pts=c.map((v,i)=>`${(i/(c.length-1)*w).toFixed(1)},${(h-2-(v-lo)/sp*(h-4)).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(${c[c.length-1]>=c[0]?"--up":"--down"})" stroke-width="1.4"/></svg>`}
+let SHEET_SYM=null;
+function stockSheetHTML(s){const m=LM[s]||{},L=LM_L[m.status]||["–",""],su=m.setup,ev=S[s].events[0],v=RX(s).models_rank?.book3;
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="color:var(--dim)">${esc(S[s].name)}</span><span><b style="font-family:var(--f-mono);font-size:20px;color:var(--bright)">${f2(m.last)}</b> <span class="${ud(m.r1)}">${pp(m.r1,2)}</span></span></div>
+   <div style="margin:6px 0"><span class="pill ${L[1]}">${L[0]}</span><span class="pill">rank ${m.rank??"–"} of 50</span><span class="pill a">score ${m.score??"–"}</span>${su?`<span class="pill b">${SU_L[su.k][0]}</span>`:""}</div>
+   <div>${sparkS(s,120,520,70).replace('width="520"','width="100%"')}</div>
+   <div class="box"><small>WHERE IT STANDS</small>${m.why||""}</div>
+   ${su?`<div class="box"><small>SETUP · ${SU_L[su.k][0].toUpperCase()}</small>${SU_L[su.k][1]}<br><b>Watch:</b> ${su.k==="breakout"?`holding above ${f2(su.trig)} (the old 20-day high)`:`a move above ${f2(su.trig)}`}. <b>Setup fails</b> below ${f2(su.fail)}.<br><span style="color:var(--dim)">${suStat(su.k)}</span></div>`:`<div class="box"><small>SETUP</small>No setup right now.</div>`}
+   <dl class="qt"><dt>1 week</dt><dd class="${ud(m.r5)}">${pp(m.r5,1)}</dd><dt>1 month</dt><dd class="${ud(m.r21)}">${pp(m.r21,1)}</dd><dt>3 months</dt><dd class="${ud(m.r63)}">${pp(m.r63,1)}</dd><dt>6 months</dt><dd class="${ud(m.r126)}">${pp(m.r126,1)}</dd>
+    <dt>vs Nifty 1M</dt><dd class="${ud(m.rs1)}">${pp(m.rs1,1)}</dd><dt>vs Nifty 3M</dt><dd class="${ud(m.rs3)}">${pp(m.rs3,1)}</dd><dt>vs 20-day</dt><dd>${pp(m.vs20,1)}</dd><dt>vs 50-day</dt><dd>${pp(m.vs50,1)}</dd>
+    <dt>vs 200-day</dt><dd>${pp(m.vs200,1)}</dd><dt>From 52w high</dt><dd>${pp(m.hi52,1)}</dd><dt>RSI 14</dt><dd>${f2(m.rsi,0)}</dd><dt>Value rank</dt><dd>${v==null?"–":Math.round(v*100)}</dd></dl>
+   ${ev?`<div style="color:var(--dim)">Next event: ${esc(ev.date)} · ${esc(ev.purpose)}</div>`:""}
+   <div class="sh-row"><button class="b" data-sg="desk">Full stock page</button><button class="b" data-sg="opts">Options check</button></div>
+   <p class="note" style="padding:8px 0 0">Rule-based description, not investment advice.</p>`}
+function stockSheet(s){setSym(s);const mount=el=>{el.querySelectorAll("[data-sg]").forEach(b=>b.onclick=()=>{const k=b.dataset.sg;closeSheet();if(k==="desk")go("desk");else{go("screener");openSub("opts")}})};
+  openSheet(s,stockSheetHTML(s),mount);SHEET_SYM=s;SHEET_MOUNT=mount}
+let SHEET_MOUNT=null;
+function sheetTick(){if(!SHEET_SYM||!$("sheet"))return;const b=$("sheet").querySelector(".sh-b"),t=b.scrollTop;b.innerHTML=stockSheetHTML(SHEET_SYM);if(SHEET_MOUNT)SHEET_MOUNT(b);b.scrollTop=t}
+function board(el){const ev=s=>S[s].events[0],m=s=>LM[s]||{},su=s=>m(s).setup;
+  const F={all:()=>true,lead:s=>m(s).status==="lead",improve:s=>m(s).status==="improve",fade:s=>m(s).status==="fade",weak:s=>m(s).status==="weak",cheap:s=>(RX(s).models_rank?.book3??0)>=.67&&["lead","improve"].includes(m(s).status),
+    setup:s=>!!su(s),breakout:s=>su(s)?.k==="breakout",coiled:s=>su(s)?.k==="coiled",pullback:s=>su(s)?.k==="pullback",turn:s=>su(s)?.k==="turn"};
   if(!F[BD.f])BD.f="all";
   const pc=(get,d=1)=>s=>`<span class="${ud(get(s))}">${pp(get(s),d)}</span>`;
   const C=[["sym","STOCK",s=>s,"t",s=>`<b style="color:var(--bright)">${s}</b>`],
    ["rank","#",s=>-m(s).rank,"",s=>{const d=m(s).drank;return `${m(s).rank??"–"} <span class="${d>0?"up":d<0?"dn":""}" style="font-size:10px">${d>0?"▲"+d:d<0?"▼"+(-d):""}</span>`}],
    ["status","STATUS",s=>({lead:5,improve:4,neutral:3,fade:2,weak:1})[m(s).status],"t",s=>{const L=LM_L[m(s).status]||["–",""];return `<span class="pill ${L[1]}">${L[0]}</span>`}],
+   ["setup","SETUP",s=>su(s)?({breakout:4,coiled:3,pullback:2,turn:1})[su(s).k]:0,"t",s=>su(s)?`<span class="pill b">${SU_L[su(s).k][0]}</span>`:"–"],
    ["score","SCORE",s=>m(s).score,"",s=>`<b style="color:var(--amber)">${m(s).score??"–"}</b>`],
    ["last","LAST",s=>m(s).last,"",s=>f2(m(s).last)],
    ["1d","1D",s=>m(s).r1,"",pc(s=>m(s).r1,2)],["1w","1W",s=>m(s).r5,"",pc(s=>m(s).r5)],["1m","1M",s=>m(s).r21,"",pc(s=>m(s).r21)],["3m","3M",s=>m(s).r63,"",pc(s=>m(s).r63)],["6m","6M",s=>m(s).r126,"",pc(s=>m(s).r126)],
@@ -788,17 +926,27 @@ function board(el){const f=(N.fund?.stk||{}),ev=s=>S[s].events[0],m=s=>LM[s]||{}
    ["val","VALUE RANK",s=>RX(s).models_rank?.book3,"",s=>{const v=RX(s).models_rank?.book3;return v==null?"–":`<span class="${v>=.67?"up":v<=.33?"dn":""}">${Math.round(v*100)}</span>`}],
    ...(WEAK?[["wr","WEAK-MARKET ROLE",s=>({defend:4,rebound:3,neutral:2,avoid:1})[role(s).k],"t",s=>`<span class="pill ${role(s).t}">${role(s).l}</span>`]]:[]),
    ["evt","NEXT EVENT",s=>ev(s)?.date||"9","t",s=>ev(s)?`${ev(s).date.slice(5)} ${esc(ev(s).purpose.split("/")[0])}`:"–"]];
-  const col=C.find(c=>c[0]===BD.k)||C[3];const list=SYMS.filter(F[BD.f]).sort((a,b)=>{const A=col[2](a),B=col[2](b);if(A==null)return 1;if(B==null)return -1;return (A>B?1:A<B?-1:0)*BD.d||(m(a).rank-m(b).rank)});
+  const col=C.find(c=>c[0]===BD.k)||C[4];const list=SYMS.filter(F[BD.f]).sort((a,b)=>{const A=col[2](a),B=col[2](b);if(A==null)return 1;if(B==null)return -1;return (A>B?1:A<B?-1:0)*BD.d||(m(a).rank-m(b).rank)});
   const cnt=k=>SYMS.filter(F[k]).length,age=LM_AT?Math.round((Date.now()-LM_AT)/1000):null;
-  el.innerHTML=`<section class="pnl"><div class="ph"><h2>TOP OF THE BOARD <em>NIFTY 50 · LIVE RANK</em></h2><span class="sub">re-ranked from prices${age!=null?` ${age}s ago`:""} · bars to ${esc(RM.asof||"")} · tap a row for the stock page</span></div>
-   ${regimeStrip()}${WEAK?`<p class="brief"><b>Weak market.</b> In this terminal's own NSE test, trend and momentum ranks did <b>not</b> predict returns in weak markets (rank correlation about zero, 66 months). Treat the score as a description, not an edge, and read the WEAK-MARKET ROLE column.</p>`:""}
-   <div class="tb"><div class="g">${[["all","ALL"],["lead","LEADERS"],["improve","IMPROVING"],["fade","FADING"],["weak","WEAK"],["cheap","STRONG + CHEAP"]].map(([k,l])=>`<button class="b" aria-pressed="${BD.f===k}" data-bf="${k}">${l} <span style="color:var(--dim)">${cnt(k)}</span></button>`).join("")}</div></div>
-   <div class="tw board" style="margin-top:8px;max-height:72vh"><table><thead><tr>${C.map(c=>`<th class="${c[3]}" data-bk="${c[0]}">${c[1]}${BD.k===c[0]?(BD.d>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
-   <tbody>${list.map(s=>`<tr data-s="${s}" title="${esc(S[s].name)} — ${esc(m(s).why||"")}">${C.map(c=>`<td class="${c[3]}">${c[4](s)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-   <p class="note"><b>How the rank works.</b> SCORE (0–100) is the average of six percentile ranks within the Nifty 50, recomputed on every price tick: 200-day average slope 20%, 12-month momentum skipping the last month 20%, 6-month strength vs Nifty 20%, distance above the 200-day 15%, 3-month strength vs Nifty 15%, closeness to the 52-week high 10%. The weights follow this terminal's own test on 167 NSE stocks (3-month rank correlations in rising markets: +0.09, +0.09, +0.08, +0.08, +0.05, +0.06). <b>STATUS is a live gate:</b> Leader = above its 20, 50 and 200-day averages, ahead of the Nifty over 1 and 3 months, within 15% of its high, score 60+. Improving = above the 20 and 50-day and ahead of the Nifty this month. <b>Fading = a strong longer record but more than 2% behind the Nifty over the last month (or behind it and below the 20-day average): 20 points are taken off, so a lagging stock cannot sit at the top.</b> Weak = below the 50 and 200-day (score capped at 35). The Fading rule is a judgement rule, not a tested one: in the same test, last month's return alone did not predict the next three months. ▲▼ = places moved since the previous close. VALUE RANK (100 = cheapest) comes from the monthly valuation models and is not in the score. Not investment advice.</p></section>`;
-  el.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{BD.f=b.dataset.bf;renderSub("board")});
+  const cards=(PREF.board||"auto")==="cards"||((PREF.board||"auto")==="auto"&&innerWidth<=700);
+  const card=s=>{const x=m(s),L=LM_L[x.status]||["–",""],d=x.drank;return `<button class="card" data-s="${s}"><div><div class="cs">${s} <span style="color:var(--dim);font-weight:400;font-size:10px">#${x.rank}${d>0?` <span class="up">▲${d}</span>`:d<0?` <span class="dn">▼${-d}</span>`:""}</span></div>
+     <div><span class="pill ${L[1]}">${L[0]}</span>${x.setup?`<span class="pill b">${SU_L[x.setup.k][0]}</span>`:""}</div><div class="cm">score ${x.score} · vs Nifty 1M ${pp(x.rs1,1)}</div></div>
+     <div>${sparkS(s)}</div><div class="cp"><b>${f2(x.last)}</b><span class="${ud(x.r1)}">${pp(x.r1,2)}</span></div></button>`};
+  const _sl=el.querySelector(".setups")?.scrollLeft||0,_op=[...el.querySelectorAll("details")].map(d=>d.open),_ct=el.querySelector(".tw")?.scrollTop||0;
+  el.innerHTML=`<section class="pnl"><div class="ph"><h2>WHAT IS SETTING UP <em>MAY MOVE NEXT</em></h2><span class="sub">tap a group to filter</span></div>
+   <div class="setups">${["turn","pullback","coiled","breakout"].map(k=>`<button class="su" data-bf="${k}" aria-pressed="${BD.f===k}"><b>${SU_L[k][0]}<em>${cnt(k)}</em></b><span>${suStat(k,1)}</span></button>`).join("")}</div>
+   <details class="how"><summary>WHAT THESE MEAN AND HOW THEY TESTED</summary><div class="brief" style="padding:0">${["turn","pullback","coiled","breakout"].map(k=>`<p><b>${SU_L[k][0]}.</b> ${SU_L[k][1]} <span style="color:var(--dim)">${suStat(k)}</span></p>`).join("")}<p style="color:var(--dim)">${SETUP_BT?esc(SETUP_BT.note||""):""} "Typical stock" is the average of all Nifty 50 stock-days in the same kind of market, so the numbers show what the setup adds. A setup says a stock is in position; it is not a forecast. Each has a level to watch and a level where the setup fails.</p></div></details></section>
+  <section class="pnl"><div class="ph"><h2>LIVE RANK <em>NIFTY 50</em></h2><span class="sub">re-ranked from prices${age!=null?` ${age}s ago`:""} · bars to ${esc(RM.asof||"")}</span></div>
+   <details class="how"><summary>MARKET STATE: ${(REGN[RM.reg]||"–").toUpperCase()} · NIFTY ${f2(RM.nifty,0)}</summary>${regimeStrip()}</details>${WEAK?`<p class="brief"><b>Weak market.</b> In this terminal's own NSE test, trend and momentum ranks did <b>not</b> predict returns in weak markets. Treat the score as a description, not an edge.</p>`:""}
+   <div class="tb"><div class="g">${[["all","ALL"],["setup","ANY SETUP"],["lead","LEADERS"],["improve","IMPROVING"],["fade","FADING"],["weak","WEAK"],["cheap","STRONG + CHEAP"]].map(([k,l])=>`<button class="b" aria-pressed="${BD.f===k}" data-bf="${k}">${l} <span style="color:var(--dim)">${cnt(k)}</span></button>`).join("")}</div></div>
+   ${cards?`<div class="cards">${list.map(card).join("")||`<p class="note">No stocks in this group right now.</p>`}</div>`
+    :`<div class="tw board" style="margin-top:8px;max-height:72vh"><table><thead><tr>${C.map(c=>`<th class="${c[3]}" data-bk="${c[0]}">${c[1]}${BD.k===c[0]?(BD.d>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
+   <tbody>${list.map(s=>`<tr data-s="${s}" title="${esc(S[s].name)} — ${esc(m(s).why||"")}">${C.map(c=>`<td class="${c[3]}">${c[4](s)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`}
+   <details class="how"><summary>HOW THE RANK WORKS</summary><p class="note" style="padding:0">SCORE (0–100) is the average of six percentile ranks within the Nifty 50, recomputed on every price tick: 200-day average slope 20%, 12-month momentum skipping the last month 20%, 6-month strength vs Nifty 20%, distance above the 200-day 15%, 3-month strength vs Nifty 15%, closeness to the 52-week high 10%. The weights follow this terminal's own test on 167 NSE stocks. STATUS is a live gate: Leader = above its 20, 50 and 200-day averages, ahead of the Nifty over 1 and 3 months, within 15% of its high, score 60+. Improving = above the 20 and 50-day and ahead of the Nifty this month. Fading = a strong longer record but more than 2% behind the Nifty over the last month (or behind it and below the 20-day average): 20 points are taken off. Weak = below the 50 and 200-day (score capped at 35). The Fading rule is a judgement rule, not a tested one. ▲▼ = places moved since the previous close. VALUE RANK (100 = cheapest) comes from the monthly valuation models and is not in the score. Not investment advice.</p></details></section>`;
+  el.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{BD.f=BD.f===b.dataset.bf&&SU_L[b.dataset.bf]?"all":b.dataset.bf;renderSub("board")});
   el.querySelectorAll("th[data-bk]").forEach(h=>h.onclick=()=>{const k=h.dataset.bk;BD.d=BD.k===k?-BD.d:(k==="sym"||k==="evt"?1:-1);BD.k=k;renderSub("board")});
-  el.querySelectorAll("tbody tr[data-s]").forEach(r=>r.onclick=()=>{setSym(r.dataset.s);go("desk")});}
+  el.querySelectorAll("[data-s]").forEach(r=>r.onclick=()=>stockSheet(r.dataset.s));
+  el.querySelectorAll("details").forEach((d,i)=>{if(_op[i])d.open=true});const _s=el.querySelector(".setups");if(_s)_s.scrollLeft=_sl;const _t=el.querySelector(".tw");if(_t)_t.scrollTop=_ct;}
 
 /* ---------- PICKS (regime-aware, with reasons) ---------- */
 function picks(el){const f=(N.fund?.stk||{});
@@ -1048,6 +1196,7 @@ function liveRepaint(){
     try{renderSub(k)}catch(e){console.error("live repaint "+k,e)}}
   const qs=$("lv-qs");if(qs&&sym&&!busy(qs)){try{qs.innerHTML=quoteHTML(sym)+signalHTML(sym)}catch(e){console.error("live quote",e)}}
   {const el=$("sv-chart");if(el&&el.offsetParent!==null&&!busy(el)&&Date.now()-(LV.chartAt||0)>30000&&Date.now()-LV.touch>4000){LV.chartAt=Date.now();try{renderSub("chart")}catch(e){}}}
+  try{sheetTick()}catch(e){}
   try{drawWL()}catch(e){}ws.scrollTop=top;window.scrollTo(0,wy)}
 ["pointerdown","keydown","wheel","touchstart"].forEach(e=>document.addEventListener(e,()=>{LV.touch=Date.now()},{passive:true}));
 async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
@@ -1078,6 +1227,7 @@ async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
   loop();})();
 
 try{liveModel()}catch(e){console.error("model",e)}
+$("theme-btn").onclick=themeSheet;$("more-btn").onclick=moreSheet;
 drawWL();
 let start="market";{const h=location.hash.slice(1);if(["market","sectors","screener","desk","research","valuation","news","macro","basis","deep"].includes(h))start=h;}
 go(start);
