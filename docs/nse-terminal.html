@@ -151,14 +151,13 @@ tbody tr{cursor:pointer} tbody tr:hover td{background:var(--raise)}
     <span class="feeds"><span>prices <b>Dhan</b> · <b id="asof"></b></span><span>news <b id="nasof"></b></span><span id="live"></span></span>
   </header>
   <nav class="rail" aria-label="Functions">
-    <button data-v="market" class="big">MARKET<span>brief · global · flows · events</span></button>
-    <button data-v="sectors" class="big">SECTORS<span>heatmap · valuation · what changed</span></button>
-    <button data-v="screener" class="big">SCREENER<span>top of the board · picks · technicals</span></button>
-    <button data-v="desk" class="big">CHART<span>trading desk · results</span></button>
-    <button data-v="research" class="big">RESEARCH<span>every question · stock and market</span></button>
-    <button data-v="valuation" class="big">VALUATION<span>story · five models · tests</span></button>
+    <button data-v="market" class="big">TODAY<span>brief · flows · events</span></button>
+    <button data-v="screener" class="big">BOARD<span>live rank · shortlists · options</span></button>
+    <button data-v="desk" class="big">STOCK<span>chart · why · valuation · results</span></button>
     <button data-v="news" class="big">NEWS<span>stock · market · NSE filings</span></button>
     <small>MORE</small>
+    <button data-v="sectors">SECTORS</button>
+    <button data-v="deep">TABLES &amp; TESTS</button>
     <button data-v="macro">MACRO</button>
     <button data-v="basis">METHOD &amp; SOURCES</button>
     <div class="wl" id="wl" aria-label="Watchlist"></div>
@@ -210,12 +209,12 @@ const charts=[];function killCharts(){while(charts.length){try{charts.pop().remo
 let tab="screener";
 function go(v){
   if(v==="chart"&&tab==="desk"&&$("sv-chart")){renderSub("chart");return}
-  if(v==="chart")v="desk";if(v==="sus"&&!$("sv-sus"))v="valuation";
-  if(v==="chg")v="chgs";
+  if(v==="chart")v="desk";if(v==="sus"&&!$("sv-sus"))v="deep";
+  if(v==="chg")v="chgs";if(v==="research"||v==="valuation")v="desk";
   if(SUBF&&SUBF[v]&&v!=="chart"&&$("sv-"+v)){renderSub(v);return}
   view=v;document.querySelectorAll(".rail button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v?"true":"false"));
   killCharts();const ws=$("ws");
-  if(v.startsWith("o:"))v="research";
+  if(v.startsWith("o:"))v="desk";
   if(TABS[v]){tab=v;layout(v);ws.scrollTop=0;return}
   tab=v;ws.className="ws";({macro,basis})[v](ws);ws.scrollTop=0;}
 document.querySelectorAll(".rail button").forEach(b=>b.onclick=()=>go(b.dataset.v));
@@ -612,18 +611,17 @@ function spark(a){if(!a.length)return"";const w=140,h=26,mn=Math.min(...a),mx=Ma
 /* ===== TWO-TAB LAYOUT: SCREENER and TRADING DESK ===== */
 const TABS={
   market:[["brief","Brief"],["glob","Global & flows"],["evt","Events"]],
+  screener:[["board","Live rank"],["picks","Shortlists"],["opts","Options live"]],
+  desk:[["chart","Chart"],["rstock","Why / what to watch"],["vstory","Valuation"],["dtech","Technicals"],["dres","Results"]],
   sectors:[["heat","Heatmap"],["sect","Sectors"],["chgs","What changed"]],
-  screener:[["board","Top of the board"],["picks","Picks"],["opts","Options live"],["scr","Screener"],["tech","Technicals"]],
-  research:[["rstock","This stock"],["rmkt","The market"]],
-  desk:[["chart","Chart"],["dtech","Technicals"],["dres","Results"]],
-  valuation:[["vstory","Stock valuation"],["sus","All 50: sustainable value"],["score","Scoreboard"]],
+  deep:[["scr","Screener"],["tech","Technicals"],["sus","All 50: sustainable value"],["score","Scoreboard"],["rmkt","Market research"]],
   news:[["news","News"]]};
 function chgSec(el){chg(el);}
 function killIn(el){for(let i=charts.length-1;i>=0;i--){const c=charts[i];if(!c.__el||el.contains(c.__el)){try{c.remove()}catch(e){}charts.splice(i,1)}}}
 let SUBF;
 function renderSub(k){const el=$("sv-"+k);if(!el)return false;killIn(el);SUBF[k](el);return true}
 function layout(t){const ws=$("ws");ws.className="ws";const L=TABS[t];
-  ws.innerHTML=`<nav class="chips" aria-label="Sections">${L.map(([k,l])=>`<a href="#" data-j="${k}">${l}</a>`).join("")}${["desk","research","valuation"].includes(t)?`<span class="deskname"><b>${sym}</b> ${esc(S[sym].name)} ${t!=="desk"?`<button class="b" data-go2="desk">CHART</button>`:""} ${t!=="research"?`<button class="b" data-go2="research">RESEARCH</button>`:""} ${t!=="valuation"?`<button class="b" data-go2="valuation">VALUATION</button>`:""}</span>`:""}</nav>`+L.map(([k])=>`<div class="sv" id="sv-${k}"></div>`).join("");
+  ws.innerHTML=`<nav class="chips" aria-label="Sections">${L.map(([k,l])=>`<a href="#" data-j="${k}">${l}</a>`).join("")}${["desk","research","valuation"].includes(t)?`<span class="deskname"><b>${sym}</b> ${esc(S[sym].name)} </span>`:""}</nav>`+L.map(([k])=>`<div class="sv" id="sv-${k}"></div>`).join("");
   ws.querySelectorAll("[data-j]").forEach(a=>a.onclick=e=>{e.preventDefault();$("sv-"+a.dataset.j).scrollIntoView({behavior:"smooth",block:"start"})});
   ws.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   for(const [k] of L){try{SUBF[k]($("sv-"+k))}catch(e){console.error(k,e);$("sv-"+k).innerHTML=`<p class="note">${k}: ${esc(e.message)}</p>`}}}
@@ -673,7 +671,7 @@ function dres(el){const q=((N.fund?.stk||{})[sym]||{}).q||[];const cr=x=>x==null
 /* ===== RESEARCH LAYER: market regime, record in falls and rebounds, five valuation models, per-stock questions ===== */
 const RS=window.RES||{stocks:{},mkt:{},sectors:{},evid:{}};const RM=RS.mkt||{},EV=RS.evid||{};
 const RX=s=>RS.stocks[s]||{};
-const WEAK=["down","correction"].includes(RM.reg)||(RM.from_peak??0)<=-0.07;
+let WEAK=["down","correction"].includes(RM.reg)||(RM.from_peak??0)<=-0.07;
 const REGN={up:"Uptrend",recovery:"Recovering",correction:"Correction",down:"Downtrend"};
 const regTxt=r=>({up:"above a rising 200-day average",recovery:"above a 200-day average that is still falling",correction:"below a 200-day average that is still rising",down:"below a falling 200-day average"}[r]||"–");
 const SECFX={"Nifty IT":"IT","Nifty Pharma":"Pharma","Nifty FMCG":"FMCG","Nifty Auto":"Auto","Nifty Metal":"Metal","Nifty Energy":"Energy","Nifty Bank":"Bank","Nifty Financial Services":"Financial Services","Nifty PSU Bank":"PSU Bank","Nifty Realty":"Realty","Nifty Infrastructure":"Infrastructure","Nifty Media":"Media"};
@@ -687,10 +685,54 @@ function role(s){const r=RX(s);const fr=r.fall_n?r.fall_beat/r.fall_n:null;
       return {k:"neutral",l:"Defensive record, lagging now",t:"a",why:`Beat the Nifty in ${r.fall_beat} of ${r.fall_n} past falls, but is ${pctx(-r.cur_fall_rel,1)} behind it in this fall — the pattern is not holding this time.`}}
     if(r.reb_n>=3&&(r.reb_pct??0)>=.7)return {k:"rebound",l:"Rebound leader",t:"a",why:`Beat the Nifty in ${r.reb_beat} of ${r.reb_n} rebounds after a fall (average ${pp(r.reb_avg,1)}).`};
     return {k:"neutral",l:"No clear edge",t:"",why:"Neither a reliable faller-defender nor a rebound leader."}}
-  if(r.state==="up"&&(r.rs?.["6m"]??0)>0&&(r.hi52??-1)>-.1)return {k:"lead",l:"Trend leader",t:"g",why:"Above a rising 200-day average, beating the Nifty over 6 months, within 10% of its high."};
-  if(r.state==="down")return {k:"avoid",l:"Downtrend",t:"r",why:"Below a falling 200-day average."};
-  return {k:"neutral",l:"No clear edge",t:"",why:""}}
-function rscore(s){const c=P_VAL[s]??.5;return WEAK?Math.round(((P_FALL[s]??.5)*.5+(P_NOW[s]??.5)*.2+c*.3)*100):Math.round(((P_RS6[s]??.5)*.5+(RX(s).state==="up"?1:0)*.2+c*.3)*100)}
+  {const m=LM[s]||{},L=LM_L[m.status]||["No clear edge",""];return {k:({lead:"lead",weak:"avoid",improve:"improve",fade:"fade"})[m.status]||"neutral",l:L[0],t:L[1],why:m.why||""}}}
+/* ===== LIVE MODEL: every rank, trend state and status is recomputed from prices on each tick ===== */
+const LM={};let LM_AT=0;
+function lmCalc(off){
+  const ni=N.idx["Nifty 50"],nc=ni?ni.c.slice(0,ni.c.length-off):[];const nr=k=>nc.length>k?nc[nc.length-1]/nc[nc.length-1-k]-1:null;
+  const M={};
+  for(const s of SYMS){const o=S[s].ohlc,n=o.c.length-off;if(n<60)continue;const c=o.c,last=c[n-1];
+    const ret=k=>n>k?last/c[n-1-k]-1:null,ma=(k,e=n)=>e>=k?c.slice(e-k,e).reduce((a,b)=>a+b,0)/k:null;
+    const m20=ma(20),m50=ma(50),m200=ma(200),m200p=ma(200,n-21);
+    const rs=k=>{const a=ret(k),b=nr(k);return a!=null&&b!=null?a-b:null};
+    const hi=Math.max(...(o.h||c).slice(Math.max(0,n-250),n));
+    M[s]={last,r1:ret(1),r5:ret(5),r21:ret(21),r63:ret(63),r126:ret(126),r250:ret(250),
+      rs1:rs(21),rs3:rs(63),rs6:rs(126),rs12:rs(250),
+      mom:n>252?c[n-22]/c[n-253]-1:(n>60?c[n-22]/c[0]-1:null),
+      vs20:m20?last/m20-1:null,vs50:m50?last/m50-1:null,vs200:m200?last/m200-1:null,
+      sl200:m200&&m200p?m200/m200p-1:null,golden:m50&&m200?m50>m200:null,hi52:last/hi-1}}
+  const P=f=>{const v=Object.entries(M).map(([s,m])=>[s,m[f]]).filter(a=>a[1]!=null&&isFinite(a[1])).sort((a,b)=>a[1]-b[1]);const o={};v.forEach(([s],i)=>o[s]=v.length>1?i/(v.length-1):.5);return o};
+  const W=[["sl200",.20],["mom",.20],["rs6",.20],["vs200",.15],["rs3",.15],["hi52",.10]],R={};W.forEach(([f])=>R[f]=P(f));
+  for(const[s,m]of Object.entries(M)){
+    let sc=0,w=0;for(const[f,wt]of W){if(R[f][s]!=null){sc+=R[f][s]*wt;w+=wt}}m.base=w?100*sc/w:50;
+    const a20=(m.vs20??0)>0,a50=(m.vs50??0)>0,a200=(m.vs200??0)>0,r1=m.rs1??0,r3=m.rs3??0;
+    m.status=(!a50&&!a200)?"weak":((r1<-.02||(!a20&&r1<0))&&(m.base>=50||(m.rs6??0)>0))?"fade":(a20&&a50&&a200&&r3>0&&r1>-.02&&m.hi52>-.15&&m.base>=60)?"lead":(a20&&a50&&r1>0)?"improve":"neutral";
+    m.score=Math.round(Math.max(0,m.status==="fade"?m.base-20:m.status==="weak"?Math.min(m.base,35):m.base));
+    m.state=a200?((m.sl200??0)>0?"up":"recovery"):((m.sl200??0)>0?"correction":"down")}
+  const ord=Object.keys(M).sort((a,b)=>M[b].score-M[a].score||M[b].base-M[a].base);ord.forEach((s,i)=>M[s].rank=i+1);
+  return M}
+const LM_L={lead:["Leader","g"],improve:["Improving","a"],fade:["Fading","r"],weak:["Weak","r"],neutral:["Neutral",""]};
+function lmWhy(m){const p=x=>pp(x,1);
+  return m.status==="lead"?`Above its 20, 50 and 200-day averages, beating the Nifty over 1 month (${p(m.rs1)}) and 3 months (${p(m.rs3)}), ${pctx(-m.hi52,1)} below its 52-week high.`
+   :m.status==="improve"?`Above its 20 and 50-day averages and beating the Nifty over the last month (${p(m.rs1)}), but not yet a full leader${(m.vs200??0)<=0?" (still below the 200-day)":""}.`
+   :m.status==="fade"?`Strong longer record (6 months vs Nifty ${p(m.rs6)}) but lagging now: behind the Nifty over the last month (${p(m.rs1)})${(m.vs20??0)<=0?" and below its 20-day average":""}. Score cut by 20.`
+   :m.status==="weak"?`Below both its 50-day and 200-day averages.`:`Mixed: no clear lead or weakness.`}
+function liveModel(){
+  const A=lmCalc(0),B=lmCalc(1);
+  for(const s of Object.keys(A)){const m=A[s];m.drank=B[s]?B[s].rank-m.rank:0;m.why=lmWhy(m);LM[s]=m;
+    const r=RS.stocks[s]||(RS.stocks[s]={});r.r=r.r||{};r.rs=r.rs||{};r.rs_rank=r.rs_rank||{};
+    Object.assign(r.r,{"1d":m.r1,"1w":m.r5,"1m":m.r21,"3m":m.r63,"6m":m.r126,"1y":m.r250});
+    Object.assign(r.rs,{"1m":m.rs1,"3m":m.rs3,"6m":m.rs6,"1y":m.rs12});
+    r.vs200=m.vs200;r.vs50=m.vs50;r.sl200=m.sl200;r.hi52=m.hi52;r.state=m.state;if(m.golden!=null)r.golden=m.golden;r.last=m.last}
+  for(const[k,f]of[["1m","rs1"],["3m","rs3"],["6m","rs6"],["1y","rs12"]]){const v=Object.keys(A).filter(s=>A[s][f]!=null).sort((a,b)=>A[b][f]-A[a][f]);v.forEach((s,i)=>RS.stocks[s].rs_rank[k]=i+1)}
+  const ni=N.idx["Nifty 50"];if(ni&&ni.c.length>220){const c=ni.c,n=c.length,last=c[n-1],ma=(k,e=n)=>c.slice(e-k,e).reduce((a,b)=>a+b,0)/k;
+    const m200=ma(200),m50=ma(50),m200p=ma(200,n-21);RM.nifty=last;RM.ma200=m200;RM.ma50=m50;RM.vs200=last/m200-1;RM.vs50=last/m50-1;RM.slope200=m200/m200p-1;
+    RM.from_52wh=last/Math.max(...c.slice(-250))-1;if(RM.peak_lvl)RM.from_peak=last/RM.peak_lvl-1;else RM.from_peak=RM.from_52wh;
+    const reg=RM.vs200>0?(RM.slope200>0?"up":"recovery"):(RM.slope200>0?"correction":"down");if(reg!==RM.reg){RM.reg=reg;RM.days_in_reg=1}
+    WEAK=["down","correction"].includes(RM.reg)||RM.from_52wh<=-0.07;RM.asof=ni.d[n-1]}
+  LM_AT=Date.now()}
+function rscore(s){return LM[s]?LM[s].score:0}
+
 function trendWhy(s){const r=RX(s),o=[];const rk=r.rs_rank||{};const sec=RS.sectors[r.sidx]||{};
   o.push(`<b>${REGN[r.state]||"–"}</b>: price ${regTxt(r.state)} (${pp(r.vs200,1)} from it; the average moved ${pp(r.sl200,1)} in a month)${r.golden?"; 50-day above 200-day":"; 50-day below 200-day"}.`);
   o.push(`<b>Strength vs Nifty</b>: ${pp(r.rs?.["3m"],1)} over 3 months, ${pp(r.rs?.["6m"],1)} over 6 (rank ${rk["6m"]??"–"} of 50). Relative-strength line ${r.mansfield>0?"above":"below"} its 1-year average (${pp(r.mansfield,1)}).${r.sidx?` Against its own sector: ${pp(r.rss?.["6m"],1)} over 6 months.`:""}`);
@@ -730,34 +772,33 @@ function regimeStrip(){const B=N.breadth||{};return kv([["Nifty 50",f2(RM.nifty,
   ["From recent top",RM.peak?pp(RM.from_peak,1)+" (since "+RM.peak.slice(5)+")":pp(RM.from_52wh,1)],["From 52-week high",pp(RM.from_52wh,1)],["India VIX",f2(RM.vix,1)+" (1y median "+f2(RM.vix_1y_med,1)+")"],["USD/INR",f2(RM.inr,2)],["Rupee 3M / 1Y",pp(-RM.inr_3m,1)+" / "+pp(-RM.inr_1y,1),"Positive = rupee stronger"],["Above 200-DMA",(B.a200??"–")+" of "+(B.n??50)]])}
 function regimeText(){const e=EV.detect?.to_trough||{};return WEAK?`<b>The Nifty is in a weak market</b>: ${regTxt(RM.reg)} for ${RM.days_in_reg} trading days, ${pp(RM.from_peak,1)} from its ${RM.peak} top and ${pp(RM.from_52wh,1)} from its 52-week high. In markets like this, since 2007: <b>stocks that held up in earlier falls kept holding up until the low</b> (${e.pos} of ${e.n} falls; top fifth ${pp(e.top,1)} vs Nifty, bottom fifth ${pp(e.bot,1)}), but <b>leadership flips in the rebound</b> and ordinary momentum ranks stop working (3-month rank correlation ${f2(EV.signals?.mom12_1?.down_3?.ic,3)} in weak months vs ${f2(EV.signals?.mom12_1?.up_3?.ic,3)} in uptrends). So the board ranks by the fall record, how the stock is doing in this fall, and the tested valuation trio — not by recent momentum alone.`
   :`<b>The Nifty is in an uptrend</b> (${regTxt(RM.reg)}). In uptrends since 2008, momentum and strength vs the Nifty have predicted the next 3 months (rank correlation ${f2(EV.signals?.mom12_1?.up_3?.ic,3)}, t ${f2(EV.signals?.mom12_1?.up_3?.t,1)}), so the board ranks by 6-month strength, the 200-day trend and the valuation trio.`}
-function board(el){const F={all:()=>true,defend:s=>role(s).k==="defend",rebound:s=>role(s).k==="rebound",avoid:s=>role(s).k==="avoid",now:s=>(RX(s).cur_fall_rel??-1)>0,up:s=>RX(s).state==="up"};
-  const f=(N.fund?.stk||{});const ev=s=>S[s].events[0];
-  const C=[["sym","STOCK",s=>s,"t",s=>`<b style="color:var(--bright)">${s}</b>`],["role","ROLE",s=>({defend:4,lead:4,rebound:3,neutral:2,avoid:1})[role(s).k],"t",s=>`<span class="pill ${role(s).t}">${role(s).l}</span>`],
-   ["score","SCORE",s=>rscore(s),"",s=>`<b style="color:var(--amber)">${rscore(s)}</b>`],["last","LAST",s=>S[s].ohlc.c.at(-1),"",s=>f2(S[s].ohlc.c.at(-1))],
-   ...[["1d","1D",2],["1w","1W",1],["1m","1M",1],["3m","3M",1],["6m","6M",1],["1y","1Y",1]].map(([k,l,d])=>[k,l,s=>RX(s).r?.[k],"",s=>`<span class="${ud(RX(s).r?.[k])}">${pp(RX(s).r?.[k],d)}</span>`]),
-   ["rs6","RS 6M",s=>RX(s).rs?.["6m"],"",s=>`<span class="${ud(RX(s).rs?.["6m"])}">${pp(RX(s).rs?.["6m"],1)}</span>`],["rk","RS RANK",s=>-(RX(s).rs_rank?.["6m"]??99),"",s=>RX(s).rs_rank?.["6m"]??"–"],
-   ["mf","RS vs 1Y AVG",s=>RX(s).mansfield,"",s=>`<span class="${ud(RX(s).mansfield)}">${pp(RX(s).mansfield,1)}</span>`],["rss","vs SECTOR 6M",s=>RX(s).rss?.["6m"],"",s=>`<span class="${ud(RX(s).rss?.["6m"])}">${pp(RX(s).rss?.["6m"],1)}</span>`],
-   ["state","TREND",s=>({up:4,recovery:3,correction:2,down:1})[RX(s).state],"t",s=>`<span class="${RX(s).state==="up"?"up":RX(s).state==="down"?"dn":""}">${REGN[RX(s).state]||"–"}</span>`],
-   ["vs200","vs 200D",s=>RX(s).vs200,"",s=>`<span class="${ud(RX(s).vs200)}">${pp(RX(s).vs200,1)}</span>`],["hi52","FROM 52W H",s=>RX(s).hi52,"",s=>pp(RX(s).hi52,1)],
-   ["now","THIS FALL vs NIFTY",s=>RX(s).cur_fall_rel,"",s=>`<span class="${ud(RX(s).cur_fall_rel)}">${pp(RX(s).cur_fall_rel,1)}</span>`],
-   ["fb","FALLS BEATEN",s=>RX(s).fall_n?RX(s).fall_beat/RX(s).fall_n:null,"",s=>RX(s).fall_n?`${RX(s).fall_beat}/${RX(s).fall_n}`:"–"],["fa","AVG IN FALLS",s=>RX(s).fall_avg,"",s=>`<span class="${ud(RX(s).fall_avg)}">${pp(RX(s).fall_avg,1)}</span>`],
-   ["ra","AVG IN REBOUNDS",s=>RX(s).reb_avg,"",s=>`<span class="${ud(RX(s).reb_avg)}">${pp(RX(s).reb_avg,1)}</span>`],
-   ["beta","β",s=>RX(s).beta,"",s=>f2(RX(s).beta,2)],["dbeta","DOWN β",s=>RX(s).dbeta,"",s=>f2(RX(s).dbeta,2)],["inr","₹ β (t)",s=>RX(s).inrb,"",s=>RX(s).inrb==null?"–":`${f2(RX(s).inrb,2)} <span style="color:var(--dim)">(${f2(RX(s).inrb_t,1)})</span>`],
-   ["val","VALUE RANK",s=>RX(s).models?.book3,"",s=>{const v=RX(s).models_rank?.book3;return v==null?"–":`<span class="${v>=.67?"up":v<=.33?"dn":""}">${Math.round(v*100)}</span>`}],
-   ["spk","PROFIT SPIKE",s=>f[s]?.spike,"",s=>f[s]?.spike==null?"–":`<span class="${f[s].spike>.25?"dn":""}">${pp(Math.exp(f[s].spike)-1,0)}</span>`],
-   ["gs","SELF-FUNDED g",s=>f[s]?.g_sus,"",s=>pctx(f[s]?.g_sus,1)],["gi","g PRICED",s=>f[s]?.g_impl_n,"",s=>{const g=f[s]?.g_impl_n;return g==null?"–":`<span class="${g>(f[s].g_sus??0)+.03?"dn":"up"}">${g>=.6?"> 60%":pctx(g,1)}</span>`}],
-   ["ri","ROE PRICED / NORMAL",s=>f[s]?.roe_impl!=null&&f[s]?.roe_n?f[s].roe_impl-f[s].roe_n:null,"",s=>f[s]?.roe_impl==null?"–":`<span class="${f[s].roe_impl>(f[s].roe_n??0)+.03?"dn":f[s].roe_impl<(f[s].roe_n??0)-.03?"up":""}">${pctx(f[s].roe_impl,0)} / ${pctx(f[s].roe_n,0)}</span>`],
+function board(el){const f=(N.fund?.stk||{}),ev=s=>S[s].events[0],m=s=>LM[s]||{};
+  const F={all:()=>true,lead:s=>m(s).status==="lead",improve:s=>m(s).status==="improve",fade:s=>m(s).status==="fade",weak:s=>m(s).status==="weak",cheap:s=>(RX(s).models_rank?.book3??0)>=.67&&["lead","improve"].includes(m(s).status)};
+  if(!F[BD.f])BD.f="all";
+  const pc=(get,d=1)=>s=>`<span class="${ud(get(s))}">${pp(get(s),d)}</span>`;
+  const C=[["sym","STOCK",s=>s,"t",s=>`<b style="color:var(--bright)">${s}</b>`],
+   ["rank","#",s=>-m(s).rank,"",s=>{const d=m(s).drank;return `${m(s).rank??"–"} <span class="${d>0?"up":d<0?"dn":""}" style="font-size:10px">${d>0?"▲"+d:d<0?"▼"+(-d):""}</span>`}],
+   ["status","STATUS",s=>({lead:5,improve:4,neutral:3,fade:2,weak:1})[m(s).status],"t",s=>{const L=LM_L[m(s).status]||["–",""];return `<span class="pill ${L[1]}">${L[0]}</span>`}],
+   ["score","SCORE",s=>m(s).score,"",s=>`<b style="color:var(--amber)">${m(s).score??"–"}</b>`],
+   ["last","LAST",s=>m(s).last,"",s=>f2(m(s).last)],
+   ["1d","1D",s=>m(s).r1,"",pc(s=>m(s).r1,2)],["1w","1W",s=>m(s).r5,"",pc(s=>m(s).r5)],["1m","1M",s=>m(s).r21,"",pc(s=>m(s).r21)],["3m","3M",s=>m(s).r63,"",pc(s=>m(s).r63)],["6m","6M",s=>m(s).r126,"",pc(s=>m(s).r126)],
+   ["rs1","vs NIFTY 1M",s=>m(s).rs1,"",pc(s=>m(s).rs1)],["rs3","vs NIFTY 3M",s=>m(s).rs3,"",pc(s=>m(s).rs3)],["rs6","vs NIFTY 6M",s=>m(s).rs6,"",pc(s=>m(s).rs6)],
+   ["v20","vs 20D",s=>m(s).vs20,"",pc(s=>m(s).vs20)],["v50","vs 50D",s=>m(s).vs50,"",pc(s=>m(s).vs50)],["v200","vs 200D",s=>m(s).vs200,"",pc(s=>m(s).vs200)],
+   ["hi52","FROM 52W H",s=>m(s).hi52,"",s=>pp(m(s).hi52,1)],
+   ["val","VALUE RANK",s=>RX(s).models_rank?.book3,"",s=>{const v=RX(s).models_rank?.book3;return v==null?"–":`<span class="${v>=.67?"up":v<=.33?"dn":""}">${Math.round(v*100)}</span>`}],
+   ...(WEAK?[["wr","WEAK-MARKET ROLE",s=>({defend:4,rebound:3,neutral:2,avoid:1})[role(s).k],"t",s=>`<span class="pill ${role(s).t}">${role(s).l}</span>`]]:[]),
    ["evt","NEXT EVENT",s=>ev(s)?.date||"9","t",s=>ev(s)?`${ev(s).date.slice(5)} ${esc(ev(s).purpose.split("/")[0])}`:"–"]];
-  const col=C.find(c=>c[0]===BD.k)||C[2];const list=SYMS.filter(F[BD.f]).sort((a,b)=>{const A=col[2](a),B=col[2](b);if(A==null)return 1;if(B==null)return -1;return (A>B?1:A<B?-1:0)*BD.d});
-  el.innerHTML=`<section class="pnl"><div class="ph"><h2>TOP OF THE BOARD <em>NIFTY 50</em></h2><span class="sub">Dhan daily history 2004–26 · ${RM.asof} · click a row for everything on that stock</span></div>
-   ${regimeStrip()}<p class="brief">${regimeText()}</p>
-   <div class="tb"><div class="g">${[["all","ALL"],["defend","HOLDS UP IN FALLS"],["rebound","REBOUND LEADERS"],["avoid","AVOID WHILE WEAK"],["now","HOLDING UP IN THIS FALL"],["up","IN UPTREND"]].map(([k,l])=>`<button class="b" aria-pressed="${BD.f===k}" data-bf="${k}">${l} <span style="color:var(--dim)">${SYMS.filter(F[k]).length}</span></button>`).join("")}</div></div>
+  const col=C.find(c=>c[0]===BD.k)||C[3];const list=SYMS.filter(F[BD.f]).sort((a,b)=>{const A=col[2](a),B=col[2](b);if(A==null)return 1;if(B==null)return -1;return (A>B?1:A<B?-1:0)*BD.d||(m(a).rank-m(b).rank)});
+  const cnt=k=>SYMS.filter(F[k]).length,age=LM_AT?Math.round((Date.now()-LM_AT)/1000):null;
+  el.innerHTML=`<section class="pnl"><div class="ph"><h2>TOP OF THE BOARD <em>NIFTY 50 · LIVE RANK</em></h2><span class="sub">re-ranked from prices${age!=null?` ${age}s ago`:""} · bars to ${esc(RM.asof||"")} · tap a row for the stock page</span></div>
+   ${regimeStrip()}${WEAK?`<p class="brief"><b>Weak market.</b> In this terminal's own NSE test, trend and momentum ranks did <b>not</b> predict returns in weak markets (rank correlation about zero, 66 months). Treat the score as a description, not an edge, and read the WEAK-MARKET ROLE column.</p>`:""}
+   <div class="tb"><div class="g">${[["all","ALL"],["lead","LEADERS"],["improve","IMPROVING"],["fade","FADING"],["weak","WEAK"],["cheap","STRONG + CHEAP"]].map(([k,l])=>`<button class="b" aria-pressed="${BD.f===k}" data-bf="${k}">${l} <span style="color:var(--dim)">${cnt(k)}</span></button>`).join("")}</div></div>
    <div class="tw board" style="margin-top:8px;max-height:72vh"><table><thead><tr>${C.map(c=>`<th class="${c[3]}" data-bk="${c[0]}">${c[1]}${BD.k===c[0]?(BD.d>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
-   <tbody>${list.map(s=>`<tr data-s="${s}" title="${esc(S[s].name)} — ${esc(role(s).why)}">${C.map(c=>`<td class="${c[3]}">${c[4](s)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-   <p class="note">SCORE (0–100) ${WEAK?"in a weak market = 50% record in past Nifty falls + 20% how it is doing in this fall + 30% valuation rank":"in an uptrend = 50% 6-month strength vs Nifty + 20% above a rising 200-day + 30% valuation rank"} (ranks within the Nifty 50). ROLE: Holds up in falls = beat the Nifty in ≥60% of past 10%+ falls and in the top third of 167 stocks; Rebound leader = top 30% in the rebounds after those falls; Avoid while weak = bottom third in falls and below its 200-day average, or a metal stock outside an uptrend. THIS FALL = return since the Nifty's ${RM.peak||"recent"} top minus the Nifty's. VALUE RANK = residual income + implied cost of capital + market pricing, percentile in the Nifty 50 (100 = cheapest; 12-month rank correlation +0.07, t 3.6, 2022–26). ₹ β = extra monthly return per 1% fall in the rupee, holding the Nifty constant (5 years; t in brackets, |t| &lt; 2 = not reliable). SELF-FUNDED g = normal ROE × retention; g PRICED = 5-year EPS growth the price needs on normal earnings; ROE PRICED = the steady return on equity that justifies today's price-to-book. Not investment advice.</p></section>`;
+   <tbody>${list.map(s=>`<tr data-s="${s}" title="${esc(S[s].name)} — ${esc(m(s).why||"")}">${C.map(c=>`<td class="${c[3]}">${c[4](s)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+   <p class="note"><b>How the rank works.</b> SCORE (0–100) is the average of six percentile ranks within the Nifty 50, recomputed on every price tick: 200-day average slope 20%, 12-month momentum skipping the last month 20%, 6-month strength vs Nifty 20%, distance above the 200-day 15%, 3-month strength vs Nifty 15%, closeness to the 52-week high 10%. The weights follow this terminal's own test on 167 NSE stocks (3-month rank correlations in rising markets: +0.09, +0.09, +0.08, +0.08, +0.05, +0.06). <b>STATUS is a live gate:</b> Leader = above its 20, 50 and 200-day averages, ahead of the Nifty over 1 and 3 months, within 15% of its high, score 60+. Improving = above the 20 and 50-day and ahead of the Nifty this month. <b>Fading = a strong longer record but more than 2% behind the Nifty over the last month (or behind it and below the 20-day average): 20 points are taken off, so a lagging stock cannot sit at the top.</b> Weak = below the 50 and 200-day (score capped at 35). The Fading rule is a judgement rule, not a tested one: in the same test, last month's return alone did not predict the next three months. ▲▼ = places moved since the previous close. VALUE RANK (100 = cheapest) comes from the monthly valuation models and is not in the score. Not investment advice.</p></section>`;
   el.querySelectorAll("[data-bf]").forEach(b=>b.onclick=()=>{BD.f=b.dataset.bf;renderSub("board")});
   el.querySelectorAll("th[data-bk]").forEach(h=>h.onclick=()=>{const k=h.dataset.bk;BD.d=BD.k===k?-BD.d:(k==="sym"||k==="evt"?1:-1);BD.k=k;renderSub("board")});
-  el.querySelectorAll("tbody tr[data-s]").forEach(r=>r.onclick=()=>{setSym(r.dataset.s);go("research")});}
+  el.querySelectorAll("tbody tr[data-s]").forEach(r=>r.onclick=()=>{setSym(r.dataset.s);go("desk")});}
 
 /* ---------- PICKS (regime-aware, with reasons) ---------- */
 function picks(el){const f=(N.fund?.stk||{});
@@ -771,7 +812,7 @@ function picks(el){const f=(N.fund?.stk||{});
   const cols=WEAK?[["HOLD UP WHILE IT FALLS",by("defend"),"Past falls predict who holds up until the low. These are not 3–6 month bets: once the fall ends they tend to lag."],
      ["LEAD THE REBOUND",by("rebound"),`For when the fall ends — for example the Nifty closing back above its 50-day average (${f2(RM.ma50,0)}). That trigger is a condition, not a tested signal.`],
      ["AVOID WHILE WEAK",by("avoid"),"Weak fall record and below the 200-day average, or metals in a weak market."]]
-    :[["TREND LEADERS",by("lead"),"Uptrend, beating the Nifty, near highs: the setup that has worked in uptrends."],["AVOID",by("avoid"),"Below a falling 200-day average."]];
+    :[["LEADERS",by("lead"),"Above the 20, 50 and 200-day averages and ahead of the Nifty over 1 and 3 months."],["IMPROVING",by("improve"),"Turning up: above the 20 and 50-day and ahead of the Nifty this month."],["FADING",by("fade"),"Good longer record but behind the Nifty over the last month."],["WEAK",by("avoid"),"Below the 50 and 200-day averages."]];
   el.innerHTML=`<section class="pnl"><div class="ph"><h2>PICKS <em>${WEAK?"WEAK MARKET PLAYBOOK":"UPTREND PLAYBOOK"}</em></h2><span class="sub">rule-based shortlists · tested on 167 NSE stocks, 2008–26</span></div>
    ${regimeStrip()}<p class="brief">${regimeText()}</p>
    <div class="lists"><div><small>Held up before → holds up again</small>Ranked by earlier falls, stocks kept their order until the low in <b>${e.pos} of ${e.n}</b> falls: top fifth ${pp(e.top,1)}, bottom fifth ${pp(e.bot,1)} vs Nifty (counted from the day the Nifty was 7% off its top).</div>
@@ -834,7 +875,7 @@ function vstory(el){const s=sym,x=S[s],f=(N.fund?.stk||{})[s]||{},v=x.val,r=RX(s
   ${step(7,"WHAT CHANGED IN THE PRICE",d1?"Biggest driver: "+[...PARTS].sort((a,b)=>Math.abs(d1[b[0]])-Math.abs(d1[a[0]]))[0][1].split(" (")[0]:"","",d1?`${d1.A.m} → ${d1.B.m}: price ${pp(d1.total)} = book value ${pp(d1.book)} + profitability ${pp(d1.roe)} + growth ${pp(d1.growth)} + rates ${pp(d1.rates)} + risk premium ${pp(d1.premium)} (log %, exact split).`:"Not enough book history.",null,chgHtml)}
   </div>
   <p class="note">Normal EPS = average trailing EPS today, 1 and 2 years ago. Self-funded growth = normal ROE × retention (≤ 25%). Model values use the latest month-end (${r.models_m||"–"}, price ${f2(r.models_px)}) and NSE XBRL book value; tested = monthly rank correlation with the next 12 months' return vs the equal-weighted Nifty 50 (stocks, 2022–26) and the next 24 months vs the Nifty (41 sector indices, 2013–26). Data: Dhan prices, NSE results and dividends.</p>`;
-  $("vs-sel").onchange=e=>{setSym(e.target.value);renderSub("vstory")};}
+  $("vs-sel").onchange=e=>{setSym(e.target.value);go("desk")};}
 
 /* ---------- RESEARCH: every question about the selected stock, then the market ---------- */
 function rsChart(el,s){const x=S[s],ni=N.idx["Nifty 50"],r=RX(s),si=N.idx[r.sidx];if(!ni)return;
@@ -897,7 +938,7 @@ function rstock(el){const s=sym,x=S[s],r=RX(s),f=(N.fund?.stk||{})[s]||{},v=x.va
    ${ans(ro.why+" "+(WEAK?"In a weak market the useful trend question is not “is it going up?” but “does it hold up while the Nifty falls, and does it lead when the fall ends?”":"In an uptrend, strength and the 200-day trend have been the useful signals."))}
    <div class="pb sig" style="gap:4px">${trendWhy(s).map(z=>`<div>· ${z}</div>`).join("")}</div>
    ${evid(`Tested on 167 stocks, monthly 2008–26 (rank correlation with the next 3 months vs the universe): 6-month strength ${f2(EV.signals?.rs6?.up_3?.ic,3)} in uptrends vs ${f2(EV.signals?.rs6?.down_3?.ic,3)} in weak markets; 200-day slope ${f2(EV.signals?.sl200?.up_3?.ic,3)} vs ${f2(EV.signals?.sl200?.down_3?.ic,3)}; low down-market beta ${f2(EV.signals?.dbeta?.up_3?.ic,3)} vs ${f2(EV.signals?.dbeta?.down_3?.ic,3)}. Weak market = Nifty below its 200-day average (${EV.weak_months} of ${EV.months} months).`)}</section>`;
-  $("rs-sel").onchange=e=>{setSym(e.target.value);renderSub("rstock")};
+  $("rs-sel").onchange=e=>{setSym(e.target.value);go("desk")};
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   rsChart($("rs-ch"),s);dchg($("rs-dec"));}
 function rmkt(el){const sec=RS.sectors||{};const sigs=EV.signals||{};const mb=EV.models||{};const eps=(RM.episodes||[]);
@@ -983,7 +1024,7 @@ function applyLive(L){const today=istDate();let k=0;
     const tv=window.TERMDATA&&TERMDATA.val&&TERMDATA.val.stocks[s];if(tv&&x.prev)tv.prev=x.prev;const lp=x.ohlc.c[x.ohlc.c.length-1];if(x.val&&x.val.eps>0)x.val.pe=lp/x.val.eps;if(tv){tv.price=lp;if(tv.eps>0)tv.pe=lp/tv.eps}}
   if(N.breadth&&k){const L2=SYMS.map(s=>S[s].tech);N.breadth.adv=L2.filter(t=>t.r1>0).length;N.breadth.dec=L2.filter(t=>t.r1<0).length;
     N.breadth.a50=L2.filter(t=>(t.vs50||0)>0).length;N.breadth.a200=L2.filter(t=>(t.vs200||0)>0).length;}
-  if(k)livePropagate();N.partial_today=false;return k}
+  if(k){livePropagate();liveModel()}N.partial_today=false;return k}
 const LIVE_SAFE=["brief","mkt","glob","heat","sect","chgs","scr","board","picks","tech","rstock","rmkt","vstory","sus","score","dval","dchg","dtech"];
 function livePropagate(){
   // copy live index levels into every structure the views read
@@ -1036,8 +1077,9 @@ async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
   document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!LV.stop&&!LV.busy){clearTimeout(LV.timer);loop()}});
   loop();})();
 
+try{liveModel()}catch(e){console.error("model",e)}
 drawWL();
-let start="market";{const h=location.hash.slice(1);if(["market","sectors","screener","desk","research","valuation","news","macro","basis"].includes(h))start=h;}
+let start="market";{const h=location.hash.slice(1);if(["market","sectors","screener","desk","research","valuation","news","macro","basis","deep"].includes(h))start=h;}
 go(start);
 window.addEventListener("resize",()=>{if(tab==="screener"&&$("sv-heat"))renderSub("heat")});
 })();
