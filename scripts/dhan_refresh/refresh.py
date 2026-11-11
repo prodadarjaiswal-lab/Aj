@@ -175,6 +175,16 @@ def build_maps(scrip_csv: str, symbols: list[str], indices: list[str]) -> tuple[
 
 
 # ---------------------------------------------------------------- data shaping
+CLOSE_DONE = dt.time(15, 35)
+
+
+def drop_partial(o: dict, now: dt.datetime) -> dict:
+    """A run during market hours must not store today's unfinished candle as a close."""
+    if o["d"] and o["d"][-1] == now.date().isoformat() and now.timetz().replace(tzinfo=None) < CLOSE_DONE:
+        return {k: v[:-1] for k, v in o.items()}
+    return o
+
+
 def to_series(resp: dict) -> dict:
     ts = resp.get("timestamp") or []
     if not ts:
@@ -333,10 +343,10 @@ def run(page: Path, dhan, scrip_csv: str, now: dt.datetime, with_fund: bool = Tr
 
     new_idx, new_stk, fund = {}, {}, {}
     for name, sid in ix.items():
-        new_idx[name] = to_series(dhan.daily(sid, "IDX_I", "INDEX", start, now.date()))
+        new_idx[name] = drop_partial(to_series(dhan.daily(sid, "IDX_I", "INDEX", start, now.date())), now)
     for sym, sid in eq.items():
         try:
-            new_stk[sym] = to_series(dhan.daily(sid, "NSE_EQ", "EQUITY", start, now.date()))
+            new_stk[sym] = drop_partial(to_series(dhan.daily(sid, "NSE_EQ", "EQUITY", start, now.date())), now)
         except RefreshError as e:
             print(f"  warning: {sym}: {e}")
         if with_fund:
@@ -359,6 +369,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--page", default="docs/ra-desk.html")
     ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
+    ap.add_argument("--with-options", action="store_true", help="also save the options snapshot (same login)")
     a = ap.parse_args(argv)
     try:
         cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
@@ -373,7 +384,14 @@ def main(argv=None) -> int:
     try:
         token = login(cid, pin, sec)
         scrip = requests.get(SCRIP_MASTER, timeout=60).text
-        print(run(Path(a.page), Dhan(cid, token), scrip, now, with_fund=not a.no_fund))
+        client = Dhan(cid, token)
+        print(run(Path(a.page), client, scrip, now, with_fund=not a.no_fund))
+        if a.with_options:
+            try:
+                import options_snapshot
+                print(options_snapshot.save_snapshot(client, scrip, Path(a.page).resolve().parents[1]))
+            except Exception as e:  # options must never block the price refresh
+                print(f"  warning: options snapshot failed: {e}")
         return 0
     except RefreshError as e:
         print(f"REFRESH FAILED, page left unchanged: {e}", file=sys.stderr)

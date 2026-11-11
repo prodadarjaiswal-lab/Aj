@@ -138,36 +138,21 @@ def snapshot(client, underlyings: dict, today: dt.date) -> dict:
     return {"date": today.isoformat(), "rows": out, "errors": errors}
 
 
-def main() -> int:
-    if "--root" in sys.argv:
-        os.chdir(sys.argv[sys.argv.index("--root") + 1])
-    page = Path("docs/ra-desk.html")
-    nset = R.read_nset(page.read_text(encoding="utf-8"))
+def save_snapshot(dhan, scrip_csv: str, root: Path = Path(".")) -> str:
+    """Use an already logged-in client: Dhan allows one new token per 2 minutes."""
+    nset = R.read_nset((root / "docs/ra-desk.html").read_text(encoding="utf-8"))
     day = nset.get("bar_today") or dt.datetime.now(R.IST).date().isoformat()
-    outdir = Path("data/options")
+    outdir = root / "data/options"
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / f"{day}.json"
     if target.exists():
-        print(f"snapshot for {day} already saved")
-        return 0
-    try:
-        cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
-        import requests
-        token = R.login(cid, pin, sec)
-        scrip = requests.get(R.SCRIP_MASTER, timeout=60).text
-        eq, _ = R.build_maps(scrip, list(nset["stocks"]), [])
-        unders = dict(INDEXES)
-        unders.update({s: (sid, "NSE_FNO") for s, sid in eq.items()})
-        snap = snapshot(OptionsClient(R.Dhan(cid, token)), unders, dt.date.fromisoformat(day))
-    except Exception as e:
-        print(f"OPTIONS SNAPSHOT FAILED: {e}", file=sys.stderr)
-        return 1
+        return f"options snapshot for {day} already saved"
+    eq, _ = R.build_maps(scrip_csv, list(nset["stocks"]), [])
+    unders = dict(INDEXES)
+    unders.update({s: (sid, "NSE_FNO") for s, sid in eq.items()})
+    snap = snapshot(OptionsClient(dhan), unders, dt.date.fromisoformat(day))
     target.write_text(json.dumps(snap, separators=(",", ":")), encoding="utf-8")
-    print(f"saved {target}: {len(snap['rows'])} underlyings, {len(snap['errors'])} skipped")
+    msg = f"options snapshot {target.name}: {len(snap['rows'])} underlyings, {len(snap['errors'])} skipped"
     if snap["errors"]:
-        print("  skipped:", ", ".join(f"{k} ({v})" for k, v in list(snap["errors"].items())[:12]))
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        msg += "\n  skipped: " + ", ".join(f"{k} ({v})" for k, v in list(snap["errors"].items())[:12])
+    return msg

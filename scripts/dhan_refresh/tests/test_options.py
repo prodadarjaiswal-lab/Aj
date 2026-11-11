@@ -50,3 +50,22 @@ def test_junk_iv_filtered():
     L = O.clean_leg(leg(5, 10, 198))
     assert L["iv"] is None
     assert O.clean_leg(leg(0, 0, 0))["iv"] is None
+
+
+def test_save_snapshot_uses_given_client(tmp_path):
+    import shutil
+    (tmp_path / "docs").mkdir()
+    shutil.copy(ROOT / "docs" / "ra-desk.html", tmp_path / "docs" / "ra-desk.html")
+    nset = O.R.read_nset((tmp_path / "docs" / "ra-desk.html").read_text())
+    rows = ["SEM_EXM_EXCH_ID,SEM_SEGMENT,SEM_SMST_SECURITY_ID,SEM_INSTRUMENT_NAME,SEM_TRADING_SYMBOL,SM_SYMBOL_NAME,SEM_CUSTOM_SYMBOL,SEM_SERIES",
+            "NSE,E,2885,EQUITY,RELIANCE,RELIANCE,RELIANCE,EQ"]
+
+    class Client(Fake):
+        def __init__(self):
+            pass
+    O.OptionsClient = lambda d: d          # no 3-second spacing in tests
+    nset_day = nset["bar_today"]
+    O.TODAY_OVERRIDE = None
+    msg = O.save_snapshot(Client(), "\n".join(rows), tmp_path)
+    assert "options snapshot" in msg or "already saved" in msg
+    assert (tmp_path / "data" / "options" / f"{nset_day}.json").exists()

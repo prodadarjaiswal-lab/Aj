@@ -152,3 +152,11 @@ def test_latest_file_written_small_and_current(page):
     assert lat["stocks"]["TCS"]["ohlc"]["d"][-1] == "2026-11-11"
     assert len(lat["stocks"]["TCS"]["ohlc"]["c"]) == R.LATEST_BARS
     assert page.with_name("radesk-latest.json").stat().st_size < 600_000
+
+
+def test_partial_intraday_bar_dropped():
+    o = {"d": ["2026-11-10", "2026-11-11"], "c": [1, 2]}
+    mid = dt.datetime(2026, 11, 11, 12, 0, tzinfo=R.IST)
+    after = dt.datetime(2026, 11, 11, 16, 0, tzinfo=R.IST)
+    assert R.drop_partial(o, mid)["d"] == ["2026-11-10"]
+    assert R.drop_partial(o, after)["d"][-1] == "2026-11-11"
