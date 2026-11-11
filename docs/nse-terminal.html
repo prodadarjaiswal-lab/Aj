@@ -245,7 +245,7 @@ function chart(ws){ws.classList.add("chartv-grid");
    ${CH.ind.MACD?`<div class="chwrap"><span>MACD 12 26 9</span><div id="ch-macd"></div></div>`:""}
    ${!LC?`<p class="note">Chart library did not load.</p>`:""}
    ${cut?`<p class="note">Candles run to ${o.d[o.d.length-1]}. Today (${N.bar_today}) closed at ${f2(o0.c[o0.c.length-1])} (Dhan quote, in the QUOTE panel); its full candle is added on the next refresh with a live Dhan token.</p>`:""}</section>
-   <div style="display:flex;flex-direction:column;gap:8px;min-width:0">${quoteHTML(sym)}${signalHTML(sym)}
+   <div style="display:flex;flex-direction:column;gap:8px;min-width:0"><div id="lv-qs" style="display:contents">${quoteHTML(sym)}${signalHTML(sym)}</div>
    <section class="pnl" style="max-height:420px"><div class="ph"><h2>NEWS <em>${sym}</em></h2><span class="sub">NSE filings + headlines</span></div><div class="news">${stockNews(sym)}</div></section></div>`;
   ws.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{CH.range=b.dataset.r;renderSub("chart")});
   ws.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{CH.type=b.dataset.t;renderSub("chart")});
@@ -983,17 +983,31 @@ function applyLive(L){const today=istDate();let k=0;
     const tv=window.TERMDATA&&TERMDATA.val&&TERMDATA.val.stocks[s];if(tv&&x.prev)tv.prev=x.prev;const lp=x.ohlc.c[x.ohlc.c.length-1];if(x.val&&x.val.eps>0)x.val.pe=lp/x.val.eps;if(tv){tv.price=lp;if(tv.eps>0)tv.pe=lp/tv.eps}}
   if(N.breadth&&k){const L2=SYMS.map(s=>S[s].tech);N.breadth.adv=L2.filter(t=>t.r1>0).length;N.breadth.dec=L2.filter(t=>t.r1<0).length;
     N.breadth.a50=L2.filter(t=>(t.vs50||0)>0).length;N.breadth.a200=L2.filter(t=>(t.vs200||0)>0).length;}
-  N.partial_today=false;return k}
+  if(k)livePropagate();N.partial_today=false;return k}
 const LIVE_SAFE=["brief","mkt","glob","heat","sect","chgs","scr","board","picks","tech","rstock","rmkt","vstory","sus","score","dval","dchg","dtech"];
+function livePropagate(){
+  // copy live index levels into every structure the views read
+  for(const sec of N.sectors||[]){const r=N.idx[sec.name];if(r&&r.c.length>1){sec.ltp=r.c[r.c.length-1];sec.prev=r.c[r.c.length-2]}}
+  const ni=N.idx["Nifty 50"];if(ni&&ni.c.length){const c=ni.c,last=c[c.length-1];
+    RM.nifty=last;if(RM.ma200)RM.vs200=last/RM.ma200-1;if(RM.ma50)RM.vs50=last/RM.ma50-1;
+    if(RM.peak_lvl)RM.from_peak=last/RM.peak_lvl-1;RM.from_52wh=last/Math.max(...c.slice(-250))-1}
+  const vx=N.idx["India VIX"];if(vx&&vx.c.length)RM.vix=vx.c[vx.c.length-1];
+  // price-based valuation fields: scale from the values saved with the monthly fundamentals
+  const scale=(o,ratio,up,down)=>{o.__b=o.__b||{};for(const f of up.concat(down)){if(o[f]==null)continue;if(o.__b[f]==null)o.__b[f]=o[f];o[f]=up.includes(f)?o.__b[f]*ratio:o.__b[f]/ratio}};
+  const FS=(N.fund&&N.fund.stk)||{};for(const[s,x]of Object.entries(FS)){const o=S[s]&&S[s].ohlc;if(!o||!o.c.length||!x.P)continue;
+    if(x.__P0==null)x.__P0=x.P;const last=o.c[o.c.length-1],ratio=last/x.__P0;x.P=last;scale(x,ratio,["pb","pe_norm","pe_core"],["rim_vp"])}
+  const snap={};(N.sectors||[]).forEach(z=>{if(z.snap_close)snap[z.name]=z.snap_close});
+  for(const r of (N.fund&&N.fund.sec)||[]){const ix=N.idx[r.name],base=snap[r.name];if(!ix||!ix.c.length)continue;const last=ix.c[ix.c.length-1];
+    if(base)scale(r,last/base,["pe","pb"],["dy","rim_vp"]);if(ix.c.length>250)r.r1y=last/ix.c[ix.c.length-251]-1;if(ix.c.length>21)r.r1m=last/ix.c[ix.c.length-22]-1}
+  const t=istNow();N.asof=istDate()+" "+String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");N.bar_today=istDate()}
 function liveRepaint(){
-  if(Date.now()-LV.touch<2500)return;const sel=window.getSelection&&String(window.getSelection());if(sel)return;
-  const ae=document.activeElement;if(ae&&(ae.tagName==="INPUT"||ae.tagName==="SELECT"||ae.tagName==="TEXTAREA"))return;
-  const ws=$("ws"),top=ws.scrollTop,wy=window.scrollY;
-  try{
-    for(const k of LIVE_SAFE){const el=$("sv-"+k);if(el&&el.offsetParent!==null)renderSub(k)}
-    {const el=$("sv-chart");if(el&&el.offsetParent!==null&&Date.now()-(LV.chartAt||0)>30000){LV.chartAt=Date.now();renderSub("chart")}}
-  }catch(e){}
-  drawWL();ws.scrollTop=top;window.scrollTo(0,wy)}
+  const ws=$("ws"),top=ws.scrollTop,wy=window.scrollY,ae=document.activeElement,sel=window.getSelection&&window.getSelection();
+  const busy=el=>(ae&&el.contains(ae)&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName))||(sel&&String(sel)&&sel.anchorNode&&el.contains(sel.anchorNode));
+  for(const k of LIVE_SAFE){const el=$("sv-"+k);if(!el||el.offsetParent===null||busy(el))continue;
+    try{renderSub(k)}catch(e){console.error("live repaint "+k,e)}}
+  const qs=$("lv-qs");if(qs&&sym&&!busy(qs)){try{qs.innerHTML=quoteHTML(sym)+signalHTML(sym)}catch(e){console.error("live quote",e)}}
+  {const el=$("sv-chart");if(el&&el.offsetParent!==null&&!busy(el)&&Date.now()-(LV.chartAt||0)>30000&&Date.now()-LV.touch>4000){LV.chartAt=Date.now();try{renderSub("chart")}catch(e){}}}
+  try{drawWL()}catch(e){}ws.scrollTop=top;window.scrollTo(0,wy)}
 ["pointerdown","keydown","wheel","touchstart"].forEach(e=>document.addEventListener(e,()=>{LV.touch=Date.now()},{passive:true}));
 async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
   try{const r=await mcp.callTool("DHAN","market_data_agent_tool",{action:"ohlc",payload:LIVE_IN},{cache:false});
