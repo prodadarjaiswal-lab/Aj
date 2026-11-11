@@ -25,3 +25,20 @@ def test_backtest_runs_on_page_data():
     stocks = {s: x["ohlc"] for s, x in nset["stocks"].items()}
     res = SU.backtest(stocks, nset["idx"]["Nifty 50"])
     assert set(res["setups"]) == set(SU.TAGS) and res["base"]["n"] > 100
+
+
+def test_n500_build_ranks_and_matches_universe():
+    import n500
+    nset = R.read_nset((ROOT / "docs" / "ra-desk.html").read_text())
+    uni = [{"s": s, "name": x["name"], "ind": x["sector"]} for s, x in nset["stocks"].items()]
+    series = {s: x["ohlc"] for s, x in nset["stocks"].items()}
+    out = n500.build(uni, series, nset["idx"]["Nifty 50"])
+    assert out["n"] >= 45 and out["rows"][0]["rank"] == 1 and len(out["rows"][0]["sp"]) == 40
+    assert {r["status"] for r in out["rows"]} <= {"lead", "improve", "neutral", "fade", "weak"}
+    assert all(("trig" in r) == ("setup" in r) for r in out["rows"])
+
+
+def test_parse_list():
+    import n500
+    rows = n500.parse_list("Company Name,Industry,Symbol,Series,ISIN Code\nA Ltd,IT,AAA,EQ,X\nB Ltd,Banks,BBB,EQ,Y\n")
+    assert [r["s"] for r in rows] == ["AAA", "BBB"] and rows[0]["ind"] == "IT"

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -29,13 +29,13 @@ jobs:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
-        run: python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html --with-options
+        run: python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html --with-options --with-n500
       - name: Commit if changed
         run: |
-          git add -N docs/radesk-latest.json data/options 2>/dev/null || true
-          if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json data/options; then echo "no change"; exit 0; fi
+          git add -N docs/radesk-latest.json data/options docs/n500.json data/nifty500.csv 2>/dev/null || true
+          if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          git add docs/ra-desk.html docs/radesk-latest.json data/options
+          git add docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html data/nifty500.csv 2>/dev/null || git add docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git push

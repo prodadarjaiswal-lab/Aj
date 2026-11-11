@@ -369,6 +369,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--page", default="docs/ra-desk.html")
     ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
+    ap.add_argument("--with-n500", action="store_true", help="also rank the Nifty 500 and update the terminal page")
     ap.add_argument("--with-options", action="store_true", help="also save the options snapshot (same login)")
     a = ap.parse_args(argv)
     try:
@@ -392,6 +393,12 @@ def main(argv=None) -> int:
                 print(options_snapshot.save_snapshot(client, scrip, Path(a.page).resolve().parents[1]))
             except Exception as e:  # options must never block the price refresh
                 print(f"  warning: options snapshot failed: {e}")
+        if a.with_n500:
+            try:
+                import n500
+                print(n500.run(client, scrip, Path(a.page).resolve().parents[1], now))
+            except Exception as e:
+                print(f"  warning: Nifty 500 board failed: {e}")
         return 0
     except RefreshError as e:
         print(f"REFRESH FAILED, page left unchanged: {e}", file=sys.stderr)

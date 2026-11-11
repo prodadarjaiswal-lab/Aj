@@ -15,7 +15,7 @@ concurrency:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -27,10 +27,15 @@ jobs:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
-        run: cd scripts/dhan_refresh && python setups.py --root ../..
+        run: |
+          cd scripts/dhan_refresh
+          python setups.py --root ../.. | tail -5
+          sleep 125   # Dhan allows one new login every 2 minutes
+          python setups.py --root ../.. --n500 | tail -60
+          python n500.py ../..
       - name: Commit result
         run: |
-          git add docs/setup-backtest.json
+          git add docs/setup-backtest.json docs/setup-backtest-n500.json docs/nse-terminal.html data/nifty500.csv 2>/dev/null || git add docs/setup-backtest.json
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
