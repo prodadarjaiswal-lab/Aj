@@ -2,7 +2,8 @@ name: Dhan nightly refresh
 
 on:
   schedule:
-    - cron: "45 10 * * 1-5"   # 16:15 IST, Monday to Friday (after the 15:30 close)
+    - cron: "47 10 * * 1-5"   # 16:17 IST, Monday to Friday (after the 15:30 close)
+    - cron: "23 12 * * 1-5"   # 17:53 IST backup: GitHub sometimes delays or drops scheduled runs
   workflow_dispatch: {}        # "Run workflow" button for a manual run
 
 permissions:
