@@ -932,7 +932,8 @@ function n5SheetHTML(r){const L=LM_L[r.status]||["–",""],p=n5px(r),d=n5d1(r),b
    <p class="note" style="padding:8px 0 0">Rank, status and setup are from the ${esc(N5.asof)} close; the price is live when Dhan is connected. Full research pages exist for Nifty 50 stocks only. Not investment advice.</p>`}
 function n5Sheet(r){const mount=el=>{el.querySelectorAll("[data-sg]").forEach(b=>b.onclick=()=>{closeSheet();setSym(r.s);go("desk")})};openSheet(r.s,n5SheetHTML(r),mount)}
 async function n5Poll(){clearTimeout(N5S.timer);const el=$("sv-board");const vis=N5&&BD.u==="n500"&&el&&el.offsetParent!==null&&!document.hidden&&OPT.mcp;
-  if(vis&&!N5S.busy&&N5S.ids&&N5S.ids.length){N5S.busy=true;
+  if(vis&&GHL.ok){const ae=document.activeElement;if(!(ae&&el.contains(ae)&&ae.tagName==="INPUT")){try{renderSub("board")}catch(e){}}}
+  else if(vis&&!N5S.busy&&N5S.ids&&N5S.ids.length){N5S.busy=true;
     try{const r=await OPT.mcp.callTool("DHAN","market_data_agent_tool",{action:"ohlc",payload:JSON.stringify({NSE_EQ:N5S.ids.slice(0,150)})},{cache:false});let n=0;
       for(const line of optTxt(r).split("\n")){const m=line.match(/^\s*(\d+):\s*LTP\s*₹?\s*([\d,\.]+)(?:\s*\|\s*O\s*([\d\.]+)\s*H\s*([\d\.]+)\s*L\s*([\d\.]+)\s*C\s*([\d\.]+))?/);if(!m)continue;const ltp=+m[2].replace(/,/g,"");if(ltp>0){N5L[m[1]]={ltp,pc:+m[6]||null};n++}}
       N5S.err=n?null:"no prices in reply";N5S.at=Date.now()}
@@ -1263,7 +1264,25 @@ function liveRepaint(){
   try{sheetTick()}catch(e){}
   try{drawWL()}catch(e){}ws.scrollTop=top;window.scrollTo(0,wy)}
 ["pointerdown","keydown","wheel","touchstart"].forEach(e=>document.addEventListener(e,()=>{LV.touch=Date.now()},{passive:true}));
-async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
+
+/* ===== Live prices from GitHub (GitHub Actions logs in to Dhan with TOTP; no Dhan connector needed) ===== */
+const GHL={ok:false,at:0,t:null,err:null,busy:false};
+function ghLiveText(res){for(const b of (res&&res.content)||[]){const r=b&&b.resource;if(r&&typeof r.text==="string")return r.text;if(b.type==="text"&&typeof b.text==="string"){const i=b.text.indexOf('{"t"');if(i>=0)return b.text.slice(i)}}
+  const p=res&&res.payload;if(p&&typeof p==="object"&&p.q)return JSON.stringify(p);return null}
+async function ghLivePoll(mcp){if(GHL.busy)return;GHL.busy=true;
+  try{const r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"Aj",path:"live.json",ref:"refs/heads/live"},{cache:false});
+    const txt=ghLiveText(r);if(!txt)throw{code:"empty",message:"no live file yet"};const d=JSON.parse(txt);if(!d.q)throw{code:"empty",message:"live file empty"};
+    const L={eq:{},idx:{}},mk=a=>({ltp:a[0],o:a[1],h:a[2],l:a[3],pc:a[4]});
+    for(const[sid,a]of Object.entries(d.q.NSE_EQ||{})){if(LIVE_SID[sid])L.eq[LIVE_SID[sid]]=mk(a);if(typeof N5L!=="undefined")N5L[sid]={ltp:a[0],pc:a[4]||null}}
+    for(const[sid,a]of Object.entries(d.q.IDX_I||{})){if(LIVE_IDX[sid])L.idx[LIVE_IDX[sid]]=mk(a)}
+    const fresh=d.d===istDate();if(fresh||!GHL.ok){applyLive(L)}
+    GHL.ok=true;GHL.at=Date.now();GHL.t=d.t;GHL.err=null;if(typeof N5S!=="undefined")N5S.at=Date.now();
+    $("asof").textContent=d.t.slice(11)+" IST";
+    liveStatus(`<b style="color:var(--up)">● LIVE</b> <span>via GitHub · prices ${esc(d.t.slice(11,19))} IST${fresh&&mktOpen()?" · every 5s":" · market closed"}</span>`);liveRepaint()}
+  catch(e){const c=e&&e.code;GHL.err=c==="server_not_connected"?"GitHub connector not added":c==="needs_reauth"?"reconnect GitHub":c==="not_in_manifest"||c==="consent_required"||c==="approval_required"?"GitHub not allowed for this page":(c||"error");
+    if(!GHL.ok||Date.now()-GHL.at>120000)GHL.ok=false}
+  finally{GHL.busy=false}}
+async function livePoll(mcp){if(GHL.ok&&Date.now()-GHL.at<60000)return;if(LV.busy||LV.stop)return;LV.busy=true;
   try{const r=await mcp.callTool("DHAN","market_data_agent_tool",{action:"ohlc",payload:LIVE_IN},{cache:false});
     let p=r&&r.payload;let txt=typeof p==="string"?p:p&&typeof p.result==="string"?p.result:"";
     if(!txt&&r&&r.content)txt=(r.content.find(b=>b.type==="text")||{}).text||"";
@@ -1277,7 +1296,7 @@ async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
     liveRepaint();
   }catch(e){const c=e&&e.code;
     if(["needs_reauth","server_not_connected","server_not_found","not_granted","not_in_manifest","blocked_by_policy","selection_required","consent_required","capability_disabled","capability_removed"].includes(c)){
-      LV.stop=true;liveStatus(`<b style="color:var(--amber)">LIVE OFF</b> <span>${c==="needs_reauth"?"log in to the Dhan connector again":c==="not_granted"||c==="consent_required"?"Dhan access not allowed for this page":"connect the Dhan connector in Claude"} · showing ${esc(N.asof)} prices</span>`);}
+      LV.err=c;if(!GHL.ok)liveStatus(`<b style="color:var(--amber)">LIVE OFF</b> <span>${c==="needs_reauth"?"log in to the Dhan connector again":c==="not_granted"||c==="consent_required"?"Dhan access not allowed for this page":"connect the Dhan connector in Claude"} · showing ${esc(N.asof)} prices</span>`);}
     else{LV.err=c||"error";liveStatus(`<b style="color:var(--amber)">LIVE retrying</b> <span>${esc(c||"error")} ${esc((e&&e.message||"").slice(0,80))}${LV.last?" · last "+LV.last.toLocaleTimeString("en-GB",{timeZone:"Asia/Kolkata",hour12:false}):""}</span>`)}
   }finally{LV.busy=false}}
 (async()=>{let mcp=null;try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}
@@ -1285,8 +1304,10 @@ async function livePoll(mcp){if(LV.busy||LV.stop)return;LV.busy=true;
     liveStatus(mktOpen()&&age>12?`<b style="color:var(--amber)">⚠ PRICES DELAYED</b> <span>last update ${esc(N.asof.slice(11))} IST (${Math.round(age)} min ago) · updates every 5 min, 9:15–15:30</span>`
       :`<span>prices from Dhan · updated every 5 min, 9:15–15:30 IST</span>`);return}
   LV.on=true;liveStatus(`<b style="color:var(--dim)">LIVE connecting…</b>`);
+  await ghLivePoll(mcp);   // GitHub first, so the Dhan connector is only asked when GitHub is not available
+  const ghLoop=async()=>{if(!document.hidden)await ghLivePoll(mcp);setTimeout(ghLoop,mktOpen()?5000:60000)};setTimeout(ghLoop,mktOpen()?5000:60000);
   const loop=async()=>{if(LV.stop)return;if(!document.hidden)await livePoll(mcp);
-    const wait=LV.err&&LV.err!=="login"?15000:mktOpen()?5000:300000;LV.timer=setTimeout(loop,wait)};
+    const wait=["needs_reauth","server_not_connected","server_not_found","not_granted","not_in_manifest","blocked_by_policy","selection_required","consent_required","capability_disabled","capability_removed"].includes(LV.err)?120000:LV.err&&LV.err!=="login"?15000:mktOpen()?5000:300000;LV.timer=setTimeout(loop,wait)};
   document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!LV.stop&&!LV.busy){clearTimeout(LV.timer);loop()}});
   loop();})();
 

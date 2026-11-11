@@ -185,6 +185,53 @@ def drop_partial(o: dict, now: dt.datetime) -> dict:
     return o
 
 
+def quotes(dhan, eq_ids, idx_ids) -> dict:
+    """Today's OHLC/LTP (and volume when given) from Dhan's quote API: {(seg, sid): (o, h, l, ltp, vol)}."""
+    out = {}
+    eq_ids, idx_ids = [int(x) for x in eq_ids], [int(x) for x in idx_ids]
+    for i in range(0, max(len(eq_ids), 1), 900):
+        body = {}
+        if eq_ids[i:i + 900]:
+            body["NSE_EQ"] = eq_ids[i:i + 900]
+        if i == 0 and idx_ids:
+            body["IDX_I"] = idx_ids
+        if not body:
+            continue
+        time.sleep(1.1)
+        try:
+            r = dhan.post("/marketfeed/quote", body)
+        except Exception as e:
+            print(f"  quote call failed ({str(e)[:80]}); trying ohlc")
+            r = dhan.post("/marketfeed/ohlc", body)
+        for seg, rows in (r.get("data") or {}).items():
+            for sid, q in (rows or {}).items():
+                o = (q or {}).get("ohlc") or {}
+                ltp = float(q.get("last_price") or 0)
+                if ltp > 0:
+                    out[(seg, str(sid))] = (float(o.get("open") or 0), float(o.get("high") or 0), float(o.get("low") or 0), ltp, float(q.get("volume") or 0))
+    return out
+
+
+def append_today(o: dict, q, now: dt.datetime) -> bool:
+    """Add today's bar from a quote when the daily history does not have it yet (Dhan adds it later)."""
+    if not q or not o["d"]:
+        return False
+    day = now.date().isoformat()
+    op, hi, lo, ltp, vol = q
+    if o["d"][-1] >= day or now.weekday() >= 5 or now.timetz().replace(tzinfo=None) < CLOSE_DONE or op <= 0:
+        return False
+    if abs(op / o["o"][-1] - 1) < 2e-4 and abs(hi / o["h"][-1] - 1) < 2e-4:
+        return False          # quote repeats the last stored session: holiday
+    o["d"].append(day)
+    for k, v in (("o", op), ("h", max(hi, ltp)), ("l", min(lo or ltp, ltp)), ("c", ltp)):
+        o[k].append(v)
+    if "v" in o:
+        o["v"].append(vol)
+    for k in list(o):
+        o[k] = o[k][-BARS:]
+    return True
+
+
 def to_series(resp: dict) -> dict:
     ts = resp.get("timestamp") or []
     if not ts:
@@ -355,6 +402,14 @@ def run(page: Path, dhan, scrip_csv: str, now: dt.datetime, with_fund: bool = Tr
             except RefreshError as e:
                 print(f"  warning: company info {sym}: {e}")
 
+    try:
+        qs = quotes(dhan, [eq[s] for s in new_stk], [ix[n] for n in new_idx])
+        added = sum(append_today(new_idx[n], qs.get(("IDX_I", str(ix[n]))), now) for n in new_idx) + \
+            sum(append_today(new_stk[s], qs.get(("NSE_EQ", str(eq[s]))), now) for s in new_stk)
+        if added:
+            print(f"  added today's bar from live quotes to {added} series")
+    except Exception as e:
+        print(f"  warning: could not add today's bar from quotes: {str(e)[:120]}")
     last = check(new_idx, new_stk, nset, now.date())
     if last <= old_last and nset.get("partial_today") is False:
         return f"no new session (latest bar {last}); page unchanged"

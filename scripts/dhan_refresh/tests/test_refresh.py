@@ -160,3 +160,14 @@ def test_partial_intraday_bar_dropped():
     after = dt.datetime(2026, 11, 11, 16, 0, tzinfo=R.IST)
     assert R.drop_partial(o, mid)["d"] == ["2026-11-10"]
     assert R.drop_partial(o, after)["d"][-1] == "2026-11-11"
+
+
+def test_append_today_from_quote():
+    o = {"d": ["2026-11-09"], "o": [100.0], "h": [105.0], "l": [99.0], "c": [104.0], "v": [10.0]}
+    after = dt.datetime(2026, 11, 11, 18, 0, tzinfo=R.IST)
+    assert not R.append_today(dict(o), (100.0, 105.0, 99.0, 104.0, 5.0), after)      # holiday replay
+    assert R.append_today(o, (104.5, 107.0, 103.0, 106.0, 7.0), after)
+    assert o["d"][-1] == "2026-11-11" and o["c"][-1] == 106.0 and o["v"][-1] == 7.0
+    assert not R.append_today(o, (104.5, 107.0, 103.0, 106.0, 7.0), after)          # already there
+    mid = dt.datetime(2026, 11, 12, 11, 0, tzinfo=R.IST)
+    assert not R.append_today(o, (110.0, 111.0, 109.0, 110.5, 1.0), mid)            # session not over

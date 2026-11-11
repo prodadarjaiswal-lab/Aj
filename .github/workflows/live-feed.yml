@@ -1,0 +1,34 @@
+name: Live prices (market hours)
+
+on:
+  schedule:
+    - cron: "37 3 * * 1-5"    # 09:07 IST, first half (runs to 12:22)
+    - cron: "17 6 * * 1-5"    # 11:47 IST, second half (runs to 15:35); overlaps so a late start leaves no gap
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    concurrency:
+      group: live-${{ github.event.schedule || 'manual' }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0
+      - name: Stream prices to the live branch
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: |
+          cd scripts/dhan_refresh
+          now=$(TZ=Asia/Kolkata date +%H%M)
+          if [ "$now" -lt 1200 ] && [ "${{ github.event.schedule }}" = "37 3 * * 1-5" ]; then UNTIL=12:22; else UNTIL=15:35; fi
+          python live_poller.py --until $UNTIL --every 5

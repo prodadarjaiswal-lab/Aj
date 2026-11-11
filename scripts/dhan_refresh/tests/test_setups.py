@@ -42,3 +42,13 @@ def test_parse_list():
     import n500
     rows = n500.parse_list("Company Name,Industry,Symbol,Series,ISIN Code\nA Ltd,IT,AAA,EQ,X\nB Ltd,Banks,BBB,EQ,Y\n")
     assert [r["s"] for r in rows] == ["AAA", "BBB"] and rows[0]["ind"] == "IT"
+
+
+def test_live_parse():
+    import live_poller as LP
+    r = {"data": {"NSE_EQ": {"11536": {"last_price": 2472.1, "ohlc": {"open": 2500, "close": 2475.4, "high": 2506, "low": 2442}}},
+                  "IDX_I": {"13": {"last_price": 25255.05, "ohlc": {"open": 25337.8, "close": 25044.65, "high": 25424.35, "low": 25095.35}}}}, "status": "success"}
+    q = LP.parse(r)
+    assert q["NSE_EQ"]["11536"] == [2472.1, 2500.0, 2506.0, 2442.0, 2475.4] and q["IDX_I"]["13"][0] == 25255.05
+    eq, idx = LP.universe()
+    assert len(eq) >= 50 and "13" in idx

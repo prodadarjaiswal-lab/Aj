@@ -153,6 +153,14 @@ def run(dhan, scrip_csv: str, root: Path, now: dt.datetime) -> str:
             series[s] = ser(dhan.daily(sid, "NSE_EQ", "EQUITY", start, now.date()))
         except Exception:
             miss += 1
+    try:
+        qs = R.quotes(dhan, [eq[s] for s in series], [ix["Nifty 50"]])
+        R.append_today(nifty, qs.get(("IDX_I", str(ix["Nifty 50"]))), now)
+        added = sum(R.append_today(o, qs.get(("NSE_EQ", str(eq[s]))), now) for s, o in series.items())
+        if added:
+            print(f"  Nifty 500: added today's bar from live quotes to {added} stocks")
+    except Exception as e:
+        print(f"  Nifty 500: could not add today's bar: {str(e)[:120]}")
     payload = build(uni, series, nifty)
     if payload["n"] < 150:
         raise R.RefreshError(f"only {payload['n']} Nifty 500 stocks had usable data")
