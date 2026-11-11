@@ -1,27 +1,51 @@
 {
  "setups": {
-  "breakout": {
-   "n": 2929,
-   "m10": 0.00266,
-   "m21": 0.00681,
-   "hit10": 0.4998,
-   "hit21": 0.5121,
-   "t21": 5.01,
+  "volbreak": {
+   "n": 1397,
+   "m10": 0.00251,
+   "m21": 0.00781,
+   "hit10": 0.4911,
+   "hit21": 0.5161,
+   "t21": 3.79,
    "up": {
-    "n": 2381,
-    "m10": 0.00316,
-    "m21": 0.00846,
-    "hit10": 0.4994,
-    "hit21": 0.522,
-    "t21": 5.64
+    "n": 1155,
+    "m10": 0.00397,
+    "m21": 0.01123,
+    "hit10": 0.4961,
+    "hit21": 0.5333,
+    "t21": 4.99
    },
    "weak": {
-    "n": 548,
-    "m10": 0.00053,
-    "m21": -0.00034,
-    "hit10": 0.5018,
-    "hit21": 0.469,
-    "t21": -0.11
+    "n": 242,
+    "m10": -0.00446,
+    "m21": -0.00849,
+    "hit10": 0.4669,
+    "hit21": 0.4339,
+    "t21": -1.7
+   }
+  },
+  "breakout": {
+   "n": 1933,
+   "m10": 0.00187,
+   "m21": 0.00465,
+   "hit10": 0.5018,
+   "hit21": 0.5008,
+   "t21": 2.88,
+   "up": {
+    "n": 1559,
+    "m10": 0.00183,
+    "m21": 0.0054,
+    "hit10": 0.5003,
+    "hit21": 0.5074,
+    "t21": 3.03
+   },
+   "weak": {
+    "n": 374,
+    "m10": 0.00203,
+    "m21": 0.00152,
+    "hit10": 0.508,
+    "hit21": 0.4733,
+    "t21": 0.4
    }
   },
   "coiled": {
@@ -124,5 +148,6 @@
  "asof": "2026-11-11",
  "from": "2020-10-13",
  "stocks": 50,
- "note": "Excess return vs Nifty after the first day a setup appears. Today's Nifty 50 members (survivorship bias). t is naive."
+ "universe": "Nifty 50",
+ "note": "Excess return vs Nifty after the first day a setup appears. Today's index members (survivorship bias). t is naive."
 }
