@@ -30,12 +30,20 @@ jobs:
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
         run: python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html
+      - name: Options snapshot (does not block the refresh)
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python options_snapshot.py --root ../..
       - name: Commit if changed
         run: |
-          git add -N docs/radesk-latest.json 2>/dev/null || true
-          if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json; then echo "no change"; exit 0; fi
+          git add -N docs/radesk-latest.json data/options 2>/dev/null || true
+          if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json data/options; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          git add docs/ra-desk.html docs/radesk-latest.json
+          git add docs/ra-desk.html docs/radesk-latest.json data/options
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git push
