@@ -15,7 +15,10 @@ PAGE = ROOT / "docs" / "ra-desk.html"
 IDX_SYMS = {"Nifty 50": "NIFTY", "Nifty Bank": "BANKNIFTY", "India VIX": "INDIA VIX", "Nifty IT": "NIFTY IT",
             "Nifty Financial Services": "FINNIFTY", "Nifty Midcap 100": "NIFTY MIDCAP 100",
             "Nifty Infrastructure": "NIFTY INFRA"}
-NEWDAY = dt.date(2026, 11, 11)
+_LAST = dt.date.fromisoformat(R.read_nset(PAGE.read_text())["idx"]["Nifty 50"]["d"][-1])
+NEWDAY = _LAST + dt.timedelta(days=1)
+while NEWDAY.weekday() >= 5:
+    NEWDAY += dt.timedelta(days=1)
 
 
 def scrip_csv(nset):
@@ -45,7 +48,7 @@ class FakeDhan:
         d, op, hi, lo, c = o["d"][:n], o["o"][:n], o["h"][:n], o["l"][:n], o["c"][:n]
         nc = c[-1] * 1.01
         ts = [int(dt.datetime.fromisoformat(x).replace(hour=0, tzinfo=R.IST).timestamp()) for x in d]
-        ts.append(int(dt.datetime(2026, 11, 11, tzinfo=R.IST).timestamp()))
+        ts.append(int(dt.datetime(NEWDAY.year, NEWDAY.month, NEWDAY.day, tzinfo=R.IST).timestamp()))
         out = {"timestamp": ts, "open": op + [c[-1]], "high": hi + [nc * 1.005], "low": lo + [c[-1] * 0.995], "close": c + [nc]}
         if "v" in o:
             out["volume"] = o["v"][:n] + [o["v"][n - 1]]
@@ -63,20 +66,20 @@ def page(tmp_path):
 
 
 def now():
-    return dt.datetime(2026, 11, 11, 16, 20, tzinfo=R.IST)
+    return dt.datetime(NEWDAY.year, NEWDAY.month, NEWDAY.day, 16, 20, tzinfo=R.IST)
 
 
 def test_full_refresh_updates_page(page):
     nset = R.read_nset(page.read_text())
     msg = R.run(page, FakeDhan(nset), scrip_csv(nset), now())
-    assert msg.startswith("updated to 2026-11-11"), msg
+    assert msg.startswith(f"updated to {NEWDAY}"), msg
     new = R.read_nset(page.read_text())
-    assert new["bar_today"] == "2026-11-11" and new["partial_today"] is False
+    assert new["bar_today"] == NEWDAY.isoformat() and new["partial_today"] is False
     t = new["stocks"]["TCS"]
-    assert t["ohlc"]["d"][-1] == "2026-11-11" and len(t["ohlc"]["c"]) == R.BARS
+    assert t["ohlc"]["d"][-1] == NEWDAY.isoformat() and len(t["ohlc"]["c"]) == R.BARS
     assert abs(t["tech"]["r1"] - 0.01) < 1e-9
     assert "dhan_fund" in t
-    assert new["idx"]["Nifty 50"]["d"][-1] == "2026-11-11"
+    assert new["idx"]["Nifty 50"]["d"][-1] == NEWDAY.isoformat()
     # every other field is kept
     assert new["fund"] == nset["fund"] and new["stocks"]["TCS"]["val"] == nset["stocks"]["TCS"]["val"]
 
@@ -126,7 +129,7 @@ def test_stale_feed_blocks_write(page):
 def test_future_bar_rejected(page):
     nset = R.read_nset(page.read_text())
     with pytest.raises(R.RefreshError, match="future"):
-        R.run(page, FakeDhan(nset), scrip_csv(nset), dt.datetime(2026, 11, 10, 16, 0, tzinfo=R.IST))
+        R.run(page, FakeDhan(nset), scrip_csv(nset), dt.datetime(_LAST.year, _LAST.month, _LAST.day, 16, 0, tzinfo=R.IST))
 
 
 def test_symbol_map_prefers_nse_eq_and_aliases():
@@ -148,8 +151,8 @@ def test_latest_file_written_small_and_current(page):
     nset = R.read_nset(page.read_text())
     R.run(page, FakeDhan(nset), scrip_csv(nset), now())
     lat = json.loads(page.with_name("radesk-latest.json").read_text())
-    assert lat["bar_today"] == "2026-11-11" and lat["schema"] == 1
-    assert lat["stocks"]["TCS"]["ohlc"]["d"][-1] == "2026-11-11"
+    assert lat["bar_today"] == NEWDAY.isoformat() and lat["schema"] == 1
+    assert lat["stocks"]["TCS"]["ohlc"]["d"][-1] == NEWDAY.isoformat()
     assert len(lat["stocks"]["TCS"]["ohlc"]["c"]) == R.LATEST_BARS
     assert page.with_name("radesk-latest.json").stat().st_size < 600_000
 
