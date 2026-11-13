@@ -1,0 +1,190 @@
+<title>Fair Value Workbench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one column on a phone; inputs left, results right from 860px. Results lead with the answer, then the working. */
+:root{--bg:#f3f5f8;--panel:#ffffff;--ink:#16202e;--mute:#5b6878;--line:#d9dfe7;--accent:#0b6e8c;--good:#17794a;--warn:#a86400;--bad:#b3261e;--track:#e6eaf0;
+--display:"Space Grotesk",system-ui,sans-serif;--body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f151d;--panel:#18212c;--ink:#e6ecf3;--mute:#98a6b6;--line:#2b3746;--accent:#4fb6d3;--good:#4cc38a;--warn:#e0a13a;--bad:#f0766d;--track:#243040;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f151d;--panel:#18212c;--ink:#e6ecf3;--mute:#98a6b6;--line:#2b3746;--accent:#4fb6d3;--good:#4cc38a;--warn:#e0a13a;--bad:#f0766d;--track:#243040;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font:600 24px/1.2 var(--display);margin:0;text-wrap:balance}
+h2{font:600 16px/1.3 var(--display);margin:0}
+p{margin:0}.sub{color:var(--mute);font-size:13px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+.cols{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:860px){.cols{grid-template-columns:340px 1fr;align-items:start}}
+.cols>*{min-width:0}
+.pnl{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{cursor:pointer;width:auto;font-weight:500}
+.sc{display:grid;grid-template-columns:54px 1fr 1fr 1fr;gap:8px;align-items:center;font-size:12px;color:var(--mute)}
+.num{font-variant-numeric:tabular-nums}
+.answer{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:baseline}
+.big{font:600 34px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.k{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.chip{display:inline-block;border-radius:999px;padding:3px 12px;font-weight:600;font-size:13px;border:1px solid currentColor}
+.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.bar{position:relative;height:74px;margin:6px 10px 0}
+.bar .track{position:absolute;left:0;right:0;top:34px;height:8px;border-radius:4px;background:var(--track)}
+.bar .range{position:absolute;top:34px;height:8px;border-radius:4px;background:var(--accent);opacity:.45}
+.bar .mk{position:absolute;top:26px;width:2px;height:24px;background:var(--ink)}
+.bar .mk.fair{background:var(--accent);width:3px}
+.bar .lb{position:absolute;font-size:11px;white-space:nowrap;transform:translateX(-50%);color:var(--mute)}
+.bar .lb.t{top:6px}.bar .lb.b{top:54px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:500}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:13px;color:var(--mute)}
+ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+</style>
+<div class="wrap">
+ <div class="top">
+  <div><h1>Fair Value Workbench</h1><p class="sub">Five ways to value any stock from eight numbers. Change any input and the answer updates.</p></div>
+  <div style="display:flex;gap:8px;align-items:end"><label>Load<select id="preset"><option value="nvda">NVDA, 13 Nov 2026</option><option value="blank">Blank</option><option value="saved">My last inputs</option></select></label></div>
+ </div>
+ <div class="cols">
+  <div class="pnl">
+   <h2>Inputs (per share)</h2>
+   <div class="grid">
+    <label>Name<input id="name"></label>
+    <label>Currency sign<input id="cur" maxlength="3"></label>
+    <label>Price<input id="price" type="number" step="any"></label>
+    <label>Core EPS, last 12 months<input id="eps" type="number" step="any"></label>
+    <label>Reported EPS, last 12 months<input id="epsGaap" type="number" step="any"></label>
+    <label>Free cash flow, last 12 months<input id="fcf" type="number" step="any"></label>
+    <label>Net cash (debt is negative)<input id="netCash" type="number" step="any"></label>
+    <label>Dividend yield %<input id="dy" type="number" step="any"></label>
+    <label>Return you require %<input id="r" type="number" step="any"></label>
+    <label>Growth, years 1 to 5 %<input id="g1" type="number" step="any"></label>
+    <label>Growth for ever after %<input id="gT" type="number" step="any"></label>
+    <label>Discount you want before buying %<input id="mosWant" type="number" step="any"></label>
+   </div>
+   <h2>Next-year scenarios</h2>
+   <div class="sc"><span></span><span>EPS</span><span>P/E</span><span>Chance %</span></div>
+   <div class="sc"><span>Bear</span><input id="s0e" type="number" step="any"><input id="s0m" type="number" step="any"><input id="s0p" type="number" step="any"></div>
+   <div class="sc"><span>Base</span><input id="s1e" type="number" step="any"><input id="s1m" type="number" step="any"><input id="s1p" type="number" step="any"></div>
+   <div class="sc"><span>Bull</span><input id="s2e" type="number" step="any"><input id="s2m" type="number" step="any"><input id="s2p" type="number" step="any"></div>
+   <p class="note">Core EPS leaves out one-off gains. Use operating profit after tax, divided by shares, if the company books investment gains.</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+   <div class="pnl">
+    <div class="answer">
+     <div><div class="k">Fair value (blend)</div><div class="big" id="oFair">–</div></div>
+     <div><div class="k">Price</div><div class="big" id="oPrice">–</div></div>
+     <div><div class="k">Price against fair value</div><div class="big" id="oMos">–</div></div>
+     <div><div class="k">Reading</div><div><span class="chip" id="oVerdict">–</span></div></div>
+    </div>
+    <p id="oLine"></p>
+    <div class="bar" id="bar" role="img" aria-label="Price against the value range"></div>
+   </div>
+   <div class="pnl">
+    <h2>The five methods</h2>
+    <div class="tw"><table><thead><tr><th>Method and what it assumes</th><th class="n">Value</th><th class="n">Against price</th></tr></thead><tbody id="oRows"></tbody></table></div>
+    <p class="note">Blend = 40% cash-flow value + 40% scenario value + 20% growth-multiple value. The no-growth floor and the growth the price needs are checks, not part of the blend.</p>
+   </div>
+   <div class="pnl">
+    <h2>Checks before you trust the number</h2>
+    <ul id="oChecks"></ul>
+   </div>
+   <div class="pnl" id="nvdaNote" hidden>
+    <h2>Nvidia on 13 Nov 2026: wait, do not buy yet</h2>
+    <ul>
+     <li>The blend is below the price, so the stock is not cheap even after falling 30% in a month. The scenario method is the only one above the price.</li>
+     <li>Free cash flow is two thirds of reported profit. Customers owe Nvidia $63bn and that rose $22bn in one quarter, which fits the reports that it helps finance its buyers.</li>
+     <li>Results on 17 Nov are the first without Jensen Huang, who resigned on 12 Nov. A four-seat Roast Room council scored waiting for those results 6.8 out of 10 and buying a part now 5.3.</li>
+     <li>After the results, buy a first third only if revenue is at least $104bn, estimates for the year to January 2028 hold near $11 to $12 a share, and the price is about $150 or less. At about $115 or less the 20% discount is there.</li>
+    </ul>
+    <p class="note">Inputs: FMP statements to 26 Jul 2026 and the quote on 13 Nov 2026. Scenario EPS and chances are judgment, set after analyst cuts on 11 and 12 Nov. This is analysis, not personal investment advice.</p>
+   </div>
+  </div>
+ </div>
+</div>
+<script>
+// Pure valuation maths. All per-share. Rates in percent.
+function valuation(i){
+  const r=i.r/100,gT=i.gT/100,g1=i.g1/100,o={};
+  // 1. Two-stage DCF on free cash flow: g1 for 5 years, straight-line fade to gT by year 10.
+  function dcf(f0,g){let f=f0,pv=0;for(let y=1;y<=10;y++){const gy=y<=5?g:g+(gT-g)*(y-5)/5;f*=1+gy;pv+=f/Math.pow(1+r,y);}
+    return r>gT?pv+f*(1+gT)/(r-gT)/Math.pow(1+r,10)+i.netCash:NaN;}
+  o.dcf=dcf(i.fcf,g1);
+  o.dcfEps=dcf(i.eps,g1);            // same, if cash flow catches up with profit
+  // 2. Scenarios: next-year EPS x multiple, weighted by probability, discounted one year.
+  const ps=i.sc.reduce((a,s)=>a+s.p,0)||1;
+  o.scTargets=i.sc.map(s=>s.eps*s.pe);
+  o.scTarget=i.sc.reduce((a,s)=>a+s.p*s.eps*s.pe,0)/ps;
+  o.sc=o.scTarget/(1+r);
+  // 3. Growth-adjusted multiple (Lynch): fair P/E = growth % + dividend yield %, between 8 and 30.
+  o.fairPE=Math.max(8,Math.min(30,i.g1+i.dy));
+  o.lynch=o.fairPE*i.eps;
+  // 4. No-growth floor: today's profit held flat for ever.
+  o.floor=i.eps/r+i.netCash;
+  // 5. Reverse DCF: the 10-year growth the price needs (then gT).
+  function implied(f0){let lo=-0.5,hi=1;for(let k=0;k<60;k++){const m=(lo+hi)/2;let f=f0,pv=0;
+      for(let y=1;y<=10;y++){f*=1+m;pv+=f/Math.pow(1+r,y);}
+      const v=pv+f*(1+gT)/(r-gT)/Math.pow(1+r,10)+i.netCash;if(v>i.price)hi=m;else lo=m;}return (lo+hi)/2*100;}
+  o.impliedFcf=implied(i.fcf);o.impliedEps=implied(i.eps);
+  // Blend
+  o.fair=0.4*o.dcf+0.4*o.sc+0.2*o.lynch;
+  o.lo=Math.min(o.dcf,o.sc,o.lynch);o.hi=Math.max(o.dcf,o.sc,o.lynch);
+  o.mos=(o.fair/i.price-1)*100;
+  o.buyBelow=o.fair*(1-i.mosWant/100);
+  // Quality
+  o.conv=i.fcf/i.epsGaap*100;o.pe=i.price/i.eps;o.fcfYield=i.fcf/i.price*100;
+  o.verdict=i.price<=o.buyBelow?'buy':o.mos>=0?'accumulate':o.mos>=-15?'hold':'avoid';
+  return o;
+}
+const IDS=['name','cur','price','eps','epsGaap','fcf','netCash','dy','r','g1','gT','mosWant','s0e','s0m','s0p','s1e','s1m','s1p','s2e','s2m','s2p'];
+const PRE={nvda:{name:'Nvidia (NVDA)',cur:'$',price:159.93,eps:6.85,epsGaap:7.97,fcf:5.25,netCash:2.5,dy:0.3,r:10,g1:12,gT:3,mosWant:20,s0e:8,s0m:15,s0p:30,s1e:12,s1m:18,s1p:50,s2e:15.7,s2m:20,s2p:20},
+ blank:{name:'',cur:'₹',price:'',eps:'',epsGaap:'',fcf:'',netCash:0,dy:0,r:12,g1:10,gT:4,mosWant:20,s0e:'',s0m:'',s0p:30,s1e:'',s1m:'',s1p:50,s2e:'',s2m:'',s2p:20}};
+const $=id=>document.getElementById(id);
+function load(p){IDS.forEach(k=>{$(k).value=p[k]??''});render();}
+function read(){const v={};IDS.forEach(k=>{v[k]=$(k).value});return v;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function render(){
+  const v=read(),n=k=>parseFloat(v[k]),cur=esc(v.cur||'');
+  const f=x=>isFinite(x)?cur+(Math.abs(x)>=1000?Math.round(x).toLocaleString():x.toFixed(Math.abs(x)<20?2:0)):'–';
+  const pc=x=>isFinite(x)?(x>0?'+':'')+x.toFixed(0)+'%':'–';
+  const i={price:n('price'),eps:n('eps'),epsGaap:n('epsGaap')||n('eps'),fcf:n('fcf'),netCash:n('netCash')||0,dy:n('dy')||0,r:n('r'),g1:n('g1'),gT:n('gT'),mosWant:n('mosWant')||0,
+    sc:[0,1,2].map(j=>({eps:n('s'+j+'e'),pe:n('s'+j+'m'),p:n('s'+j+'p')||0})).filter(s=>isFinite(s.eps)&&isFinite(s.pe))};
+  $('nvdaNote').hidden=!(v.name.indexOf('NVDA')>=0&&v.price==String(PRE.nvda.price));
+  try{localStorage.setItem('fvw',JSON.stringify(v));}catch(e){}
+  const ok=[i.price,i.eps,i.fcf,i.r,i.g1,i.gT].every(isFinite)&&i.price>0&&i.sc.length>0&&i.r>i.gT;
+  if(!ok){$('oFair').textContent='–';$('oPrice').textContent=f(i.price);$('oMos').textContent='–';$('oVerdict').textContent='Needs inputs';$('oVerdict').className='chip';
+    $('oLine').textContent=i.r<=i.gT?'The return you require must be higher than the growth for ever after.':'Fill in price, EPS, free cash flow, the rates and at least one scenario.';$('oRows').innerHTML='';$('oChecks').innerHTML='';$('bar').innerHTML='';return;}
+  const o=valuation(i),ag=x=>pc((x/i.price-1)*100);
+  $('oFair').textContent=f(o.fair);$('oPrice').textContent=f(i.price);$('oMos').textContent=pc(-o.mos);
+  const V={buy:['Buy zone','good'],accumulate:['Fair, small buys only','warn'],hold:['Not cheap, wait','warn'],avoid:['Expensive, avoid','bad']}[o.verdict];
+  $('oVerdict').textContent=V[0];$('oVerdict').className='chip '+V[1];
+  $('oLine').textContent=`The price is ${Math.abs(o.mos).toFixed(0)}% ${o.mos<0?'above':'below'} the blended fair value. With the ${i.mosWant}% discount you asked for, the buy price is ${cur}${o.buyBelow.toFixed(0)} or less. The three methods range from ${cur}${o.lo.toFixed(0)} to ${cur}${o.hi.toFixed(0)}.`;
+  const row=(a,b,c,d)=>`<tr><td>${a}<div class="note">${d}</div></td><td class="n">${b}</td><td class="n">${c}</td></tr>`;
+  $('oRows').innerHTML=
+   row('Cash-flow value (DCF)',f(o.dcf),ag(o.dcf),`Free cash flow grows ${i.g1}% a year for 5 years, slows to ${i.gT}% by year 10, discounted at ${i.r}%. If cash flow caught up with profit it would be ${f(o.dcfEps)}.`)+
+   row('Scenario value',f(o.sc),ag(o.sc),`Targets ${o.scTargets.map(x=>cur+x.toFixed(0)).join(', ')}; chance-weighted ${f(o.scTarget)} in a year, discounted one year.`)+
+   row('Growth-multiple value',f(o.lynch),ag(o.lynch),`Fair P/E of ${o.fairPE.toFixed(1)} = growth % plus dividend yield % (kept between 8 and 30), times core EPS.`)+
+   row('No-growth floor',f(o.floor),ag(o.floor),`Today's profit held flat for ever at a ${i.r}% return, plus net cash.`)+
+   row('Growth the price needs',o.impliedFcf.toFixed(0)+'% a year','',`For 10 years on free cash flow (${o.impliedEps.toFixed(0)}% a year on core EPS). Compare with what the business can keep up.`);
+  const li=(cls,t)=>`<li><span class="${cls}">${cls=='good'?'Fine':cls=='warn'?'Watch':'Problem'}:</span> ${t}</li>`;
+  const c=[];
+  c.push(li(o.conv>=85?'good':o.conv>=60?'warn':'bad',`free cash flow is ${o.conv.toFixed(0)}% of reported profit. Under 85% means profit is not yet arriving as cash.`));
+  c.push(li(i.eps/i.epsGaap>=0.93?'good':'warn',`core EPS is ${(i.eps/i.epsGaap*100).toFixed(0)}% of reported EPS. The gap is one-off gains.`));
+  c.push(li(o.impliedFcf<=i.g1?'good':o.impliedFcf<=i.g1+5?'warn':'bad',`the price needs ${o.impliedFcf.toFixed(0)}% growth for 10 years; you assumed ${i.g1}% for 5.`));
+  c.push(li(i.netCash>=0?'good':'warn',`net cash is ${f(i.netCash)} a share (${(i.netCash/i.price*100).toFixed(0)}% of the price).`));
+  c.push(li(i.price>o.floor*2?'warn':'good',`${((1-o.floor/i.price)*100).toFixed(0)}% of the price pays for growth that has not happened yet. P/E on core EPS is ${o.pe.toFixed(1)}; free-cash-flow yield is ${o.fcfYield.toFixed(1)}%.`));
+  $('oChecks').innerHTML=c.join('');
+  // bar: one linear scale across all marks
+  const pts=[['Floor',o.floor,'b'],['Fair',o.fair,'t'],['Price',i.price,'b']],all=[o.floor,o.lo,o.hi,o.fair,i.price];
+  let mn=Math.min(...all),mx=Math.max(...all);const pad=(mx-mn)*0.08||1;mn-=pad;mx+=pad;const x=q=>((q-mn)/(mx-mn)*100).toFixed(2)+'%';
+  $('bar').innerHTML=`<div class="track"></div><div class="range" style="left:${x(o.lo)};width:${((o.hi-o.lo)/(mx-mn)*100).toFixed(2)}%"></div>`+
+   pts.map(p=>`<div class="mk ${p[0]=='Fair'?'fair':''}" style="left:${x(p[1])}"></div><div class="lb ${p[2]}" style="left:${x(p[1])}">${p[0]} ${f(p[1])}</div>`).join('');
+}
+IDS.forEach(k=>$(k).addEventListener('input',render));
+$('preset').addEventListener('change',e=>{const k=e.target.value;if(k==='saved'){let s=null;try{s=JSON.parse(localStorage.getItem('fvw'));}catch(x){}load(s||PRE.nvda);}else load(PRE[k]);});
+load(PRE.nvda);
+</script>
