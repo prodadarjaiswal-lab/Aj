@@ -111,3 +111,20 @@ def test_poll_answers_only_the_owner(monkeypatch):
     b = bot()
     assert b.poll() == 1 and len(sent) == 1 and b.state["offset"] == 7
     assert b.poll() == 0
+
+
+def test_rising_dips_and_bargains():
+    b = bot()
+    assert "1. <b>AAA</b>" in b.handle("rising") and "[value support]" in b.handle("rising")
+    assert "No dip signal has passed" in b.handle("dips")                       # MODEL has no tested dip signal
+    model = dict(MODEL, signals=dict(MODEL["signals"], qdd={"tested": True, "out": {"up": {"n": 80, "hit21": 0.6, "x21": 0.03}}}))
+    tech = {"stocks": dict(TECH["stocks"], BBB={"d": "2026-11-13", "c": 50.0, "atr": 1.0, "new": [], "dip10": ["qdd"], "hi52": -30.0})}
+    b2 = B.Bot("NSE", B.Data({"asof": "2026-11-13", "rows": ROWS}, NSET, OPTS, tech, model), state={})
+    dp = b2.handle("dips")
+    assert "1. <b>BBB</b>" in dp and "80 cases" in dp
+    us = {"asof": "2026-11-14", "rows": [{"s": "KO", "price": 60.0, "off_high": -0.15, "pe_now": 18, "pe_hist_median": 24, "eps_cagr5": 0.07, "roe_avg": 0.4},
+                                         {"s": "XYZ", "price": 10.0, "off_high": -0.30, "pe_now": 40, "pe_hist_median": 20, "eps_cagr5": 0.1, "roe_avg": 0.3}]}
+    rows = [dict(ROWS[0], hi52=-0.2)] + ROWS[1:]
+    b3 = B.Bot("NSE", B.Data({"asof": "2026-11-13", "rows": rows}, NSET, OPTS, TECH, MODEL), state={})
+    bg = B.bargains(b3.d, us)
+    assert "<b>AAA</b>" in bg and "<b>KO</b>" in bg and "XYZ" not in bg and "not a back-tested signal" in bg

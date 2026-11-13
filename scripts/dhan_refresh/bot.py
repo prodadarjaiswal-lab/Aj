@@ -23,13 +23,16 @@ SETUP = {"volbreak": "volume breakout", "pullback": "pullback in an uptrend", "b
          "coiled": "coiled range", "turn": "turn up"}
 STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fade": "fading", "weak": "weak"}
 
-MENU = [("top", "Top 5 tested setups today"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
-DESCRIPTION = ("Your NSE terminal in chat. Six commands:\n"
+MENU = [("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
+        ("bargains", "Blue chips now cheap, India and US"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
+DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
                "price TCS\n"
                "TCS  (trade verdict)\n"
                "value TCS  (investing verdict)\n"
                "hedge TCS\n"
-               "top\n"
+               "rising  (turning bullish, with value)\n"
+               "dips  (proven stocks after a sharp fall)\n"
+               "bargains  (blue chips now cheap, India and US)\n"
                "alert TCS above 3450  (alert alone lists; alert remove 1)")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
@@ -50,6 +53,10 @@ SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "ibs": "a close near the day's low while above its 200-day average",
           "reclaim200": "a close back above its 200-day average"}
 WARN_SIGNALS = ("extended", "downtrend")
+DIP_SIGNALS = ("qdrop", "qdd", "qdd_hold")
+SIGNAL.update({"qdrop": "a 15%+ fall within 10 days after beating the Nifty for 2 years",
+               "qdd": "a fall to 25% below its 52-week high after beating the Nifty for 2 years",
+               "qdd_hold": "its first close back above the 20-day average after such a fall"})
 SECTOR_INDEX = {"Information Technology": "Nifty IT", "Financial Services": "Nifty Bank", "Automobile and Auto Components": "Nifty Auto",
                 "Fast Moving Consumer Goods": "Nifty FMCG", "Healthcare": "Nifty Pharma", "Metals & Mining": "Nifty Metal",
                 "Oil Gas & Consumable Fuels": "Nifty Energy", "Power": "Nifty Energy", "Realty": "Nifty Realty",
@@ -84,7 +91,8 @@ class Data:
         flag = "tested_weak" if up is False else "tested"
         sigs = self.model.get("signals", {})
         # only signals that passed the back-test in the market condition we are in now, strongest first
-        self.tested = sorted([k for k, v in sigs.items() if v.get(flag) and k not in WARN_SIGNALS],
+        self.dips = [k for k in DIP_SIGNALS if sigs.get(k, {}).get(flag)]
+        self.tested = sorted([k for k, v in sigs.items() if v.get(flag) and k not in WARN_SIGNALS and k not in DIP_SIGNALS],
                              key=lambda k: -((v := sigs[k]).get("lift_out_x10" if flag == "tested" else "lift_out_x10_weak") or 0))
         self.regime_flag = flag
         self.asof = board.get("asof", "?")
@@ -143,24 +151,107 @@ def pct(x, d=1) -> str:
     return f"{x * 100:+.{d}f}%"
 
 
-def top(d: Data) -> str:
+def value_tag(d: Data, sym: str) -> str:
+    v = (d.stocks.get(sym) or {}).get("val") or {}
+    g = v.get("gap")
+    if g is None:
+        return ""
+    return "value support" if g <= -0.03 else "fairly priced" if g < 0.05 else "expensive"
+
+
+def rising(d: Data) -> str:
+    """Stocks turning bullish on a tested signal; those with value support first."""
     cands = []
     for sym, t in d.tech.items():
         new = [k for k in d.tested if k in t.get("new", [])]
         r = d.bysym.get(sym)
         if new and r and r.get("status") in ("lead", "improve"):
-            cands.append((d.tested.index(new[0]), -(r.get("score") or 0), sym, new[0], t))
+            tag = value_tag(d, sym)
+            cands.append(({"value support": 0, "fairly priced": 1, "": 2, "expensive": 3}[tag], d.tested.index(new[0]),
+                          -(r.get("score") or 0), sym, new[0], t, tag))
     cands.sort()
-    regime = d.nifty_up()
-    head = f"<b>Top tested setups</b> · {esc(d.asof)} close"
+    head = f"<b>Turning bullish</b> · {esc(d.asof)} close"
     if not cands:
         return head + ("\nNone today among leading stocks." if d.tested else "\nNo signal has passed the back-test for the current market.")
     lines = [head]
-    for i, (_, _, sym, sig, t) in enumerate(cands[:5], 1):
+    for i, (_, _, _, sym, sig, t, tag) in enumerate(cands[:5], 1):
         a = t.get("atr") or 0
-        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}: {SIGNAL.get(sig, sig)}. Stop {rupee(t['c'] - 2 * a)}, target {rupee(t['c'] + 3 * a)}.")
-    if regime is False:
+        val = f" [{tag}]" if tag else ""
+        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}{val}: {SIGNAL.get(sig, sig)}. Stop {rupee(t['c'] - 2 * a)}, target {rupee(t['c'] + 3 * a)}.")
+    if d.nifty_up() is False:
         lines.append("Weak market: only signals that passed the back-test in weak markets are used.")
+    return "\n".join(lines)
+
+
+top = rising
+
+
+def dips(d: Data) -> str:
+    """Proven stocks after a sharp fall, only for dip signals that passed the back-test."""
+    head = f"<b>Proven stocks after a sharp fall</b> · {esc(d.asof)} close"
+    if not d.dips:
+        return head + "\nNo dip signal has passed the back-test for the current market, so none is shown."
+    cands = []
+    for sym, t in d.tech.items():
+        hit = [k for k in d.dips if k in t.get("dip10", [])]
+        if hit:
+            cands.append((d.dips.index(hit[0]), t.get("hi52") or 0, sym, hit[0], t))
+    cands.sort()
+    if not cands:
+        return head + "\nNone in the last 10 trading days."
+    lines = [head]
+    for i, (_, _, sym, sig, t) in enumerate(cands[:5], 1):
+        s = d.stat(sig)
+        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}, {t.get('hi52')}% from its 52-week high: {SIGNAL.get(sig, sig)}.")
+        if i == 1 and s.get("n"):
+            lines.append(f"   Last 2 years, {s['n']:,} cases: beat the Nifty in {s.get('hit21', 0) * 100:.0f}% within 21 days, average {pct(s.get('x21', 0))}.")
+    return "\n".join(lines)
+
+
+def bargains(d: Data, us: dict | None = None) -> str:
+    """Blue chips with a record of growth that now trade cheaply. A screen: fundamentals have no
+    history to back-test against, so this is not a tested signal."""
+    india = []
+    for sym, s in d.stocks.items():
+        v, r = s.get("val") or {}, d.bysym.get(sym) or {}
+        if v.get("gap") is None or v.get("g3") is None:
+            continue
+        hi = (r.get("hi52") or 0)
+        if v["gap"] <= -0.03 and v["g3"] > 0.05 and v.get("pe") and v.get("pe_med") and v["pe"] < v["pe_med"] and hi <= -0.10:
+            india.append((v["gap"], sym, v, r))
+    india.sort()
+    us = us if us is not None else _load(ROOT / "docs/us-value.json", {})
+    usl = []
+    def growth(x):
+        for yrs in (5, 4):
+            g = [x.get(f"eps_cagr{yrs}"), x.get(f"rev_cagr{yrs}")]
+            g = [v for v in g if v is not None]
+            if g:
+                return max(g), yrs
+        return None, None
+    for x in us.get("rows", []):
+        g, yrs = growth(x)
+        x["_g"], x["_y"] = g, yrs
+        if g is not None and g > 0.05 and (x.get("roe_avg") or 0) > 0.15 and (x.get("off_high") or 0) <= -0.10 and x.get("pe_now") and x.get("pe_hist_median") \
+                and 0 < x["pe_now"] < x["pe_hist_median"]:
+            usl.append((x["pe_now"] / x["pe_hist_median"], x))
+    usl.sort(key=lambda z: z[0])
+    lines = ["<b>Blue chips now cheap</b> (a valuation screen, not a back-tested signal)"]
+    lines.append("<b>India</b> (Nifty 50)")
+    if india:
+        for gap, sym, v, r in india[:4]:
+            lines.append(f"• <b>{esc(sym)}</b> {rupee(d.last(r))}, {r.get('hi52', 0) * 100:.0f}% from its high: "
+                         + (f"price assumes profits shrink {-v['g_impl'] * 100:.0f}% a year" if v['g_impl'] < 0 else f"price needs {v['g_impl'] * 100:.0f}% growth a year")
+                         + f", delivered {v['g3'] * 100:.0f}%; P/E {v['pe']:.0f} vs median {v['pe_med']:.0f}.")
+    else:
+        lines.append("None passes today.")
+    lines.append(f"<b>US</b> ({esc(us.get('asof', 'no data'))})")
+    if usl:
+        for _, x in usl[:4]:
+            lines.append(f"• <b>{esc(x['s'])}</b> ${x['price']:,.2f}, {x['off_high'] * 100:.0f}% from its high: P/E {x['pe_now']:.0f} vs its usual {x['pe_hist_median']:.0f}; "
+                         f"{x['_y']}-year growth {x['_g'] * 100:.0f}% a year, ROE {x['roe_avg'] * 100:.0f}%.")
+    else:
+        lines.append("None passes today." if us.get("rows") else "US data not loaded yet.")
     return "\n".join(lines)
 
 
@@ -232,7 +323,9 @@ def value(d: Data, sym: str, ltp: float | None = None) -> str:
     else:
         lines.append("<b>Expensive.</b> The price needs faster growth than the company has delivered.")
     if v.get("g_impl") is not None and v.get("g3") is not None:
-        lines.append(f"Growth the price needs: {v['g_impl'] * 100:.0f}% a year for 10 years. Delivered over 3 years: {v['g3'] * 100:.0f}% a year.")
+        need = (f"The price assumes profits shrink {-v['g_impl'] * 100:.0f}% a year for 10 years." if v["g_impl"] < 0
+                else f"Growth the price needs: {v['g_impl'] * 100:.0f}% a year for 10 years.")
+        lines.append(f"{need} Delivered over 3 years: {v['g3'] * 100:.0f}% a year.")
     if v.get("pe") and v.get("pe_med"):
         lines.append(f"P/E {v['pe']:.0f} against its own median of {v['pe_med']:.0f}.")
     if v.get("fair_at_g3") and last:
@@ -396,8 +489,12 @@ class Bot:
     def handle(self, text: str) -> str:
         low = re.sub(r"\s+", " ", text.strip()).lower().lstrip("/")
         w = low.split(" ")
-        if low in ("top", "top 5", "top5", "picks"):
-            return top(self.d)
+        if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
+            return rising(self.d)
+        if low in ("dips", "dip", "discount", "discounts"):
+            return dips(self.d)
+        if low in ("bargains", "bargain", "value", "cheap"):
+            return bargains(self.d)
         if w[0] == "price" and len(w) == 2:
             out = self.price(w[1])
             self.log("price", w[1].upper(), out)
