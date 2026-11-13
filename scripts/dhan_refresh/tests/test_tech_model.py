@@ -65,6 +65,10 @@ def test_data_guard_skips_split_like_jumps():
     for k in range(400, 600):
         c[k] = 50.0                                  # an unadjusted 1:2 split on day 400
     o = {"d": days, "o": c[:], "h": [x * 1.01 for x in c], "l": [x * 0.99 for x in c], "c": c, "v": [1000] * 600}
-    res = M.backtest({"S": o}, {"d": days, "c": [100.0] * 600})
-    assert all(r["out"]["up"].get("n", 0) == 0 for r in res["signals"].values() if r["out"]["up"].get("n") is not None) or True
-    assert "data_guard" in res
+    nifty = {"d": days, "c": [100.0 + 0.01 * i for i in range(600)]}
+    guarded = M.backtest({"S": o}, nifty)
+    n_base = sum(guarded["base"][p][m].get("n", 0) for p in ("in", "out") for m in ("up", "weak"))
+    o2 = dict(o, c=[100.0] * 600, o=[100.0] * 600, h=[101.0] * 600, l=[99.0] * 600)
+    clean = M.backtest({"S": o2}, nifty)
+    n_clean = sum(clean["base"][p][m].get("n", 0) for p in ("in", "out") for m in ("up", "weak"))
+    assert n_base < n_clean                          # sample points around the jump were dropped
