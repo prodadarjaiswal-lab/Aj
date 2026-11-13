@@ -11,10 +11,50 @@ def q(p, prev=166.19):
     return {"price": p, "prev": prev, "high": max(p, prev), "low": min(p, prev), "t": 0}
 
 
-def test_parse_yahoo():
-    d = {"chart": {"result": [{"meta": {"regularMarketPrice": 161.88, "chartPreviousClose": 166.19,
-                                          "regularMarketDayHigh": 170, "regularMarketDayLow": 158.39, "regularMarketTime": 1794595674}}]}}
-    assert U.parse_yahoo(d) == {"price": 161.88, "prev": 166.19, "high": 170.0, "low": 158.39, "t": 1794595674}
+import struct  # noqa: E402
+
+
+def pkt(code, sid, body):
+    n = 11 + len(body)
+    return struct.pack("<BiiBB", 1, sid, sid, n, code) + body
+
+
+def test_parse_dhan_packets():
+    buf = (pkt(1, 777, struct.pack("<fiii", 161.88, 1000, 1794595674, 1794595675)) +
+           pkt(3, 777, struct.pack("<ffff", 169.89, 161.5, 170.0, 158.39)) +
+           pkt(32, 777, struct.pack("<f", 166.19)))
+    p = U.parse(buf)
+    assert [x["k"] for x in p] == ["trade", "ohlc", "prev"]
+    assert abs(p[0]["ltp"] - 161.88) < 1e-3 and p[0]["sid"] == "777"
+    assert abs(p[1]["high"] - 170.0) < 1e-3 and abs(p[2]["prev"] - 166.19) < 1e-3
+    e = U.parse(pkt(50, 0, struct.pack("<h", 806)))
+    assert e[0]["k"] == "error" and e[0]["code"] == 806
+
+
+class FakeWS:
+    def __init__(self, msgs):
+        self.msgs = list(msgs)
+
+    def recv(self, timeout=None):
+        if not self.msgs:
+            raise TimeoutError
+        return self.msgs.pop(0)
+
+
+def test_feed_builds_quote_and_raises_on_error():
+    f = U.DhanUS("1", "t", {"NVDA": "777"})
+    f.ws = FakeWS([pkt(32, 777, struct.pack("<f", 166.19)) + pkt(1, 777, struct.pack("<fiii", 161.88, 1, 0, 0)),
+                   pkt(3, 777, struct.pack("<ffff", 169.89, 161.5, 170.0, 158.39))])
+    f.pump(0.2)
+    q = f.q["NVDA"]
+    assert round(q["price"], 2) == 161.88 and round(q["prev"], 2) == 166.19 and round(q["low"], 2) == 158.39
+    assert "-2.59%" in U.line("NVDA", {"name": "Nvidia"}, q)
+    f.ws = FakeWS([pkt(50, 0, struct.pack("<h", 807))])
+    try:
+        f.pump(0.2)
+        assert False
+    except U.DhanError as e:
+        assert "807" in str(e)
 
 
 def test_levels_and_moves_fire_once():

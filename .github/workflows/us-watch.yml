@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   watch:
@@ -25,10 +26,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install requests==2.32.3
+      - run: pip install requests==2.32.3 pyotp==2.9.0 websockets==13.1
       - name: Watch US stocks
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           cd scripts/dhan_refresh
-          if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 60; fi
+          if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 30; fi
