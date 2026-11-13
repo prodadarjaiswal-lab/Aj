@@ -14,10 +14,6 @@
   "weak": [
    "qdrop"
   ],
-  "changes": [
-   "new, passes in rising markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
-   "new, passes in weak markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
-   "new, passes in rising markets: Proven stock 25% below its 52-week high, first close back above its 20-day average"
-  ]
+  "changes": []
  }
 ]
