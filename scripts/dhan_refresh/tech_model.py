@@ -266,11 +266,16 @@ def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
         nc = [nmap[x] for x in d]
         T = Tech(cols["o"], cols["h"], cols["l"], cols["c"], v, nc)
         c = cols["c"]
+        # data guard: a one-day move over 40% is a split, bonus or bad tick in the history, not a market move;
+        # skip any case whose window (10 days before to 21 after) touches one
+        bad = [k for k in range(1, len(c)) if c[k - 1] and abs(c[k] / c[k - 1] - 1) > 0.40]
         prev = set()
         for i in range(252, len(c) - 21):
             f = T.flags(i)
             new = f - prev
             prev = f
+            if bad and any(i - 10 <= k <= i + 21 for k in bad):
+                continue
             ex = lambda k: (c[i + k] / c[i] - 1) - (nc[i + k] / nc[i] - 1)
             up = nm200.get(d[i]) is not None and nc[i] > nm200[d[i]]
             oos = d[i] >= cut
@@ -278,7 +283,7 @@ def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
                 base.append((ex(5), ex(10), ex(21), T.atr_trade(i), up, oos))
             for k in new:
                 rows[k].append((ex(5), ex(10), ex(21), T.atr_trade(i), up, oos))
-    out = {"cutoff": cut, "signals": {}}
+    out = {"cutoff": cut, "signals": {}, "data_guard": "cases within 10 days before / 21 after a one-day move above 40% are excluded"}
     sel = lambda r, up, oos: [x for x in r if x[4] == up and x[5] == oos]
     out["base"] = {p: {m: stats(sel(base, up, oos)) for m, up in (("up", True), ("weak", False))}
                    for p, oos in (("in", False), ("out", True))}

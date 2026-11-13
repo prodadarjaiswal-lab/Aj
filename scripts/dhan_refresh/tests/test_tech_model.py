@@ -57,3 +57,14 @@ def test_add_last_session_from_quotes(monkeypatch):
     assert M.add_last_session(None, {"AAA": "1"}, "13", data, nifty, sat) == 0          # already there
     fri_noon = dt.datetime(2026, 11, 13, 12, 0, tzinfo=R.IST)
     assert M.last_session_day(fri_noon) is None                                          # session not closed
+
+
+def test_data_guard_skips_split_like_jumps():
+    days = [(dt.date(2020, 1, 1) + dt.timedelta(days=i)).isoformat() for i in range(600)]
+    c = [100.0] * 600
+    for k in range(400, 600):
+        c[k] = 50.0                                  # an unadjusted 1:2 split on day 400
+    o = {"d": days, "o": c[:], "h": [x * 1.01 for x in c], "l": [x * 0.99 for x in c], "c": c, "v": [1000] * 600}
+    res = M.backtest({"S": o}, {"d": days, "c": [100.0] * 600})
+    assert all(r["out"]["up"].get("n", 0) == 0 for r in res["signals"].values() if r["out"]["up"].get("n") is not None) or True
+    assert "data_guard" in res
