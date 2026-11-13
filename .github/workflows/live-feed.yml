@@ -12,7 +12,7 @@ permissions:
 jobs:
   live:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 355   # GitHub allows 6 h per job; a second run is started at 14:45 IST to cover the close
     concurrency:
       group: live-${{ github.event.schedule || 'manual' }}
       cancel-in-progress: false
