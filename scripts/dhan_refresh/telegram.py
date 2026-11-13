@@ -70,7 +70,7 @@ def send(text: str) -> bool:
 
 
 def setup() -> int:
-    """Find the chat that pressed Start, save its id, and send a test message."""
+    """Find the private chat that messaged the bot, save its id, and send a test message."""
     if not _token():
         print("TELEGRAM_BOT_TOKEN secret is missing. Add it in GitHub: Settings > Secrets and variables > Actions.")
         return 1
@@ -80,10 +80,10 @@ def setup() -> int:
     for u in call("getUpdates", timeout=0):
         m = u.get("message") or {}
         c = m.get("chat") or {}
-        if c.get("type") == "private" and str(m.get("text", "")).startswith("/start"):
+        if c.get("type") == "private":
             chats[c["id"]] = c.get("first_name", "")
     if not chats:
-        print(f"No one has pressed Start yet. Open @{me.get('username')} in Telegram, tap Start, then run this again.")
+        print(f"No message to the bot yet. Open @{me.get('username')} in Telegram, send it any message (or tap Start), then run this again.")
         return 1
     if len(chats) > 1:
         print(f"{len(chats)} chats pressed Start; using the first one.")
