@@ -231,14 +231,20 @@ def save_state(st: dict) -> None:
         print(f"  state not saved: {str(e)[:100]}")
 
 
+DHAN_JOBS = ("dhan-refresh.yml", "tech-model.yml", "setup-backtest.yml")
+
+
 def refresh_running() -> bool:
-    """True while the nightly Dhan refresh is running; a new Dhan login would cancel its token."""
-    try:
-        r = subprocess.run(["gh", "run", "list", "--workflow", "dhan-refresh.yml", "--status", "in_progress", "--json", "databaseId"],
-                           capture_output=True, text=True, timeout=30, cwd=ROOT)
-        return r.returncode == 0 and r.stdout.strip() not in ("", "[]")
-    except Exception:
-        return False
+    """True while another Dhan job (nightly refresh or a back-test) runs; a new login would cancel its token."""
+    for wf in DHAN_JOBS:
+        try:
+            r = subprocess.run(["gh", "run", "list", "--workflow", wf, "--status", "in_progress", "--json", "databaseId"],
+                               capture_output=True, text=True, timeout=30, cwd=ROOT)
+            if r.returncode == 0 and r.stdout.strip() not in ("", "[]"):
+                return True
+        except Exception:
+            pass
+    return False
 
 
 _TOKEN = {}
@@ -248,7 +254,7 @@ def open_feed(cfg: dict, relogin: bool = False) -> DhanUS:
     for _ in range(40):                            # wait up to 20 minutes for the nightly refresh to finish
         if not refresh_running():
             break
-        print("  nightly Dhan refresh is running; waiting before logging in")
+        print("  another Dhan job is running; waiting before logging in")
         time.sleep(30)
     ids = security_ids(list(cfg))
     if not ids:
