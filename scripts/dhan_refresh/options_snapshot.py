@@ -102,7 +102,8 @@ def features(spot: float, rows, expiry: str, today: dt.date) -> dict:
         g = auction.gex(spot, rows, days)
         if g.get("net_gex") is not None:
             f.update({"net_gex": g["net_gex"], "gamma_flip": g["gamma_flip"], "gex_regime": g["regime"],
-                      "call_gamma_strikes": g["call_gamma_strikes"], "put_gamma_strikes": g["put_gamma_strikes"]})
+                      "call_gamma_strikes": g["call_gamma_strikes"], "put_gamma_strikes": g["put_gamma_strikes"],
+                      "gex_by_strike": {str(k): v for k, v in g["by_strike"].items() if abs(k / spot - 1) <= 0.08}})
     except Exception as e:
         print(f"  gex skipped: {str(e)[:60]}")
     return {k2: (round(v, 6) if isinstance(v, float) and math.isfinite(v) else v) for k2, v in f.items()}
