@@ -1,3 +1,6 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+bot-out/
+live-out/
+us-watch-out/
