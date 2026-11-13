@@ -426,6 +426,7 @@ def main(argv=None) -> int:
     ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
     ap.add_argument("--with-n500", action="store_true", help="also rank the Nifty 500 and update the terminal page")
     ap.add_argument("--with-options", action="store_true", help="also save the options snapshot (same login)")
+    ap.add_argument("--with-auction", action="store_true", help="also compute auction/order-flow levels from 1-minute bars")
     ap.add_argument("--with-tech", action="store_true", help="also re-run the technical back-test and today's signals (same login)")
     a = ap.parse_args(argv)
     try:
@@ -455,6 +456,22 @@ def main(argv=None) -> int:
                 print(n500.run(client, scrip, Path(a.page).resolve().parents[1], now))
             except Exception as e:
                 print(f"  warning: Nifty 500 board failed: {e}")
+        if a.with_auction:
+            try:
+                import auction
+                root_ = Path(a.page).resolve().parents[1]
+                syms = list(read_nset((root_ / "docs/nse-terminal.html").read_text(encoding="utf-8"))["stocks"])
+                try:
+                    import bot as B
+                    st = B.load_state()
+                    extra = [x["sym"] for x in st.get("alerts", []) + st.get("watch", []) if x.get("mkt") == "NSE"]
+                    extra += [x["sym"] for x in st.get("journal", [])[-60:]]
+                    syms += [s for s in dict.fromkeys(extra) if s not in syms][:40]
+                except Exception:
+                    pass
+                print(auction.run(client, scrip, root_, syms))
+            except Exception as e:
+                print(f"  warning: auction levels failed: {e}")
         if a.with_tech:
             try:
                 import tech_model

@@ -97,6 +97,14 @@ def features(spot: float, rows, expiry: str, today: dt.date) -> dict:
     if below:
         f["put_wall"] = max(below, key=lambda x: x[1])[0]
     f["max_pain"] = max_pain(rows)
+    try:                                   # gamma exposure (derived; see auction.gex for the assumption)
+        import auction
+        g = auction.gex(spot, rows, days)
+        if g.get("net_gex") is not None:
+            f.update({"net_gex": g["net_gex"], "gamma_flip": g["gamma_flip"], "gex_regime": g["regime"],
+                      "call_gamma_strikes": g["call_gamma_strikes"], "put_gamma_strikes": g["put_gamma_strikes"]})
+    except Exception as e:
+        print(f"  gex skipped: {str(e)[:60]}")
     return {k2: (round(v, 6) if isinstance(v, float) and math.isfinite(v) else v) for k2, v in f.items()}
 
 
