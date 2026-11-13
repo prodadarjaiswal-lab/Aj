@@ -42,10 +42,14 @@ NAMES = {
     "dip3": "Three down closes in a row while above the 200-day average",
     "ibs": "Closes in the bottom 20% of its day's range while above the 200-day average",
     "reclaim200": "Closes back above the 200-day average after 20+ days below",
+    "qdrop": "Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
+    "qdd": "Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high",
+    "qdd_hold": "Proven stock 25% below its 52-week high, first close back above its 20-day average",
     "extended": "Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)",
     "downtrend": "Downtrend: below a falling 200-day average and 50-day below 200-day (warning)",
 }
 WARN = ("extended", "downtrend")
+DIPS = ("qdrop", "qdd", "qdd_hold")          # judged over 21 days, not 10: recoveries take longer
 
 
 def _ema(a, n):
@@ -195,6 +199,14 @@ class Tech:
             f.add("ibs")
         if last > m200 and all(c[k] < S.m200[k] for k in range(i - 20, i) if S.m200[k]):
             f.add("reclaim200")
+        if i >= 504 and self.nc[i - 504]:
+            proven = (c[i - 21] / c[i - 504] - 1) - (self.nc[i - 21] / self.nc[i - 504] - 1) >= 0.20
+            if proven and last / max(c[i - 10:i]) - 1 <= -0.15:
+                f.add("qdrop")
+            if proven and last <= 0.75 * hi52:
+                f.add("qdd")
+                if S.m20[i] and last > S.m20[i] and c[i - 1] <= (S.m20[i - 1] or 0):
+                    f.add("qdd_hold")
         t = S.tag(i)
         if t in ("volbreak", "pullback"):
             f.add(t)
@@ -226,9 +238,10 @@ def stats(rows):
         a = [r[j] for r in rows]
         out[k] = round(st.mean(a), 5)
         out["hit" + k[1:]] = round(sum(x > 0 for x in a) / len(a), 4)
-    a10 = [r[1] for r in rows]
-    sd = st.pstdev(a10) or 1e-9
-    out["t10"] = round(st.mean(a10) / (sd / math.sqrt(len(a10))), 2)
+    for j, k in ((1, "t10"), (2, "t21")):
+        a = [r[j] for r in rows]
+        sd = st.pstdev(a) or 1e-9
+        out[k] = round(st.mean(a) / (sd / math.sqrt(len(a))), 2)
     rr = [r[3] for r in rows if r[3] is not None]
     if rr:
         out["avg_r"] = round(st.mean(rr), 3)
@@ -276,6 +289,17 @@ def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
         lift = lambda s, b, f: (s.get(f, 0) - b.get(f, 0)) if s.get("n", 0) >= 20 else None
         res["lift_in_x10"], res["lift_out_x10"] = lift(si, bi, "x10"), lift(so, bo, "x10")
         res["lift_in_r"], res["lift_out_r"] = lift(si, bi, "avg_r"), lift(so, bo, "avg_r")
+        if k in DIPS:
+            # recovery over 21 days: beat the average stock in both periods, by 1%+ out-of-sample, t >= 2, 50+ cases
+            for flag, side in (("tested", "up"), ("tested_weak", "weak")):
+                a, b = res["in"][side], res["out"][side]
+                li21, lo21 = lift(a, out["base"]["in"][side], "x21"), lift(b, out["base"]["out"][side], "x21")
+                res[f"lift21_{side}"] = lo21
+                res[flag] = bool(li21 is not None and lo21 is not None and li21 > 0 and lo21 >= 0.01
+                                 and b.get("n", 0) >= 50 and b.get("t21", 0) >= 2)
+            res["lift_out_x10_weak"] = lift(res["out"]["weak"], out["base"]["out"]["weak"], "x10")
+            out["signals"][k] = res
+            continue
         if k in WARN:
             res["tested"] = bool(res["lift_in_x10"] is not None and res["lift_out_x10"] is not None
                                  and res["lift_in_x10"] < 0 and res["lift_out_x10"] < 0 and so.get("n", 0) >= 100)
@@ -314,9 +338,10 @@ def today(data: dict, nifty: dict) -> dict:
         i = len(d) - 1
         now = T.flags(i)
         recent = set().union(*(T.flags(k) - T.flags(k - 1) for k in range(i - 2, i + 1)))
+        dip10 = set().union(*((T.flags(k) - T.flags(k - 1)) & set(DIPS) for k in range(i - 9, i + 1)))
         a = T.atr[i]
         out[sym] = {"d": d[i], "c": cols["c"][i], "atr": round(a, 2) if a else None,
-                    "on": sorted(now), "new": sorted(recent & now), **readout(T, i)}
+                    "on": sorted(now), "new": sorted(recent & now), "dip10": sorted(dip10), **readout(T, i)}
     return out
 
 
