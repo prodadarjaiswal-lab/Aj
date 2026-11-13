@@ -14,6 +14,15 @@ OPTS = {"date": "2026-11-13", "rows": {"AAA": {"spot": 104, "expiry": "2026-11-2
                                                 "pcr_oi": 0.8, "call_wall": 110, "put_wall": 100}}}
 
 
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def no_git(monkeypatch):
+    """Tests must never push bot state to the real repository."""
+    monkeypatch.setattr(B, "save_state", lambda st: None)
+
+
 def bot(market="NSE"):
     return B.Bot(market, B.Data({"asof": "2026-11-13", "rows": ROWS}, NSET, OPTS), state={})
 
