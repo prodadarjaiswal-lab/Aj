@@ -61,6 +61,16 @@ def test_value_and_hedge_order():
     assert "1.20x the position" in h and "about 1.9%" in h and "Stop at ₹100.0" in h
 
 
+def test_hedge_flags_adverse_company_news():
+    nset = {"stocks": {"AAA": {"val": {"beta": 1.2}, "news": [{"time": "2026-11-12 10:00", "title": "Alpha CEO resigns amid probe"}],
+                               "filings": [{"time": "2026-11-01 10:00", "title": "Board meeting"}]}}, "idx": {"Nifty 50": NIFTY}}
+    b = B.Bot("NSE", B.Data({"asof": "2026-11-13", "rows": ROWS}, nset, OPTS, TECH, MODEL), state={})
+    h = b.handle("hedge AAA")
+    assert "Possibly adverse company news" in h and "CEO resigns" in h and "company-specific" in h
+    h2 = bot().handle("hedge BBB")
+    assert "Nifty 50 stocks only" in h2
+
+
 def test_price_live_and_close():
     b = bot()
     assert "2026-11-13 close" in b.handle("price AAA")

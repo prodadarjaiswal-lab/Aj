@@ -240,6 +240,29 @@ def value(d: Data, sym: str, ltp: float | None = None) -> str:
     return "\n".join(lines)
 
 
+ADVERSE = ("resign", "probe", "penalt", "fraud", "raid", "default", "downgrad", "loss", "slump", "plunge", "cut ",
+           "sebi order", "show cause", "investigat", "lawsuit", "pledge", "fire", "strike", "recall", "ban", "warning", "weak")
+
+
+def company_news(d: Data, sym: str, days: int = 7) -> tuple:
+    """Recent news and NSE filings for a Nifty 50 stock; (headlines, adverse) by a plain keyword screen."""
+    s = d.stocks.get(sym)
+    if s is None:
+        return None, False
+    items = sorted((s.get("news") or []) + (s.get("filings") or []), key=lambda x: x.get("time", ""), reverse=True)
+    if not items:
+        return [], False
+    newest = items[0].get("time", "")[:10]
+    import datetime as _dt
+    try:
+        cut = (_dt.date.fromisoformat(newest) - _dt.timedelta(days=days)).isoformat()
+    except ValueError:
+        cut = ""
+    recent = [x for x in items if x.get("time", "")[:10] >= cut][:6]
+    bad = [x for x in recent if any(k in x.get("title", "").lower() for k in ADVERSE)]
+    return (bad or recent)[:2], bool(bad)
+
+
 def hedge(d: Data, r: dict, ltp: float | None = None) -> str:
     sym = r["s"]
     t = d.tech.get(sym, {})
@@ -259,8 +282,17 @@ def hedge(d: Data, r: dict, ltp: float | None = None) -> str:
         sector = ir <= -0.03 or mr <= -0.03
     else:
         company, sector = False, False
+    news, adverse = company_news(d, sym)
+    if news is None:
+        lines.append("News check covers Nifty 50 stocks only.")
+    elif adverse:
+        company = True
+        lines.append("Possibly adverse company news (keyword screen): " + "; ".join(
+            f"{esc(x['title'][:110])} ({esc(x.get('time', '')[:10])})" for x in news))
+    elif news:
+        lines.append(f"No adverse company news in the last week (latest: {esc(news[0]['title'][:90])}).")
     if company:
-        lines.append("The weakness is company-specific, so a Nifty hedge would not help.")
+        lines.append("The risk is company-specific, so a Nifty hedge would not help.")
     elif sector:
         lines.append("The fall is sector or market wide, so a stop or put on the stock alone protects only part.")
     else:
