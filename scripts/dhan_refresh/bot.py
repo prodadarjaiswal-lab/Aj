@@ -23,21 +23,22 @@ SETUP = {"volbreak": "volume breakout", "pullback": "pullback in an uptrend", "b
          "coiled": "coiled range", "turn": "turn up"}
 STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fade": "fading", "weak": "weak"}
 
-HELP = """<b>Commands</b>
-<code>price TCS</code>  latest price (NSE in market hours, US in the US session)
-<code>TCS</code>  trade verdict (technical)
-<code>value TCS</code>  investing verdict (valuation, Nifty 50 stocks)
-<code>top</code>  today's top 5 tested setups
-<code>hedge TCS</code>  ways to hedge a position
-<code>alert TCS above 3450</code>  one-time price alert (also: below)
-<code>watch RELIANCE</code>  alert on 3% moves
-<code>my alerts</code>  list alerts and watched stocks
-<code>remove 2</code>  delete alert number 2
-<code>status</code>  what is running
-Research, not advice."""
-
-MENU = [("top", "Today's top 5 tested setups"), ("myalerts", "List my alerts and watched stocks"),
-        ("status", "What is running"), ("help", "All commands with examples")]
+MENU = [("top", "Top 5 tested setups today"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
+DESCRIPTION = ("Your NSE terminal in chat. Six commands:\n"
+               "price TCS\n"
+               "TCS  (trade verdict)\n"
+               "value TCS  (investing verdict)\n"
+               "hedge TCS\n"
+               "top\n"
+               "alert TCS above 3450  (alert alone lists; alert remove 1)")
+SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
+          "volbreak": "a breakout above its 20-day high on 1.5x average volume",
+          "nr7": "its tightest day in 7, inside the prior day, in an uptrend"}
+ORDER = ("hi52v", "volbreak", "nr7")            # strongest tested signal first
+SECTOR_INDEX = {"Information Technology": "Nifty IT", "Financial Services": "Nifty Bank", "Automobile and Auto Components": "Nifty Auto",
+                "Fast Moving Consumer Goods": "Nifty FMCG", "Healthcare": "Nifty Pharma", "Metals & Mining": "Nifty Metal",
+                "Oil Gas & Consumable Fuels": "Nifty Energy", "Power": "Nifty Energy", "Realty": "Nifty Realty",
+                "Media Entertainment & Publication": "Nifty Media"}
 
 
 def _load(p, default):
@@ -48,9 +49,9 @@ def _load(p, default):
 
 
 class Data:
-    """Read-only view of what the nightly jobs produced."""
+    """Read-only view of what the nightly and weekly jobs produced."""
 
-    def __init__(self, board: dict | None = None, nset: dict | None = None, opts: dict | None = None):
+    def __init__(self, board=None, nset=None, opts=None, tech=None, model=None):
         if board is None:
             board = _load(ROOT / "docs/n500.json", {"rows": []})
         if nset is None:
@@ -62,12 +63,20 @@ class Data:
         if opts is None:
             files = sorted(glob.glob(str(ROOT / "data/options/*.json")))
             opts = _load(files[-1], {}) if files else {}
+        self.tech = (tech if tech is not None else _load(ROOT / "docs/tech-today.json", {})).get("stocks", {})
+        self.model = model if model is not None else _load(ROOT / "docs/tech-model.json", {})
+        self.tested = [k for k in ORDER if self.model.get("signals", {}).get(k, {}).get("tested")]
         self.asof = board.get("asof", "?")
         self.rows = board.get("rows", [])
         self.bysym = {r["s"]: r for r in self.rows}
         self.stocks = nset.get("stocks", {})
+        self.idx = nset.get("idx", {})
         self.opts = opts.get("rows", {})
-        self.opts_date = opts.get("date", "")
+
+    def last(self, r: dict) -> float:
+        """Newest close we hold: the board's or the technical file's, whichever is later."""
+        t = self.tech.get(r["s"], {})
+        return t["c"] if t.get("c") and t.get("d", "") >= self.asof else r["last"]
 
     def find(self, word: str):
         w = word.upper().strip()
@@ -76,130 +85,176 @@ class Data:
         hits = [r for r in self.rows if w in r["name"].upper().split() or r["name"].upper().startswith(w)]
         return hits[0] if len(hits) == 1 else None
 
+    def nifty_up(self):
+        """True when the Nifty 50 is above its 200-day average (the regime the signals were tested in)."""
+        c = self.idx.get("Nifty 50", {}).get("c", [])
+        if len(c) < 200:
+            return None
+        return c[-1] > sum(c[-200:]) / 200
+
+    def ret21(self, name):
+        c = self.idx.get(name, {}).get("c", [])
+        return c[-1] / c[-22] - 1 if len(c) > 22 else None
+
+    def industry_r21(self, r):
+        peers = sorted(x["r21"] for x in self.rows if x.get("ind") == r.get("ind") and x["s"] != r["s"] and x.get("r21") is not None)
+        return peers[len(peers) // 2] if len(peers) >= 3 else None
+
+    def stat(self, sig):
+        return self.model.get("signals", {}).get(sig, {}).get("out", {}).get("up", {})
+
 
 def rupee(x) -> str:
     return f"₹{x:,.1f}" if x < 1000 else f"₹{x:,.0f}"
 
 
+def pct(x, d=1) -> str:
+    return f"{x * 100:+.{d}f}%"
+
+
 def top(d: Data) -> str:
-    good = [r for r in d.rows if r.get("setup") in EDGE and r.get("status") in ("lead", "improve") and r.get("trig")]
-    good.sort(key=lambda r: -(r.get("score") or 0))
-    if not good:
-        return f"No tested setups on leading stocks (data to {esc(d.asof)}). Sitting out is a position."
-    lines = [f"<b>Top tested setups</b> · data to {esc(d.asof)}"]
-    for i, r in enumerate(good[:5], 1):
-        where = "above" if r["last"] > r["trig"] else "below"
-        lines.append(f"{i}. <b>{esc(r['s'])}</b> {rupee(r['last'])}, {SETUP[r['setup']]}; {where} its trigger {rupee(r['trig'])}, "
-                     f"off below {rupee(r['fail'])} (score {r.get('score')})")
-    lines.append("Send a symbol for its verdict. Edge in the 6-year test: about +0.5% to +0.7% over 21 days in rising markets.")
+    cands = []
+    for sym, t in d.tech.items():
+        new = [k for k in d.tested if k in t.get("new", [])]
+        r = d.bysym.get(sym)
+        if new and r and r.get("status") in ("lead", "improve"):
+            cands.append((ORDER.index(new[0]), -(r.get("score") or 0), sym, new[0], t))
+    cands.sort()
+    regime = d.nifty_up()
+    head = f"<b>Top tested setups</b> · {esc(d.asof)} close"
+    if not cands:
+        return head + "\nNone today among leading stocks."
+    lines = [head]
+    for i, (_, _, sym, sig, t) in enumerate(cands[:5], 1):
+        a = t.get("atr") or 0
+        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}: {SIGNAL[sig]}. Stop {rupee(t['c'] - 2 * a)}, target {rupee(t['c'] + 3 * a)}.")
+    if regime is False:
+        lines.append("Nifty is below its 200-day average; these signals showed no edge in such markets.")
     return "\n".join(lines)
 
 
-def options_line(d: Data, sym: str, last: float) -> str:
+def options_line(d: Data, sym: str) -> str:
     o = d.opts.get(sym)
     if not o:
         return ""
-    bits = [f"Options ({esc(o.get('expiry', ''))}): market expects ±{o['exp_move'] * 100:.1f}% by expiry"]
-    if o.get("pcr_oi"):
-        bits.append(f"put/call open interest {o['pcr_oi']:.2f}")
-    if o.get("call_wall") and o.get("put_wall"):
-        bits.append(f"heaviest calls at {o['call_wall']:,.0f}, puts at {o['put_wall']:,.0f}")
-    return ", ".join(bits) + "."
+    return (f"Options to {esc(o.get('expiry', ''))}: expected move ±{o['exp_move'] * 100:.1f}%, "
+            f"put/call open interest {o['pcr_oi']:.2f}, heaviest calls {o['call_wall']:,.0f}, puts {o['put_wall']:,.0f}.")
 
 
 def technical(d: Data, r: dict, ltp: float | None = None) -> str:
-    last = ltp or r["last"]
-    st, setup = r.get("status"), r.get("setup")
-    lines = [f"<b>{esc(r['s'])}</b> {rupee(last)} · trade view"]
-    if st in ("lead", "improve") and setup in EDGE and last > r["fail"]:
-        if last > r["trig"] * 1.05:
-            call = f"<b>Wait.</b> It has a tested setup but is {((last / r['trig']) - 1) * 100:.0f}% past the trigger. Buy on a pullback towards {rupee(r['trig'])}."
-        elif last > r["trig"]:
-            call = f"<b>Buy candidate.</b> {SETUP[setup].capitalize()} is live above {rupee(r['trig'])}. Stop below {rupee(r['fail'])}."
-        else:
-            call = f"<b>Buy only above {rupee(r['trig'])}.</b> {SETUP[setup].capitalize()} is set up but not triggered. Stop below {rupee(r['fail'])}."
-    elif st in ("lead", "improve"):
-        extra = f" It shows a {SETUP[setup]}, a pattern with no tested edge." if setup else ""
-        call = f"<b>No entry now.</b> The stock is {STATUS[st]} but has no tested setup today.{extra}"
-    elif st == "neutral":
-        call = "<b>No trade.</b> Neither leading nor weak; nothing to act on."
+    sym = r["s"]
+    t = d.tech.get(sym, {})
+    last = ltp or d.last(r)
+    atr = t.get("atr")
+    new = [k for k in d.tested if k in t.get("new", [])]
+    trade_levels = False
+    st_, regime = r.get("status"), d.nifty_up()
+    lines = [f"<b>{esc(sym)}</b> {rupee(last)} · trade"]
+    if new and regime is not False and st_ not in ("weak", "fade"):
+        sig = new[0]
+        s, b = d.stat(sig), d.model.get("base", {}).get("out", {}).get("up", {})
+        lines.append(f"<b>Buy candidate.</b> It just made {SIGNAL[sig]}.")
+        trade_levels = True
+        if s.get("n"):
+            lines.append(f"Last 2 years, {s['n']:,} cases: beat the Nifty in {s['hit10'] * 100:.0f}% within 10 days, "
+                         f"average {pct(s['x10'])} vs the Nifty (a typical stock: {pct(b.get('x10', 0))}).")
+    elif new and regime is False:
+        lines.append(f"<b>Wait.</b> It made {SIGNAL[new[0]]}, but the Nifty is below its 200-day average, where this signal had no edge.")
+        trade_levels = True
+    elif st_ in ("weak", "fade"):
+        lines.append(f"<b>Avoid.</b> It is {STATUS[st_]} against the Nifty 500 and has no tested entry signal.")
+    elif st_ in ("lead", "improve"):
+        lines.append(f"<b>Wait.</b> A {'leading' if st_ == 'lead' else 'improving'} stock, but no tested entry signal today.")
     else:
-        call = f"<b>Avoid for a trade.</b> The stock is {STATUS.get(st, st)} against the Nifty 500."
-    lines.append(call)
-    facts = [f"rank {r.get('rank')} of {len(d.rows)} (score {r.get('score')})"]
+        lines.append("<b>No trade.</b> Neither leading nor lagging, and no tested entry signal.")
+    if atr and trade_levels:
+        lines.append(f"Stop {rupee(last - 2 * atr)} ({pct(-2 * atr / last)}), target {rupee(last + 3 * atr)} ({pct(3 * atr / last)}), "
+                     f"from 2 and 3 times its daily range.")
+    facts = [f"rank {r.get('rank')} of {len(d.rows)}"]
     if r.get("vs50") is not None:
-        facts.append(f"{r['vs50'] * 100:+.0f}% vs 50-day avg, {r['vs200'] * 100:+.0f}% vs 200-day")
+        facts.append(f"{pct(r['vs50'], 0)} vs 50-day avg, {pct(r['vs200'], 0)} vs 200-day")
+    if r.get("rs3") is not None:
+        facts.append(f"3 months vs Nifty 500 {pct(r['rs3'], 0)}")
     if r.get("rsi") is not None:
         facts.append(f"RSI {r['rsi']:.0f}")
-    if r.get("rs3") is not None:
-        facts.append(f"3-month return vs Nifty 500 {r['rs3'] * 100:+.0f}%")
-    if r.get("hi52") is not None:
-        facts.append(f"{-r['hi52'] * 100:.0f}% below its 52-week high")
-    lines.append("Why: " + "; ".join(facts) + ".")
-    ol = options_line(d, r["s"], last)
+    lines.append("; ".join(facts) + ".")
+    ol = options_line(d, sym)
     if ol:
         lines.append(ol)
-    lines.append(f"Data to {esc(d.asof)} close. For the investing view send: value {esc(r['s'])}")
     return "\n".join(lines)
 
 
 def value(d: Data, sym: str, ltp: float | None = None) -> str:
     s = d.stocks.get(sym)
     if not s or not s.get("val"):
-        return f"The investing view covers the Nifty 50 stocks for now; {esc(sym)} is not one of them. Send {esc(sym)} for the trade view."
+        return f"{esc(sym)}: the investing view covers the Nifty 50 stocks only."
     v = s["val"]
-    last = ltp or (s.get("ohlc", {}).get("c") or [0])[-1]
-    lines = [f"<b>{esc(sym)}</b> {rupee(last)} · investing view"]
+    last = ltp or (d.last(d.bysym[sym]) if sym in d.bysym else (s.get("ohlc", {}).get("c") or [0])[-1])
+    lines = [f"<b>{esc(sym)}</b> {rupee(last)} · invest" if last else f"<b>{esc(sym)}</b> · invest"]
     gap = v.get("gap")
     if gap is None:
-        call = "<b>No verdict.</b> Not enough history to compare price with growth."
+        lines.append("<b>No verdict.</b> Not enough history to compare price with growth.")
     elif gap <= -0.03:
-        call = "<b>Reasonable to accumulate.</b> The price needs less growth than the company has delivered."
+        lines.append("<b>Reasonable to accumulate.</b> The price needs less growth than the company has delivered.")
     elif gap < 0.05:
-        call = "<b>Fairly priced.</b> The price needs about the growth the company has delivered."
+        lines.append("<b>Fairly priced.</b> The price needs about the growth the company has delivered.")
     else:
-        call = "<b>Expensive.</b> The price needs faster growth than the company has delivered."
-    lines.append(call)
-    facts = []
+        lines.append("<b>Expensive.</b> The price needs faster growth than the company has delivered.")
     if v.get("g_impl") is not None and v.get("g3") is not None:
-        facts.append(f"price needs {v['g_impl'] * 100:.0f}% a year growth for 10 years; 3-year delivered growth is {v['g3'] * 100:.0f}%")
+        lines.append(f"Growth the price needs: {v['g_impl'] * 100:.0f}% a year for 10 years. Delivered over 3 years: {v['g3'] * 100:.0f}% a year.")
     if v.get("pe") and v.get("pe_med"):
-        facts.append(f"P/E {v['pe']:.0f} against its own median {v['pe_med']:.0f}")
-    if v.get("fair_at_g3"):
-        facts.append(f"value if growth continues at the delivered rate: {rupee(v['fair_at_g3'])}")
-    if facts:
-        lines.append("Why: " + "; ".join(facts) + ".")
-    if s.get("signal"):
-        lines.append(f"Terminal label: {esc(s['signal'])}.")
-    lines.append(f"Full five-method model: Fair Value Workbench. For the trade view send: {esc(sym)}")
+        lines.append(f"P/E {v['pe']:.0f} against its own median of {v['pe_med']:.0f}.")
+    if v.get("fair_at_g3") and last:
+        lines.append(f"Value if growth stays at the delivered rate: {rupee(v['fair_at_g3'])} ({pct(v['fair_at_g3'] / last - 1, 0)}).")
     return "\n".join(lines)
 
 
 def hedge(d: Data, r: dict, ltp: float | None = None) -> str:
-    sym, last = r["s"], ltp or r["last"]
+    sym = r["s"]
+    t = d.tech.get(sym, {})
+    last = ltp or d.last(r)
     beta = (d.stocks.get(sym, {}).get("val") or {}).get("beta")
-    o = d.opts.get(sym)
-    lines = [f"<b>Hedging {esc(sym)}</b> at {rupee(last)}, per ₹1,00,000 held"]
-    if r.get("fail") and r["fail"] < last:
-        lines.append(f"1. <b>Stop-loss (free):</b> exit below {rupee(r['fail'])}, a loss of about {(1 - r['fail'] / last) * 100:.0f}%.")
+    o, nf = d.opts.get(sym), d.opts.get("NIFTY")
+    lines = [f"<b>Hedging {esc(sym)}</b> {rupee(last)}"]
+    lines.append("<b>1. Across asset classes</b>")
+    lines.append("Hold part of the portfolio outside Indian equities: gold (ETF) and a liquid or government bond fund. "
+                 "When foreign investors sell Indian stocks the rupee usually weakens, so US holdings gain in rupees. "
+                 "Gold is insurance, not a return source: in 2008 the Nifty fell 52% while gold rose 28% in rupees, but the link is weak in some falls.")
+    sr, ir, mr = r.get("r21"), d.industry_r21(r), d.ret21("Nifty 50")
+    lines.append("<b>2. Market, sector or company risk</b>")
+    if sr is not None and ir is not None and mr is not None:
+        lines.append(f"Last month: {esc(sym)} {pct(sr)}, its industry {pct(ir)}, Nifty {pct(mr)}.")
+        company = sr - ir <= -0.05
+        sector = ir <= -0.03 or mr <= -0.03
     else:
-        lines.append("1. <b>Stop-loss (free):</b> decide the exit price before you buy; 1.5 to 2 times the daily range below entry is common.")
+        company, sector = False, False
+    if company:
+        lines.append("The weakness is company-specific, so a Nifty hedge would not help.")
+    elif sector:
+        lines.append("The fall is sector or market wide, so a stop or put on the stock alone protects only part.")
+    else:
+        lines.append("No broad fall right now; choose the hedge by the risk you fear.")
     if o:
-        cost = o["straddle"] / 2 / o["spot"] * 100
-        lines.append(f"2. <b>Protective put:</b> {esc(sym)} has options. An at-the-money put to {esc(o['expiry'])} costs roughly {cost:.1f}% "
-                     f"of the position and caps the loss at about that. Implied volatility {o['iv_put']:.0f}%.")
+        lines.append(f"• Company risk: an at-the-money put to {esc(o['expiry'])} costs about {o['straddle'] / 2 / o['spot'] * 100:.1f}% "
+                     f"(implied volatility {o['iv_put']:.0f}%). A collar (sell a higher call) cuts that cost but caps the upside.")
     else:
-        lines.append(f"2. <b>Protective put:</b> no option data for {esc(sym)} in the nightly snapshot, so a stock put may not be available.")
+        lines.append("• Company risk: no stock options in the snapshot, so the choices are a smaller position or an exit.")
     b = beta or 1.0
-    nf = d.opts.get("NIFTY")
-    nline = f"3. <b>Market hedge:</b> short about ₹{b * 100000:,.0f} of Nifty (beta {b:.2f}{'' if beta else ', assumed'}) with futures or a Nifty put. " \
-            "This removes market risk, not the stock's own risk."
-    if nf:
-        nline += f" A Nifty at-the-money put to {esc(nf['expiry'])} costs roughly {nf['straddle'] / 2 / nf['spot'] * 100:.1f}%."
-    lines.append(nline)
-    lines.append("4. <b>Another asset class:</b> keep part of the money in gold or a liquid fund. Gold has tended to hold up when Indian "
-                 "equities fall, but it is a cushion, not a matched hedge.")
-    lines.append("Lot sizes make option and futures hedges practical only for larger positions. Research, not advice.")
+    idx = "Nifty Bank" if SECTOR_INDEX.get(r.get("ind")) == "Nifty Bank" else "Nifty"
+    nl = f"• Market or sector risk: short {idx} worth {b:.2f}x the position (beta{'' if beta else ' assumed 1'})"
+    if nf and idx == "Nifty":
+        nl += f"; a Nifty at-the-money put to {esc(nf['expiry'])} costs about {nf['straddle'] / 2 / nf['spot'] * 100:.1f}%"
+    lines.append(nl + ". One index contract is ₹15-20 lakh, so this suits larger portfolios.")
+    lines.append("<b>3. Stop-loss</b>")
+    atr = t.get("atr")
+    if atr:
+        stop = last - 2 * atr
+        lines.append(f"Stop at {rupee(stop)} ({pct(stop / last - 1)}), 2 times its daily range. "
+                     f"Risking 1% of ₹10 lakh allows {int(10000 / (last - stop)):,} shares.")
+    if r.get("fail") and r["fail"] < last:
+        lines.append(f"Chart level: the setup fails below {rupee(r['fail'])}.")
+    soon = d.stocks.get(sym, {}).get("res_soon")
+    lines.append(("Results are due soon: a" if soon else "A") + " stop does not protect against an overnight gap; a put does.")
     return "\n".join(lines)
 
 
@@ -217,6 +272,7 @@ class Bot:
         self.quotes = {}                          # NSE: {sym: (ltp, prev)}; US: {sym: (ltp, prev)}
         self.us_symbols = set()
         self.status_line = ""
+        self.state.setdefault("journal", [])
 
     # -- Telegram ---------------------------------------------------------
     def poll(self) -> int:
@@ -257,62 +313,65 @@ class Bot:
             ltp, prev = self.quotes[sym]
             chg = f" ({(ltp / prev - 1) * 100:+.2f}%)" if prev else ""
             cur = "$" if self.market == "US" else "₹"
-            return f"<b>{esc(sym)}</b> {cur}{ltp:,.2f}{chg} (Dhan, live)"
+            return f"<b>{esc(sym)}</b> {cur}{ltp:,.2f}{chg}, live from Dhan"
         r = self.d.find(word)
         if r:
-            return f"<b>{esc(r['s'])}</b> {rupee(r['last'])} at the {esc(self.d.asof)} close. Live NSE prices are answered 09:15 to 15:30 IST."
-        if self.market == "US":
-            return f"{esc(sym)} is not tracked yet. Send: watch {esc(sym)} us"
-        return f"I don't know {esc(sym)}. NSE: Nifty 500 symbols. US stocks are answered during the US session; add one with: watch {esc(sym)} us"
+            t = self.d.tech.get(r["s"], {})
+            day = t["d"] if t.get("c") and t.get("d", "") >= self.d.asof else self.d.asof
+            return f"<b>{esc(r['s'])}</b> {rupee(self.d.last(r))}, {esc(day)} close. Live prices 09:15 to 15:30 IST."
+        return f"{esc(sym)}: not a Nifty 500 stock, and not tracked in the US session."
+
+    def log(self, cmd: str, sym: str, reply: str) -> None:
+        """Journal of every stock asked about (kept on the 'bot' branch, last 500)."""
+        first = re.sub(r"<[^>]+>", "", reply.split("\n")[1] if "\n" in reply else reply)[:160]
+        j = self.state.setdefault("journal", [])
+        j.append({"t": __import__("datetime").datetime.now(__import__("zoneinfo").ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M"),
+                  "cmd": cmd, "sym": sym, "price": self.ltp(sym), "said": first})
+        del j[:-500]
+        self.dirty = True
 
     def handle(self, text: str) -> str:
-        t = re.sub(r"\s+", " ", text.strip())
-        low = t.lower().lstrip("/")
+        low = re.sub(r"\s+", " ", text.strip()).lower().lstrip("/")
         w = low.split(" ")
-        if low in ("help", "start", "hi", "hello", "commands"):
-            return HELP
-        if low in ("top", "picks", "top 5", "top5", "buys"):
+        if low in ("top", "top 5", "top5", "picks"):
             return top(self.d)
-        if low in ("my alerts", "myalerts", "alerts", "list"):
-            return self.list_alerts()
-        if low == "status":
-            return self.status()
-        if w[0] == "price" and len(w) >= 2:
-            return self.price(w[1])
-        if w[0] in ("value", "invest") and len(w) >= 2:
+        if w[0] == "price" and len(w) == 2:
+            out = self.price(w[1])
+            self.log("price", w[1].upper(), out)
+            return out
+        if w[0] in ("value", "hedge") and len(w) == 2:
             r = self.d.find(w[1])
-            return value(self.d, r["s"] if r else w[1].upper(), self.ltp(r["s"]) if r else None)
-        if w[0] in ("technical", "trade", "verdict") and len(w) >= 2:
-            return self.tech(w[1])
-        if w[0] == "hedge" and len(w) >= 2:
-            r = self.d.find(w[1])
-            return hedge(self.d, r, self.ltp(r["s"])) if r else f"I don't know {esc(w[1].upper())}. Hedge works for Nifty 500 stocks."
+            sym = r["s"] if r else w[1].upper()
+            if w[0] == "value":
+                out = value(self.d, sym, self.ltp(sym))
+            else:
+                out = hedge(self.d, r, self.ltp(sym)) if r else f"{esc(sym)}: not a Nifty 500 stock."
+            self.log(w[0], sym, out)
+            return out
         if w[0] == "alert":
+            if len(w) == 1:
+                return self.list_alerts()
+            if len(w) == 3 and w[1] == "remove" and w[2].isdigit():
+                return self.remove(int(w[2]))
             m = re.match(r"alert (\S+) (above|below|over|under|>|<) ?\$?₹?([\d.,]+)( us)?$", low)
-            if not m:
-                return "Use: <code>alert TCS above 3450</code> or <code>alert NVDA below 150</code>"
-            return self.add_alert(m.group(1).upper(), "above" if m.group(2) in ("above", "over", ">") else "below",
-                                  float(m.group(3).replace(",", "")), bool(m.group(4)))
-        if w[0] == "watch" and len(w) >= 2:
-            return self.add_watch(w[1].upper(), len(w) > 2 and w[2] == "us")
-        if w[0] in ("remove", "delete") and len(w) == 2 and w[1].isdigit():
-            return self.remove(int(w[1]))
+            if m:
+                return self.add_alert(m.group(1).upper(), "above" if m.group(2) in ("above", "over", ">") else "below",
+                                      float(m.group(3).replace(",", "")), bool(m.group(4)))
+            return "Alert format: alert TCS above 3450"
         if len(w) == 1 and re.fullmatch(r"[a-z0-9&\-]{2,15}", w[0]):
-            if self.d.find(w[0]):
-                return self.tech(w[0])
+            r = self.d.find(w[0])
+            if r:
+                out = technical(self.d, r, self.ltp(r["s"]))
+                self.log("trade", r["s"], out)
+                return out
             if w[0].upper() in self.quotes:
                 return self.price(w[0])
-        return "I didn't understand that. Send <code>help</code> for the commands."
+            return f"{esc(w[0].upper())}: not a Nifty 500 stock."
+        return "Not a command. The six commands are in my description."
 
     def ltp(self, sym: str):
         q = self.quotes.get(sym)
         return q[0] if q and q[0] else None
-
-    def tech(self, word: str) -> str:
-        r = self.d.find(word)
-        if not r:
-            return f"I don't know {esc(word.upper())}. The trade view covers Nifty 500 stocks."
-        return technical(self.d, r, self.ltp(r["s"]))
 
     def market_of(self, sym: str, us_flag: bool) -> str | None:
         if us_flag or self.is_us(sym):
@@ -322,49 +381,28 @@ class Bot:
     def add_alert(self, sym: str, side: str, level: float, us_flag: bool) -> str:
         mkt = self.market_of(sym, us_flag)
         if not mkt:
-            return f"I don't know {esc(sym)}. For a US stock add 'us': <code>alert {esc(sym)} {side} {level:g} us</code>"
+            return f"{esc(sym)}: not a Nifty 500 stock. For a US stock end with 'us'."
         if len(self.state["alerts"]) >= 40:
-            return "You have 40 alerts already. Remove one first (send: my alerts)."
+            return "40 alerts already. Remove one first."
         self.state["alerts"].append({"sym": sym, "mkt": mkt, "side": side, "level": level})
         self.dirty = True
         cur = "$" if mkt == "US" else "₹"
-        when = "" if mkt == self.market else f" It is checked during the {mkt} session."
-        return f"Done. One message when {esc(sym)} goes {side} {cur}{level:,.2f}.{when}"
-
-    def add_watch(self, sym: str, us_flag: bool) -> str:
-        mkt = self.market_of(sym, us_flag)
-        if not mkt:
-            return f"I don't know {esc(sym)}. For a US stock: <code>watch {esc(sym)} us</code>"
-        if not any(x["sym"] == sym for x in self.state["watch"]):
-            self.state["watch"].append({"sym": sym, "mkt": mkt})
-            self.dirty = True
-        return f"Watching {esc(sym)} ({mkt}). You get a message on a 3% move in a day."
+        return f"Alert set: {esc(sym)} {side} {cur}{level:,.2f}."
 
     def list_alerts(self) -> str:
-        a, wt = self.state["alerts"], self.state["watch"]
-        if not a and not wt:
-            return "No alerts yet. Try: <code>alert TCS above 3450</code>"
-        lines = ["<b>Your alerts</b>"]
-        for i, x in enumerate(a, 1):
-            lines.append(f"{i}. {esc(x['sym'])} {x['side']} {'$' if x['mkt'] == 'US' else '₹'}{x['level']:,.2f}")
-        if wt:
-            lines.append("Watching: " + ", ".join(esc(x["sym"]) for x in wt))
-        lines.append("Delete one with: <code>remove 1</code>")
-        return "\n".join(lines)
+        a = self.state["alerts"]
+        if not a:
+            return "No alerts."
+        return "<b>Your alerts</b>\n" + "\n".join(
+            f"{i}. {esc(x['sym'])} {x['side']} {'$' if x['mkt'] == 'US' else '₹'}{x['level']:,.2f}" for i, x in enumerate(a, 1))
 
     def remove(self, i: int) -> str:
         a = self.state["alerts"]
         if not 1 <= i <= len(a):
-            return "No alert with that number. Send: my alerts"
+            return "No alert with that number."
         x = a.pop(i - 1)
         self.dirty = True
-        return f"Removed: {esc(x['sym'])} {x['side']} {x['level']:,.2f}"
-
-    def status(self) -> str:
-        return (f"{self.market} price job: running. {self.status_line}\n"
-                f"Board data to {esc(self.d.asof)} close; options snapshot {esc(self.d.opts_date or 'none')}.\n"
-                f"{len(self.state['alerts'])} alerts, {len(self.state['watch'])} watched.\n"
-                "I answer while a price job runs: NSE 09:07 to 15:35 IST, US session from about 19:55 IST.")
+        return f"Removed: {esc(x['sym'])} {x['side']} {x['level']:,.2f}."
 
     # -- user alerts ------------------------------------------------------
     def check(self, when: str) -> list:
@@ -422,10 +460,8 @@ def save_state(st: dict) -> None:
 def set_menu() -> None:
     """Register the command menu and description shown in Telegram."""
     T.call("setMyCommands", commands=[{"command": c, "description": d} for c, d in MENU])
-    T.call("setMyDescription", description=(
-        "Your NSE terminal in chat. Try:\nprice TCS\nTCS  (trade verdict)\nvalue TCS  (investing verdict)\ntop\nhedge TCS\n"
-        "alert TCS above 3450\nalert NVDA below 150\nwatch RELIANCE\nmy alerts\nstatus"))
-    T.call("setMyShortDescription", short_description="Prices, verdicts, top setups, hedges and alerts from your NSE terminal.")
+    T.call("setMyDescription", description=DESCRIPTION)
+    T.call("setMyShortDescription", short_description="price TCS · TCS · value TCS · hedge TCS · top · alert TCS above 3450")
 
 
 if __name__ == "__main__":

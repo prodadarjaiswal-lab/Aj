@@ -35,10 +35,28 @@ NAMES = {
     "gap": "Gap up of 3% or more that holds into the close on 2x volume",
     "volbreak": "Volume breakout above the 20-day high (existing setup)",
     "pullback": "Pullback in an uptrend (existing setup)",
+    "don55": "Donchian breakout: close above the 55-day high (turtle rule)",
+    "macd0": "MACD crosses above its signal line while above zero",
+    "bbsq": "Bollinger squeeze breakout: band width in its lowest 20% of 6 months, close above the upper band",
+    "rsnew": "Relative strength line at a 1-year high before the price is",
+    "dip3": "Three down closes in a row while above the 200-day average",
+    "ibs": "Closes in the bottom 20% of its day's range while above the 200-day average",
+    "reclaim200": "Closes back above the 200-day average after 20+ days below",
     "extended": "Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)",
     "downtrend": "Downtrend: below a falling 200-day average and 50-day below 200-day (warning)",
 }
 WARN = ("extended", "downtrend")
+
+
+def _ema(a, n):
+    out, e, k = [None] * len(a), None, 2 / (n + 1)
+    for i, x in enumerate(a):
+        if x is None:
+            continue
+        e = x if e is None else x * k + e * (1 - k)
+        if i >= n - 1:
+            out[i] = e
+    return out
 
 
 def atr_series(h, l, c, n=14):
@@ -122,6 +140,11 @@ class Tech:
         self.st = supertrend_dir(h, l, c, self.atr10, 3.0)
         self.rsi2 = rsi_n(c, 2)
         self.v50 = rolling_mean(v, 50) if v else None
+        self.m55h = [max(h[i - 55:i]) if i >= 55 else None for i in range(len(c))]
+        ema = lambda a, n: _ema(a, n)
+        e12, e26 = ema(c, 12), ema(c, 26)
+        self.macd = [a - b if a is not None and b is not None else None for a, b in zip(e12, e26)]
+        self.sig = _ema([x if x is not None else 0.0 for x in self.macd], 9)
 
     def flags(self, i) -> set:
         S, c, h, l, v = self.S, self.c, self.h, self.l, self.v
@@ -154,6 +177,24 @@ class Tech:
                 f.add("accum")
         if vol_ok and self.o[i] >= 1.03 * c[i - 1] and last > self.o[i] and v[i] >= 2 * self.v50[i - 1]:
             f.add("gap")
+        if self.m55h[i] and last > self.m55h[i]:
+            f.add("don55")
+        if self.macd[i] is not None and self.macd[i - 1] is not None and self.macd[i] > 0 \
+                and self.macd[i] > self.sig[i] and self.macd[i - 1] <= self.sig[i - 1]:
+            f.add("macd0")
+        bw = [x for x in S.bbw[i - 125:i] if x is not None]
+        if bw and S.bbw[i - 1] is not None and sum(x < S.bbw[i - 1] for x in bw) <= 0.2 * len(bw) \
+                and S.m20[i] and S.bbw[i] is not None and last > S.m20[i] * (1 + S.bbw[i] / 2):
+            f.add("bbsq")
+        rsl = [x for x in S.rsl[i - 251:i + 1] if x is not None]
+        if rsl and S.rsl[i] >= max(rsl) and last < 0.97 * hi52:
+            f.add("rsnew")
+        if last > m200 and c[i] < c[i - 1] < c[i - 2] < c[i - 3]:
+            f.add("dip3")
+        if last > m200 and h[i] > l[i] and (last - l[i]) / (h[i] - l[i]) <= 0.2:
+            f.add("ibs")
+        if last > m200 and all(c[k] < S.m200[k] for k in range(i - 20, i) if S.m200[k]):
+            f.add("reclaim200")
         t = S.tag(i)
         if t in ("volbreak", "pullback"):
             f.add(t)
@@ -244,6 +285,16 @@ def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
             res["tested"] = bool(res["lift_in_x10"] is not None and res["lift_out_x10"] is not None
                                  and res["lift_in_x10"] > 0 and res["lift_out_x10"] >= 0.003
                                  and (res["lift_out_r"] or 0) > 0 and so.get("n", 0) >= 100 and so.get("t10", 0) >= 2)
+        # the same test for weak markets (Nifty below its 200-day average)
+        bw_i, bw_o = out["base"]["in"]["weak"], out["base"]["out"]["weak"]
+        wi, wo = res["in"]["weak"], res["out"]["weak"]
+        li, lo, lr = lift(wi, bw_i, "x10"), lift(wo, bw_o, "x10"), lift(wo, bw_o, "avg_r")
+        res["lift_out_x10_weak"] = lo
+        if k in WARN:
+            res["tested_weak"] = bool(li is not None and lo is not None and li < 0 and lo < 0 and wo.get("n", 0) >= 100)
+        else:
+            res["tested_weak"] = bool(li is not None and lo is not None and li > 0 and lo >= 0.003 and (lr or 0) > 0
+                                      and wo.get("n", 0) >= 100 and wo.get("t10", 0) >= 2)
         out["signals"][k] = res
     return out
 
@@ -265,8 +316,27 @@ def today(data: dict, nifty: dict) -> dict:
         recent = set().union(*(T.flags(k) - T.flags(k - 1) for k in range(i - 2, i + 1)))
         a = T.atr[i]
         out[sym] = {"d": d[i], "c": cols["c"][i], "atr": round(a, 2) if a else None,
-                    "on": sorted(now), "new": sorted(recent & now),
-                    "adx": round(T.adx[i], 1) if T.adx[i] else None, "st": T.st[i]}
+                    "on": sorted(now), "new": sorted(recent & now), **readout(T, i)}
+    return out
+
+
+def readout(T: "Tech", i: int) -> dict:
+    """Plain indicator values for the technical desk (no judgement; the back-test decides what matters)."""
+    S, c, h = T.S, T.c, T.h
+    r = lambda x, k=1: round(x, k) if x is not None else None
+    last = c[i]
+    out = {"rsi": r(S.rsi[i]), "adx": r(T.adx[i]), "di": "buyers" if (T.pdi[i] or 0) > (T.ndi[i] or 0) else "sellers",
+           "st": "up" if T.st[i] == 1 else "down", "macd": "above signal" if (T.macd[i] or 0) > (T.sig[i] or 0) else "below signal",
+           "atr_pct": r(T.atr[i] / last * 100, 2) if T.atr[i] else None,
+           "vs50": r((last / S.m50[i] - 1) * 100) if S.m50[i] else None,
+           "vs200": r((last / S.m200[i] - 1) * 100) if S.m200[i] else None,
+           "hi52": r((last / max(h[max(0, i - 251):i + 1]) - 1) * 100),
+           "rs3": r(((last / c[i - 63]) - (T.nc[i] / T.nc[i - 63])) * 100) if i >= 63 else None}
+    if T.v and T.v50 and T.v50[i - 1]:
+        out["volx"] = r(T.v[i] / T.v50[i - 1], 2)
+    bw = [x for x in S.bbw[max(0, i - 125):i + 1] if x is not None]
+    if bw and S.bbw[i] is not None:
+        out["bbw_pct"] = round(sum(x < S.bbw[i] for x in bw) / len(bw) * 100)
     return out
 
 
@@ -283,7 +353,8 @@ def fetch(dhan, root: Path, years: float):
     def series(resp):
         ts = resp.get("timestamp") or []
         return {"d": [dt.datetime.fromtimestamp(t, R.IST).date().isoformat() for t in ts],
-                "o": resp["open"], "c": resp["close"], "h": resp["high"], "l": resp["low"], "v": resp.get("volume")}
+                "o": list(resp["open"]), "c": list(resp["close"]), "h": list(resp["high"]), "l": list(resp["low"]),
+                "v": list(resp["volume"]) if resp.get("volume") else None}
     nifty = series(dhan.daily(ix["Nifty 50"], "IDX_I", "INDEX", start, end))
     data = {}
     for sym, sid in eq.items():
@@ -291,7 +362,56 @@ def fetch(dhan, root: Path, years: float):
             data[sym] = series(dhan.daily(sid, "NSE_EQ", "EQUITY", start, end))
         except Exception as e:
             print(f"  skip {sym}: {str(e)[:80]}")
+    add_last_session(dhan, eq, ix["Nifty 50"], data, nifty)
     return data, nifty, end
+
+
+def last_session_day(now: dt.datetime) -> dt.date | None:
+    """The trading day whose bar Dhan's quote API holds now (None before today's close)."""
+    d = now.date()
+    if d.weekday() < 5:
+        return d if now.time() >= dt.time(15, 35) else None
+    return d - dt.timedelta(days=d.weekday() - 4)        # Saturday/Sunday -> Friday
+
+
+def add_last_session(dhan, eq: dict, nifty_id, data: dict, nifty: dict, now: dt.datetime | None = None) -> int:
+    """Dhan's daily history lags a day; add the last session's bar from the quote API.
+    Skipped on holidays (the quote repeats the stored bar). Returns bars added."""
+    import refresh as R
+    now = now or dt.datetime.now(R.IST)
+    day = last_session_day(now)
+    if not day or not nifty["d"] or nifty["d"][-1] >= day.isoformat():
+        return 0
+    try:
+        q = R.quotes(dhan, list(eq.values()), [nifty_id])
+    except Exception as e:
+        print(f"  last session not added: {str(e)[:80]}")
+        return 0
+    n = 0
+
+    def add(o, v):
+        nonlocal n
+        if not v or v[0] <= 0 or not o["d"] or o["d"][-1] >= day.isoformat():
+            return False
+        if abs(v[0] / o["o"][-1] - 1) < 2e-4 and abs(v[1] / o["h"][-1] - 1) < 2e-4:
+            return False                                   # holiday replay of the stored bar
+        o["d"].append(day.isoformat())
+        for k, x in zip(("o", "h", "l", "c"), v[:4]):
+            o[k].append(x)
+        if o.get("v") is not None:
+            o["v"].append(v[4] if len(v) > 4 else 0)
+        n += 1
+        return True
+    nv = q.get(("IDX_I", str(nifty_id)))
+    if nv and nifty["c"]:
+        if nv[0] > 0 and nv[3] > 0 and not (abs(nv[3] / nifty["c"][-1] - 1) < 2e-5):
+            nifty["d"].append(day.isoformat())
+            nifty["c"].append(nv[3])
+    for sym, sid in eq.items():
+        if sym in data:
+            add(data[sym], q.get(("NSE_EQ", str(sid))))
+    print(f"  added {day} from quotes to {n} stocks")
+    return n
 
 
 def run_today(dhan, root: Path) -> None:
@@ -311,12 +431,39 @@ def main() -> int:
     res.update({"asof": end.isoformat(), "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
                 "note": "Excess return vs Nifty 50 from the close of the first day a signal appears. ATR trade: stop 2 ATR, "
                         "target 3 ATR, exit day 21. Today's Nifty 500 members (survivorship bias)."})
+    prev = {}
+    try:
+        prev = json.loads((root / "docs/tech-model.json").read_text(encoding="utf-8")).get("signals", {})
+    except Exception:
+        pass
+    changes = []
+    for k, r in res["signals"].items():
+        for flag, regime in (("tested", "rising"), ("tested_weak", "weak")):
+            was, now = prev.get(k, {}).get(flag), r.get(flag)
+            if was is not None and bool(was) != bool(now):
+                changes.append(f"{'added' if now else 'dropped'} in {regime} markets: {NAMES[k]}")
+            elif was is None and now:
+                changes.append(f"new, passes in {regime} markets: {NAMES[k]}")
+    hist_p = root / "docs/tech-model-history.json"
+    try:
+        hist = json.loads(hist_p.read_text(encoding="utf-8"))
+    except Exception:
+        hist = []
+    hist.append({"asof": end.isoformat(), "rising": [k for k, r in res["signals"].items() if r["tested"]],
+                 "weak": [k for k, r in res["signals"].items() if r.get("tested_weak")], "changes": changes})
+    hist_p.write_text(json.dumps(hist[-104:], indent=1), encoding="utf-8")
+    if changes:
+        try:
+            import telegram as T
+            T.send("<b>Technical model re-test</b>\n" + "\n".join("• " + T.esc(x) for x in changes))
+        except Exception as e:
+            print(f"  telegram notice failed: {e}")
     (root / "docs/tech-model.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
     (root / "docs/tech-today.json").write_text(json.dumps({"asof": end.isoformat(), "stocks": today(data, nifty)},
                                                            separators=(",", ":")), encoding="utf-8")
     for k, r in res["signals"].items():
         so = r["out"]["up"]
-        print(f"{k:10s} tested={r['tested']!s:5s} n_out={so.get('n')} lift10 in={r['lift_in_x10']} out={r['lift_out_x10']} "
+        print(f"{k:10s} up={r['tested']!s:5s} weak={r.get('tested_weak')!s:5s} n_out={so.get('n')} lift10 in={r['lift_in_x10']} out={r['lift_out_x10']} "
               f"R out={so.get('avg_r')} liftR={r['lift_out_r']}")
     return 0
 
