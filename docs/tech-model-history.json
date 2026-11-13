@@ -1,0 +1,19 @@
+[
+ {
+  "asof": "2026-11-13",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "volbreak",
+   "don55",
+   "macd0",
+   "rsnew"
+  ],
+  "weak": [],
+  "changes": [
+   "new, passes in rising markets: Donchian breakout: close above the 55-day high (turtle rule)",
+   "new, passes in rising markets: MACD crosses above its signal line while above zero",
+   "new, passes in rising markets: Relative strength line at a 1-year high before the price is"
+  ]
+ }
+]
