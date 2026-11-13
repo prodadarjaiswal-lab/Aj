@@ -77,3 +77,14 @@ def test_restart_keeps_sent():
 def test_config_file_is_valid():
     c = U.config()
     assert "NVDA" in c and all(isinstance(x, (int, float)) for x in c["NVDA"]["below"])
+
+
+def test_security_ids_from_dhan_list(monkeypatch):
+    csv_text = ("EXCHANGE,SEGMENT,SCRIP_CODE,ISIN_CODE,SYMBOL,SYMBOL_NAME,EXCH_SYMBOL\n"
+                "NASDAQ,E,4242,US67066G1040,NVDA,NVIDIA CORP,NVDA\n"
+                "NYSE,E,99,US0000000000,NVD,OTHER,NVD\n")
+
+    class R:
+        text = csv_text
+    monkeypatch.setattr(U.requests, "get", lambda *a, **k: R())
+    assert U.security_ids(["NVDA"]) == {"NVDA": "4242"}

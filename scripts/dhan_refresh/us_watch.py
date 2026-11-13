@@ -53,7 +53,8 @@ def security_ids(symbols: list) -> dict:
         raise DhanError("Dhan's US instrument list came back empty")
     cols = list(rows[0].keys())
     sym_cols = [c for c in cols if "SYMBOL" in c.upper() and "NAME" not in c.upper()] or cols
-    id_cols = [c for c in cols if "SECURITY_ID" in c.upper() or c.upper() in ("SECURITYID", "SCRIP_ID", "ID")]
+    # Dhan's US list keeps the security id in SCRIP_CODE (DhanHQ-py fetch_global_security_list)
+    id_cols = [c for c in cols if c.upper() in ("SCRIP_CODE", "SECURITY_ID", "SECURITYID", "SM_SECURITY_ID")]
     if not id_cols:
         raise DhanError(f"no security id column in Dhan's US list; columns: {cols[:12]}")
     want = {s.upper(): s for s in symbols}
@@ -63,6 +64,7 @@ def security_ids(symbols: list) -> dict:
             v = str(r.get(c, "")).strip().upper()
             if v in want and want[v] not in out:
                 out[want[v]] = str(r[id_cols[0]]).strip()
+                print(f"  {want[v]}: {r.get('EXCHANGE', '')} {r.get('SYMBOL_NAME', '')} id {out[want[v]]}")
     missing = [s for s in symbols if s not in out]
     if missing:
         print(f"  not in Dhan's US list: {missing}; columns: {cols[:12]}")
