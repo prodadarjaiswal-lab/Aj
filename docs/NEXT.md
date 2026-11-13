@@ -13,17 +13,18 @@ The owner's brief (13-14 Nov 2026): a strong, tested technical model; a curated 
 - `scripts/dhan_refresh/bot.py` now has six commands: price, SYMBOL (trade), value, hedge, top, alert. Replies are curated and the hedge reply follows the agreed order. Every stock asked about is journalled.
 - `docs/hedging-research.md`: Damodaran, the owner's Drive notes, NSE and SEBI sources.
 
-## To do
-1. Make the bot's verdicts use the signal set for the current market: `tested` in rising markets, `tested_weak` in weak ones (`technical()` and `top()`).
-2. Dispatch `tech-model.yml`; check the new candidates and the Telegram re-test notice.
-3. Write `docs/technical-desk.md` for the pinned chat:
-   - a model scoreboard;
-   - one line per stock with the indicator readout and its tested signals.
-   - Regenerate it nightly and weekly.
-4. Journal: nightly, copy the bot journal (branch `bot`, `bot.json`) to `docs/journal.md` on main.
-5. Two pinned Claude Project chats, "Stock Query" and "Journal". Write `docs/claude-project/*.md` (instructions, and which repo files to sync) plus setup steps for the owner.
-6. Dhan robustness:
-   - Telegram alert when the live feed, the US tracker or the nightly refresh fails.
-   - Test a login conflict and recovery.
-7. Confirm the Telegram description and menu updated: `bot.py menu` runs at job start.
-8. Show the owner the TCS example (price, trade, value, hedge) and summarise.
+## Done on 14 Nov (02:20 to 02:40 IST)
+- Bot verdicts use only the signals that passed for the current market (rising or weak).
+- The back-test runs every trading night inside the nightly refresh, using the same Dhan login. Signals are promoted or dropped automatically, with a Telegram notice.
+- First real run of the 20-signal back-test on 497 stocks: 6 signals pass in rising markets, none in weak markets.
+- New output files:
+  - `docs/technical-desk.md`
+  - `docs/auction.json` and `docs/auction-desk.md`: order flow and auction from 1-minute bars
+  - gamma exposure fields in the options snapshot
+  - `docs/journal.md`
+- Pinned Claude Project instructions and setup steps are in `docs/claude-project/`.
+- The Dhan jobs send a Telegram message when they fail. The US tracker waits for any other Dhan job before it logs in.
+
+## Open
+- The Telegram description and menu update the next time a price job starts (Monday 09:07 IST).
+- Order-flow levels are context only until they are back-tested. Next: test VWAP reclaim, Initial Balance extension and value-area acceptance on 1-minute history.
