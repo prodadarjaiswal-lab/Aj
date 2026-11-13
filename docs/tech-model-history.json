@@ -7,13 +7,17 @@
    "volbreak",
    "don55",
    "macd0",
-   "rsnew"
+   "rsnew",
+   "qdrop",
+   "qdd_hold"
   ],
-  "weak": [],
+  "weak": [
+   "qdrop"
+  ],
   "changes": [
-   "new, passes in rising markets: Donchian breakout: close above the 55-day high (turtle rule)",
-   "new, passes in rising markets: MACD crosses above its signal line while above zero",
-   "new, passes in rising markets: Relative strength line at a 1-year high before the price is"
+   "new, passes in rising markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
+   "new, passes in weak markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
+   "new, passes in rising markets: Proven stock 25% below its 52-week high, first close back above its 20-day average"
   ]
  }
 ]

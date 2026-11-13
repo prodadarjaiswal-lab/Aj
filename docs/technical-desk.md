@@ -12,6 +12,9 @@ Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 202
 | Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,540 | 51% | +0.81% | +0.19% |
 | MACD crosses above its signal line while above zero | rising | 1,750 | 48% | +0.51% | +0.19% |
 | Relative strength line at a 1-year high before the price is | rising | 277 | 56% | +1.75% | +0.19% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 175 | 57% | +1.55% | +0.19% |
+| Proven stock 25% below its 52-week high, first close back above its 20-day average | rising | 877 | 55% | +1.56% | +0.19% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | weak | 622 | 53% | +0.72% | +0.42% |
 
 ## Signals that failed (do not use for a verdict)
 
@@ -27,6 +30,7 @@ Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 202
 - Three down closes in a row while above the 200-day average
 - Closes in the bottom 20% of its day's range while above the 200-day average
 - Closes back above the 200-day average after 20+ days below
+- Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high
 - Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)
 - Downtrend: below a falling 200-day average and 50-day below 200-day (warning)
 
@@ -43,7 +47,7 @@ ABBOTINDIA: 26440.0 | new downtrend,nr7 | RSI 52.3 | ADX 17.6 buyers | ST up | M
 ABCAPITAL: 408.0 | new ibs | RSI 62.0 | ADX 26.7 buyers | ST up | MACD above signal | 6.1/10.9 | hi -5.3 | RS -3.0 | vol 1.21x | ATR 2.97%
 ABDL: 757.7 | new - | RSI 66.8 | ADX 15.7 buyers | ST up | MACD above signal | 10.4/29.3 | hi -1.3 | RS 17.6 | vol 0.86x | ATR 3.54%
 ABREL: 1203.0 | new accum | RSI 64.9 | ADX 25.7 buyers | ST up | MACD above signal | 4.4/-6.3 | hi -34.6 | RS -16.8 | vol 1.67x | ATR 4.46%
-ABSLAMC: 895.8 | new - | RSI 46.8 | ADX 23.1 buyers | ST up | MACD above signal | -7.6/-10.0 | hi -26.9 | RS -15.8 | vol 0.95x | ATR 4.11%
+ABSLAMC: 895.8 | new qdd | RSI 46.8 | ADX 23.1 buyers | ST up | MACD above signal | -7.6/-10.0 | hi -26.9 | RS -15.8 | vol 0.95x | ATR 4.11%
 ACC: 1220.1 | new - | RSI 55.4 | ADX 22.1 buyers | ST up | MACD above signal | 1.4/-10.6 | hi -38.6 | RS -11.0 | vol 0.62x | ATR 2.58%
 ACE: 1180.0 | new accum,ibs | RSI 60.5 | ADX 26.3 buyers | ST up | MACD above signal | 2.8/18.9 | hi -6.9 | RS 6.4 | vol 4.77x | ATR 4.03%
 ACMESOLAR: 414.4 | new - | RSI 51.1 | ADX 11.3 buyers | ST down | MACD above signal | -0.8/23.7 | hi -13.1 | RS 7.6 | vol 0.44x | ATR 4.09%
@@ -193,7 +197,7 @@ FINCABLES: 1270.0 | new - | RSI 52.2 | ADX 27.6 buyers | ST up | MACD above sign
 FIRSTCRY: 160.4 | new - | RSI 40.2 | ADX 11.8 sellers | ST down | MACD above signal | -6.3/-24.5 | hi -53.6 | RS -28.2 | vol 0.22x | ATR 3.72%
 FIVESTAR: 442.6 | new - | RSI 46.4 | ADX 25.9 sellers | ST up | MACD above signal | -9.2/-6.9 | hi -32.2 | RS -21.9 | vol 0.46x | ATR 4.14%
 FLUOROCHEM: 4712.1 | new ibs | RSI 58.9 | ADX 24.0 buyers | ST up | MACD above signal | 4.4/19.7 | hi -5.0 | RS -3.1 | vol 0.39x | ATR 3.41%
-FORCEMOT: 19600.0 | new adx,nr7 | RSI 69.4 | ADX 25.6 buyers | ST up | MACD above signal | 11.7/1.5 | hi -25.9 | RS 2.7 | vol 0.66x | ATR 3.38%
+FORCEMOT: 19600.0 | new adx,nr7,qdd | RSI 69.4 | ADX 25.6 buyers | ST up | MACD above signal | 11.7/1.5 | hi -25.9 | RS 2.7 | vol 0.66x | ATR 3.38%
 FORTIS: 764.0 | new - | RSI 46.0 | ADX 21.0 sellers | ST up | MACD above signal | -5.5/-14.2 | hi -25.1 | RS -18.8 | vol 1.0x | ATR 2.99%
 FSL: 291.2 | new - | RSI 53.3 | ADX 29.6 buyers | ST up | MACD below signal | 5.4/12.6 | hi -21.7 | RS 3.9 | vol 0.16x | ATR 3.91%
 GABRIEL: 1552.7 | new ibs | RSI 61.1 | ADX 14.8 buyers | ST up | MACD above signal | 11.8/30.9 | hi -8.1 | RS 4.2 | vol 2.1x | ATR 4.64%
@@ -229,7 +233,7 @@ HDFCLIFE: 592.2 | new adx | RSI 70.6 | ADX 26.6 buyers | ST up | MACD above sign
 HEGAM: 277.9 | new rsi2 | RSI 61.2 | ADX 32.1 buyers | ST up | MACD above signal | 13.8/27.7 | hi -12.5 | RS 10.2 | vol 0.48x | ATR 5.86%
 HEROMOTOCO: 5385.0 | new - | RSI 55.5 | ADX 16.2 buyers | ST up | MACD above signal | 2.8/2.4 | hi -15.7 | RS -11.0 | vol 0.95x | ATR 2.54%
 HEXT: 493.6 | new - | RSI 36.9 | ADX 22.4 sellers | ST down | MACD below signal | -6.0/-5.7 | hi -38.9 | RS -17.2 | vol 0.1x | ATR 3.85%
-HFCL: 205.5 | new ibs | RSI 38.0 | ADX 11.7 sellers | ST down | MACD below signal | -12.0/23.6 | hi -27.2 | RS -12.7 | vol 0.97x | ATR 6.15%
+HFCL: 205.5 | new ibs,qdd | RSI 38.0 | ADX 11.7 sellers | ST down | MACD below signal | -12.0/23.6 | hi -27.2 | RS -12.7 | vol 0.97x | ATR 6.15%
 HINDALCO: 943.6 | new - | RSI 54.2 | ADX 24.8 sellers | ST up | MACD above signal | 0.0/-3.8 | hi -19.8 | RS -12.9 | vol 2.03x | ATR 2.64%
 HINDCOPPER: 439.9 | new - | RSI 50.6 | ADX 29.0 buyers | ST down | MACD above signal | -5.3/-15.2 | hi -42.1 | RS -22.3 | vol 0.6x | ATR 3.55%
 HINDPETRO: 381.5 | new downtrend | RSI 59.8 | ADX 28.7 buyers | ST up | MACD above signal | 8.0/-0.1 | hi -25.0 | RS -6.0 | vol 0.5x | ATR 3.02%
@@ -384,7 +388,7 @@ PCBL: 282.6 | new - | RSI 42.3 | ADX 24.8 sellers | ST down | MACD above signal 
 PERSISTENT: 6003.0 | new ibs | RSI 57.6 | ADX 13.4 buyers | ST up | MACD below signal | 5.6/13.1 | hi -9.0 | RS 5.6 | vol 0.59x | ATR 2.64%
 PETRONET: 324.1 | new ibs | RSI 64.4 | ADX 29.0 buyers | ST up | MACD above signal | 10.0/14.0 | hi -3.6 | RS 13.0 | vol 3.72x | ATR 2.48%
 PFC: 334.2 | new - | RSI 52.8 | ADX 24.5 buyers | ST up | MACD above signal | -0.0/-15.5 | hi -31.3 | RS -14.9 | vol 0.66x | ATR 2.47%
-PFOCUS: 269.9 | new - | RSI 42.6 | ADX 12.0 sellers | ST down | MACD below signal | -9.3/-3.4 | hi -26.4 | RS -4.7 | vol 0.83x | ATR 5.82%
+PFOCUS: 269.9 | new qdd | RSI 42.6 | ADX 12.0 sellers | ST down | MACD below signal | -9.3/-3.4 | hi -26.4 | RS -4.7 | vol 0.83x | ATR 5.82%
 PGEL: 566.8 | new accum | RSI 63.1 | ADX 19.5 buyers | ST up | MACD above signal | 7.6/3.9 | hi -12.0 | RS -10.9 | vol 0.36x | ATR 3.24%
 PHOENIXLTD: 2255.0 | new accum | RSI 73.6 | ADX 35.0 buyers | ST up | MACD above signal | 15.6/22.6 | hi -2.0 | RS 15.7 | vol 1.0x | ATR 2.97%
 PIDILITIND: 1525.7 | new ibs,rsi2 | RSI 50.5 | ADX 23.2 buyers | ST up | MACD above signal | 0.1/1.5 | hi -10.6 | RS -13.1 | vol 1.1x | ATR 2.49%
