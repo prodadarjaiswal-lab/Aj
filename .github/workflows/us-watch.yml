@@ -1,0 +1,34 @@
+name: US stock alerts
+
+on:
+  schedule:
+    - cron: "25 13 * * 1-5"   # 13:25 UTC: before the 09:30 New York open in summer and winter; runs up to 5 h 45 m
+    - cron: "15 19 * * 1-5"   # 19:15 UTC: picks up and runs to the 16:00 New York close
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "track = watch until the close; now = send one price message"
+        default: track
+
+permissions:
+  contents: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    concurrency:
+      group: us-watch-${{ github.event.schedule || 'manual' }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Watch US stocks
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          cd scripts/dhan_refresh
+          if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 60; fi

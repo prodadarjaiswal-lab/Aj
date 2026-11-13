@@ -1,0 +1,15 @@
+{
+ "_note": "US stocks to track on Telegram. Levels in USD. Edit freely; the job reads this on every start.",
+ "NVDA": {
+  "name": "Nvidia",
+  "below": [150, 135, 120],
+  "above": [180],
+  "move_pct": 3,
+  "why": {
+   "150": "Roast Room buy level for the first third, if results pass",
+   "135": "Bear-case value",
+   "120": "Workbench buy price with a 20% discount (about $115-120)",
+   "180": "Back above the post-scandal gap"
+  }
+ }
+}
