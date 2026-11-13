@@ -157,6 +157,9 @@ def main() -> int:
             push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q}, state())
             n += 1
             fails = 0
+            if n % 60 == 0 and G.newer_run("live-feed.yml"):      # the planned hand-over: stop so alerts are not doubled
+                print("a newer live job is running; stopping")
+                break
             if first is None:
                 first = q
                 print(f"first push: {sum(len(v) for v in q.values())} prices")
@@ -176,9 +179,10 @@ def main() -> int:
                     T.send("⚠️ NSE live prices stopped: the Dhan login kept being taken by another job.")
                     return 1
                 G.wait_for_batch_jobs()
-                time.sleep(125)                        # Dhan issues one new token per 2 minutes
                 try:
-                    dhan = R.Dhan(cid, R.login(cid, pin, sec))
+                    dhan = R.Dhan(cid, R.login(cid, pin, sec))   # takes the shared session if another job refreshed it
+                    if relogins > 1:
+                        time.sleep(125)                          # Dhan issues one new token per 2 minutes
                     print("  logged in again")
                 except Exception as e2:
                     print(f"  re-login failed: {str(e2)[:100]}")

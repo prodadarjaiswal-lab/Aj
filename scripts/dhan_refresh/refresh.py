@@ -114,7 +114,30 @@ def describe_secrets(cid: str, pin: str, sec: str) -> list[str]:
     return notes
 
 
-def login(client_id: str, pin: str, totp_secret: str) -> str:
+def login(client_id: str, pin: str, totp_secret: str, fresh: bool = False) -> str:
+    """The shared Dhan session (token_cache) if Dhan still accepts it; otherwise a new TOTP login, then shared."""
+    import token_cache as TC
+    cid, pin_, sec = clean_secrets(client_id, pin, totp_secret)
+    if not fresh:
+        tok = TC.read(pin_, sec)
+        if tok and token_valid(cid, tok):
+            print("  reusing the shared Dhan session")
+            return tok
+    tok = _fresh_login(client_id, pin, totp_secret)
+    TC.write(tok, pin_, sec)
+    return tok
+
+
+def token_valid(client_id: str, token: str) -> bool:
+    import requests
+    try:
+        r = requests.get(API + "/profile", headers={"access-token": token, "client-id": client_id, "Accept": "application/json"}, timeout=20)
+        return r.status_code == 200 and "807" not in r.text and "808" not in r.text and "809" not in r.text
+    except Exception:
+        return False
+
+
+def _fresh_login(client_id: str, pin: str, totp_secret: str) -> str:
     import pyotp
     import requests
 

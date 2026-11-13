@@ -1,0 +1,21 @@
+name: Update Telegram bot menu
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ["scripts/dhan_refresh/bot.py"]
+
+jobs:
+  menu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Set the command menu and description
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: cd scripts/dhan_refresh && python bot.py menu

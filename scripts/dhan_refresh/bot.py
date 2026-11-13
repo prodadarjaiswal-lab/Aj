@@ -23,13 +23,16 @@ SETUP = {"volbreak": "volume breakout", "pullback": "pullback in an uptrend", "b
          "coiled": "coiled range", "turn": "turn up"}
 STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fade": "fading", "weak": "weak"}
 
-MENU = [("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
+MENU = [("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
+        ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
         ("bargains", "Blue chips now cheap, India and US"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
                "price TCS\n"
                "TCS  (trade verdict)\n"
                "value TCS  (investing verdict)\n"
                "hedge TCS\n"
+               "flow TCS  (VWAP, volume and market profile, delta estimate)\n"
+               "options NIFTY  (expected move, OI walls, gamma)\n"
                "rising  (turning bullish, with value)\n"
                "dips  (proven stocks after a sharp fall)\n"
                "bargains  (blue chips now cheap, India and US)\n"
@@ -53,8 +56,9 @@ SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "ibs": "a close near the day's low while above its 200-day average",
           "reclaim200": "a close back above its 200-day average"}
 WARN_SIGNALS = ("extended", "downtrend")
-DIP_SIGNALS = ("qdrop", "qdd", "qdd_hold")
-SIGNAL.update({"qdrop": "a 15%+ fall within 10 days after beating the Nifty for 2 years",
+DIP_SIGNALS = ("qdrop25", "qdrop", "qdrop10", "qdd", "qdd_hold")
+SIGNAL.update({"qdrop10": "a 10%+ fall within 10 days after beating the Nifty for 2 years",
+               "qdrop25": "a 25%+ fall within 20 days after beating the Nifty for 2 years","qdrop": "a 15%+ fall within 10 days after beating the Nifty for 2 years",
                "qdd": "a fall to 25% below its 52-week high after beating the Nifty for 2 years",
                "qdd_hold": "its first close back above the 20-day average after such a fall"})
 SECTOR_INDEX = {"Information Technology": "Nifty IT", "Financial Services": "Nifty Bank", "Automobile and Auto Components": "Nifty Auto",
@@ -101,6 +105,7 @@ class Data:
         self.stocks = nset.get("stocks", {})
         self.idx = nset.get("idx", {})
         self.opts = opts.get("rows", {})
+        self.auction = _load(ROOT / "docs/auction.json", {}).get("symbols", {})
 
     def last(self, r: dict) -> float:
         """Newest close we hold: the board's or the technical file's, whichever is later."""
@@ -253,6 +258,48 @@ def bargains(d: Data, us: dict | None = None) -> str:
     else:
         lines.append("None passes today." if us.get("rows") else "US data not loaded yet.")
     return "\n".join(lines)
+
+
+def flow(d: Data, sym: str) -> str:
+    a = d.auction.get("Nifty 50" if sym in ("NIFTY", "NIFTY50") else "Nifty Bank" if sym == "BANKNIFTY" else sym)
+    if not a:
+        return f"{esc(sym)}: no 1-minute auction data. Covered: Nifty 50 stocks, the indices and stocks you ask about (from the next nightly refresh)."
+    L = [f"<b>{esc(sym)}</b> order flow · session {esc(a['date'])} · context only (no auction signal passed the back-test)"]
+    v, w, dl, t = a.get("vp"), a.get("vwap") or {}, a.get("delta") or {}, a.get("tpo") or {}
+    if w.get("vwap"):
+        L.append(f"VWAP {w['vwap']:,} (±1σ {w['dn1']:,} to {w['up1']:,}); price {w['dev_sd']}σ away, {w['state']} for {w['minutes_on_side']} min.")
+    if v and v.get("poc"):
+        L.append(f"Volume profile (derived): POC {v['poc']:,}, value {v['val']:,} to {v['vah']:,}.")
+    if t.get("tpo_poc") is not None:
+        L.append(f"Market profile: POC {t['tpo_poc']:,}, value {t['tpo_val']:,} to {t['tpo_vah']:,}; first hour {t['ib_low']:,} to {t['ib_high']:,}, "
+                 f"broke {t['ib_extension']}; {'excess' if t['excess_high'] else 'poor'} high, {'excess' if t['excess_low'] else 'poor'} low.")
+    if a.get("auction"):
+        L.append(f"Opened {a['auction']['open_vs_prev_value']}: {a['auction']['read']}.")
+    if dl.get("cum_delta_est") is not None:
+        L.append(f"Delta (estimate from bar closes; Dhan has no bid/ask tape): {dl['cum_delta_est']:,}, buy share {dl['buy_share_est']}"
+                 + (f"; {dl['divergence_est']}" if dl.get("divergence_est") else "") + ".")
+    if a.get("composite"):
+        c = a["composite"]
+        L.append(f"{c['days']}-day value {c['val']:,} to {c['vah']:,}, POC {c['poc']:,}.")
+    return "\n".join(L)
+
+
+def options(d: Data, sym: str) -> str:
+    o = d.opts.get(sym)
+    if not o:
+        return f"{esc(sym)}: no option chain in the nightly snapshot (Nifty, Bank Nifty and 50 F&O stocks are covered)."
+    L = [f"<b>{esc(sym)}</b> options to {esc(o['expiry'])} ({o.get('days')} days) · spot {o['spot']:,}"]
+    if o.get("exp_move"):
+        L.append(f"Expected move ±{o['exp_move'] * 100:.1f}% (at-the-money straddle {o['straddle']:,.1f}).")
+    L.append(f"Put/call open interest {o.get('pcr_oi', 0):.2f}, volume {o.get('pcr_vol', 0):.2f}. Heaviest calls {o.get('call_wall', 0):,.0f}, "
+             f"puts {o.get('put_wall', 0):,.0f}; max pain {o.get('max_pain', 0):,.0f}.")
+    if o.get("iv_call") and o.get("iv_put"):
+        L.append(f"Implied volatility: calls {o['iv_call']:.1f}%, puts {o['iv_put']:.1f}%.")
+    if o.get("net_gex") is not None:
+        L.append(f"Gamma (derived; assumes dealers long calls, short puts): {o['gex_regime']}. Flip at {o['gamma_flip']:,}; "
+                 f"call gamma at {', '.join(str(x) for x in o.get('call_gamma_strikes', []))}; put gamma at {', '.join(str(x) for x in o.get('put_gamma_strikes', []))}.")
+    L.append("Context only: these option readings have not been back-tested yet (history builds nightly).")
+    return "\n".join(L)
 
 
 def options_line(d: Data, sym: str) -> str:
@@ -499,6 +546,12 @@ class Bot:
             out = self.price(w[1])
             self.log("price", w[1].upper(), out)
             return out
+        if w[0] in ("flow", "orderflow", "auction") and len(w) == 2:
+            out = flow(self.d, w[1].upper())
+            self.log("flow", w[1].upper(), out)
+            return out
+        if w[0] in ("options", "option", "oi", "gamma") and len(w) == 2:
+            return options(self.d, w[1].upper())
         if w[0] in ("value", "hedge") and len(w) == 2:
             r = self.d.find(w[1])
             sym = r["s"] if r else w[1].upper()

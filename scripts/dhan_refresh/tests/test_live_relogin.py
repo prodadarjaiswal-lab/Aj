@@ -53,3 +53,13 @@ def test_accidental_clash_logs_back_in_and_keeps_pushing(monkeypatch):
 def test_planned_handover_stops(monkeypatch):
     rc, logins, pushes = run_day(monkeypatch, newer=True)
     assert rc == 0 and logins == 1 and pushes == 1
+
+
+def test_handover_detected_while_healthy(monkeypatch):
+    calls = {"n": 0}
+    def newer(wf):
+        calls["n"] += 1
+        return True
+    monkeypatch.setattr(LP.G, "newer_run", newer)
+    rc, logins, pushes = run_day(monkeypatch, newer=True)
+    assert rc == 0

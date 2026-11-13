@@ -42,14 +42,16 @@ NAMES = {
     "dip3": "Three down closes in a row while above the 200-day average",
     "ibs": "Closes in the bottom 20% of its day's range while above the 200-day average",
     "reclaim200": "Closes back above the 200-day average after 20+ days below",
+    "qdrop10": "Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days",
     "qdrop": "Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
+    "qdrop25": "Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days",
     "qdd": "Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high",
     "qdd_hold": "Proven stock 25% below its 52-week high, first close back above its 20-day average",
     "extended": "Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)",
     "downtrend": "Downtrend: below a falling 200-day average and 50-day below 200-day (warning)",
 }
 WARN = ("extended", "downtrend")
-DIPS = ("qdrop", "qdd", "qdd_hold")          # judged over 21 days, not 10: recoveries take longer
+DIPS = ("qdrop10", "qdrop", "qdrop25", "qdd", "qdd_hold")          # judged over 21 days, not 10: recoveries take longer
 
 
 def _ema(a, n):
@@ -201,8 +203,13 @@ class Tech:
             f.add("reclaim200")
         if i >= 504 and self.nc[i - 504]:
             proven = (c[i - 21] / c[i - 504] - 1) - (self.nc[i - 21] / self.nc[i - 504] - 1) >= 0.20
-            if proven and last / max(c[i - 10:i]) - 1 <= -0.15:
+            fall10 = last / max(c[i - 10:i]) - 1
+            if proven and fall10 <= -0.10:
+                f.add("qdrop10")
+            if proven and fall10 <= -0.15:
                 f.add("qdrop")
+            if proven and last / max(c[i - 20:i]) - 1 <= -0.25:
+                f.add("qdrop25")
             if proven and last <= 0.75 * hi52:
                 f.add("qdd")
                 if S.m20[i] and last > S.m20[i] and c[i - 1] <= (S.m20[i - 1] or 0):
