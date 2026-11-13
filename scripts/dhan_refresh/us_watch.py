@@ -251,11 +251,8 @@ _TOKEN = {}
 
 
 def open_feed(cfg: dict, relogin: bool = False) -> DhanUS:
-    for _ in range(40):                            # wait up to 20 minutes for the nightly refresh to finish
-        if not refresh_running():
-            break
-        print("  another Dhan job is running; waiting before logging in")
-        time.sleep(30)
+    import dhan_guard as G
+    G.wait_for_batch_jobs(20)
     ids = security_ids(list(cfg))
     if not ids:
         raise DhanError("none of the symbols were found in Dhan's US instrument list")

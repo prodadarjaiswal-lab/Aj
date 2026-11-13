@@ -20,6 +20,7 @@ from pathlib import Path
 
 import alerts as AL
 import bot as B
+import dhan_guard as G
 import refresh as R
 import telegram as T
 
@@ -119,7 +120,7 @@ def main() -> int:
     print(f"telegram: {'on' if T.enabled() else 'off'}; {len(al.sent)} alerts already sent today")
     state = lambda: {"d": day, "sent": sorted(al.sent)}
     bot = B.Bot("NSE")
-    n = fails = 0
+    n = fails = relogins = 0
     first = last_q = None
     reached_end = False
     while True:
@@ -165,8 +166,23 @@ def main() -> int:
                 break
         except Exception as e:
             if any(c in str(e) for c in ("401", "807", "808", "809", "DH-901")):
-                print(f"login no longer valid (another job logged in?): {str(e)[:100]}; stopping")
-                break
+                if G.newer_run("live-feed.yml"):
+                    print("a newer live job has taken over the login; stopping")
+                    break
+                # an accidental clash (a manual refresh, a back-test): wait for it, then log back in
+                relogins += 1
+                print(f"login lost ({str(e)[:80]}); re-login {relogins}")
+                if relogins > 6:
+                    T.send("⚠️ NSE live prices stopped: the Dhan login kept being taken by another job.")
+                    return 1
+                G.wait_for_batch_jobs()
+                time.sleep(125)                        # Dhan issues one new token per 2 minutes
+                try:
+                    dhan = R.Dhan(cid, R.login(cid, pin, sec))
+                    print("  logged in again")
+                except Exception as e2:
+                    print(f"  re-login failed: {str(e2)[:100]}")
+                continue
             fails += 1
             print(f"  {now:%H:%M:%S} poll failed ({fails}): {str(e)[:120]}")
             if fails >= 30:
