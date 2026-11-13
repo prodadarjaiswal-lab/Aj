@@ -1,0 +1,145 @@
+{
+ "cutoff": "2026-05-20",
+ "days": 245,
+ "cost": 0.0006,
+ "signals": {
+  "ibx_up": {
+   "in": {
+    "n": 2642,
+    "net": -0.00051,
+    "hit": 0.4296,
+    "t": -3.24
+   },
+   "out": {
+    "n": 2404,
+    "net": -0.00109,
+    "hit": 0.4052,
+    "t": -6.66
+   },
+   "tested": false,
+   "name": "Breaks above the first hour's range (Initial Balance) after 10:15"
+  },
+  "ibx_dn": {
+   "in": {
+    "n": 2746,
+    "net": -0.0008,
+    "hit": 0.4494,
+    "t": -4.99
+   },
+   "out": {
+    "n": 2830,
+    "net": 5e-05,
+    "hit": 0.4989,
+    "t": 0.39
+   },
+   "tested": false,
+   "name": "Breaks below the first hour's range after 10:15 (short)"
+  },
+  "va_accept_up": {
+   "in": {
+    "n": 894,
+    "net": -4e-05,
+    "hit": 0.4664,
+    "t": -0.1
+   },
+   "out": {
+    "n": 961,
+    "net": -0.00217,
+    "hit": 0.3871,
+    "t": -6.64
+   },
+   "tested": false,
+   "name": "Opens above yesterday's value area and is still above it at 10:15"
+  },
+  "va_accept_dn": {
+   "in": {
+    "n": 1000,
+    "net": -0.00035,
+    "hit": 0.486,
+    "t": -1.08
+   },
+   "out": {
+    "n": 874,
+    "net": -0.00068,
+    "hit": 0.4725,
+    "t": -2.44
+   },
+   "tested": false,
+   "name": "Opens below yesterday's value area and is still below it at 10:15 (short)"
+  },
+  "va_reject_up": {
+   "in": {
+    "n": 485,
+    "net": -0.00053,
+    "hit": 0.4763,
+    "t": -1.34
+   },
+   "out": {
+    "n": 577,
+    "net": 0.00103,
+    "hit": 0.5667,
+    "t": 2.76
+   },
+   "tested": false,
+   "name": "Opens above yesterday's value but is back inside it at 10:15 (short, fade the open)"
+  },
+  "va_reject_dn": {
+   "in": {
+    "n": 345,
+    "net": -0.00044,
+    "hit": 0.4638,
+    "t": -0.93
+   },
+   "out": {
+    "n": 406,
+    "net": -0.00114,
+    "hit": 0.4236,
+    "t": -2.59
+   },
+   "tested": false,
+   "name": "Opens below yesterday's value but is back inside it at 10:15 (long, fade the open)"
+  },
+  "vwap_reclaim": {
+   "in": {
+    "n": 3100,
+    "net": -0.00025,
+    "hit": 0.4652,
+    "t": -1.76
+   },
+   "out": {
+    "n": 3033,
+    "net": -0.00124,
+    "hit": 0.3963,
+    "t": -9.31
+   },
+   "tested": false,
+   "name": "Closes back above session VWAP after 30+ minutes below (10:15-13:30)"
+  },
+  "vwap_loss": {
+   "in": {
+    "n": 2951,
+    "net": -0.00067,
+    "hit": 0.4554,
+    "t": -4.73
+   },
+   "out": {
+    "n": 3027,
+    "net": 0.00018,
+    "hit": 0.5243,
+    "t": 1.39
+   },
+   "tested": false,
+   "name": "Closes back below session VWAP after 30+ minutes above (10:15-13:30, short)"
+  }
+ },
+ "base_drift": {
+  "n": 12200,
+  "net": -0.00029,
+  "hit": 0.4698,
+  "t": -4.11
+ },
+ "asof": "2026-11-13",
+ "from": "2025-11-19",
+ "stocks": 50,
+ "note": "Same-day trade from the trigger bar to the close, in the signal's direction, excess over Nifty 50, net of 0.06% round trip. 5-minute Dhan bars; Nifty 50 members today."
+}
