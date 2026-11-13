@@ -414,21 +414,37 @@ def add_last_session(dhan, eq: dict, nifty_id, data: dict, nifty: dict, now: dt.
     return n
 
 
-def run_today(dhan, root: Path) -> None:
-    data, nifty, end = fetch(dhan, root, 1.6)
-    res = {"asof": end.isoformat(), "stocks": today(data, nifty)}
-    (root / "docs/tech-today.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")
-    print(f"tech-today: {len(res['stocks'])} stocks")
+def desk(res: dict, td: dict) -> str:
+    """Markdown reference for the pinned chat: what passed the back-test, and every stock's readout."""
+    sig = res["signals"]
+    L = [f"# Technical desk · data to {res['asof']}", "",
+         f"Back-test: {res['stocks']} Nifty 500 stocks from {res['from']}; first years in-sample, from {res['cutoff']} out-of-sample. "
+         "A signal is used only if it beat the average stock in both periods (t >= 2, 100+ cases, better ATR-trade result). "
+         "Excess = return minus Nifty 50 over 10 trading days after the signal first appears. Re-tested daily.", "",
+         "## Signals that passed", "", "| Signal | Market | Cases (last 2y) | Beat Nifty | Avg excess 10d | Typical stock |", "|---|---|---|---|---|---|"]
+    for side, flag, name in (("up", "tested", "rising"), ("weak", "tested_weak", "weak")):
+        b = res["base"]["out"][side]
+        for k, r in sig.items():
+            if r.get(flag) and k not in WARN:
+                s_ = r["out"][side]
+                L.append(f"| {NAMES[k]} | {name} | {s_['n']:,} | {s_['hit10'] * 100:.0f}% | {s_['x10'] * 100:+.2f}% | {b.get('x10', 0) * 100:+.2f}% |")
+    L += ["", "## Signals that failed (do not use for a verdict)", ""]
+    L += [f"- {NAMES[k]}" for k, r in sig.items() if not r.get("tested") and not r.get("tested_weak")]
+    L += ["", "## Stocks", "", "Columns: close, new signals (last 3 days), RSI, ADX and who controls, Supertrend, MACD, % vs 50/200-day, "
+          "% from 52-week high, 3-month return vs Nifty, volume vs 50-day, ATR %.", ""]
+    for sym in sorted(td):
+        t = td[sym]
+        L.append(f"{sym}: {t['c']:.1f} | new {','.join(t['new']) or '-'} | RSI {t.get('rsi')} | ADX {t.get('adx')} {t.get('di')} | "
+                 f"ST {t.get('st')} | MACD {t.get('macd')} | {t.get('vs50')}/{t.get('vs200')} | hi {t.get('hi52')} | RS {t.get('rs3')} | "
+                 f"vol {t.get('volx')}x | ATR {t.get('atr_pct')}%")
+    return "\n".join(L) + "\n"
 
 
-def main() -> int:
-    import refresh as R
-    root = Path(sys.argv[sys.argv.index("--root") + 1]) if "--root" in sys.argv else Path("../..")
-    cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
-    dhan = R.Dhan(cid, R.login(cid, pin, sec))
+def run_full(dhan, root: Path) -> dict:
+    """Daily: re-run the 6-year back-test, promote or drop signals, write today's signals and the desk file."""
     data, nifty, end = fetch(dhan, root, 6)
     res = backtest(data, nifty)
-    res.update({"asof": end.isoformat(), "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
+    res.update({"asof": nifty["d"][-1], "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
                 "note": "Excess return vs Nifty 50 from the close of the first day a signal appears. ATR trade: stop 2 ATR, "
                         "target 3 ATR, exit day 21. Today's Nifty 500 members (survivorship bias)."})
     prev = {}
@@ -440,31 +456,41 @@ def main() -> int:
     for k, r in res["signals"].items():
         for flag, regime in (("tested", "rising"), ("tested_weak", "weak")):
             was, now = prev.get(k, {}).get(flag), r.get(flag)
-            if was is not None and bool(was) != bool(now):
-                changes.append(f"{'added' if now else 'dropped'} in {regime} markets: {NAMES[k]}")
-            elif was is None and now:
+            if k in prev and was is not None and bool(was) != bool(now):
+                changes.append(f"{'now passes' if now else 'no longer passes'} in {regime} markets: {NAMES[k]}")
+            elif prev and (k not in prev or was is None) and now:
                 changes.append(f"new, passes in {regime} markets: {NAMES[k]}")
     hist_p = root / "docs/tech-model-history.json"
     try:
         hist = json.loads(hist_p.read_text(encoding="utf-8"))
     except Exception:
         hist = []
-    hist.append({"asof": end.isoformat(), "rising": [k for k, r in res["signals"].items() if r["tested"]],
+    hist = [h for h in hist if h.get("asof") != res["asof"]]
+    hist.append({"asof": res["asof"], "rising": [k for k, r in res["signals"].items() if r["tested"]],
                  "weak": [k for k, r in res["signals"].items() if r.get("tested_weak")], "changes": changes})
-    hist_p.write_text(json.dumps(hist[-104:], indent=1), encoding="utf-8")
+    hist_p.write_text(json.dumps(hist[-260:], indent=1), encoding="utf-8")
+    td = today(data, nifty)
+    (root / "docs/tech-model.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    (root / "docs/tech-today.json").write_text(json.dumps({"asof": res["asof"], "stocks": td}, separators=(",", ":")), encoding="utf-8")
+    (root / "docs/technical-desk.md").write_text(desk(res, td), encoding="utf-8")
     if changes:
         try:
             import telegram as T
             T.send("<b>Technical model re-test</b>\n" + "\n".join("• " + T.esc(x) for x in changes))
         except Exception as e:
             print(f"  telegram notice failed: {e}")
-    (root / "docs/tech-model.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
-    (root / "docs/tech-today.json").write_text(json.dumps({"asof": end.isoformat(), "stocks": today(data, nifty)},
-                                                           separators=(",", ":")), encoding="utf-8")
     for k, r in res["signals"].items():
         so = r["out"]["up"]
-        print(f"{k:10s} up={r['tested']!s:5s} weak={r.get('tested_weak')!s:5s} n_out={so.get('n')} lift10 in={r['lift_in_x10']} out={r['lift_out_x10']} "
-              f"R out={so.get('avg_r')} liftR={r['lift_out_r']}")
+        print(f"{k:10s} up={r['tested']!s:5s} weak={r.get('tested_weak')!s:5s} n_out={so.get('n')} "
+              f"lift10 in={r['lift_in_x10']} out={r['lift_out_x10']} weak_out={r.get('lift_out_x10_weak')} liftR={r['lift_out_r']}")
+    return res
+
+
+def main() -> int:
+    import refresh as R
+    root = Path(sys.argv[sys.argv.index("--root") + 1]) if "--root" in sys.argv else Path("../..")
+    cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
+    run_full(R.Dhan(cid, R.login(cid, pin, sec)), root)
     return 0
 
 

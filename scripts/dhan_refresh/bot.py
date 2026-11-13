@@ -33,8 +33,23 @@ DESCRIPTION = ("Your NSE terminal in chat. Six commands:\n"
                "alert TCS above 3450  (alert alone lists; alert remove 1)")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
-          "nr7": "its tightest day in 7, inside the prior day, in an uptrend"}
-ORDER = ("hi52v", "volbreak", "nr7")            # strongest tested signal first
+          "nr7": "its tightest day in 7, inside the prior day, in an uptrend",
+          "trend": "a trend-template pattern (above rising 50, 150 and 200-day averages, near its high)",
+          "vcp": "a volatility contraction near its high",
+          "adx": "the start of a strong trend (ADX above 25, buyers in control)",
+          "rsi2": "a short, sharp dip (RSI(2) under 10) while above its 200-day average",
+          "st_up": "a Supertrend turn up",
+          "accum": "steady accumulation (up-day volume 1.5x down-day volume)",
+          "gap": "a gap up of 3% that held on 2x volume",
+          "pullback": "a pullback within an uptrend",
+          "don55": "a close above its 55-day high",
+          "macd0": "a MACD cross up while above zero",
+          "bbsq": "a breakout from a Bollinger squeeze",
+          "rsnew": "a 1-year high in relative strength before price",
+          "dip3": "three down days in a row while above its 200-day average",
+          "ibs": "a close near the day's low while above its 200-day average",
+          "reclaim200": "a close back above its 200-day average"}
+WARN_SIGNALS = ("extended", "downtrend")
 SECTOR_INDEX = {"Information Technology": "Nifty IT", "Financial Services": "Nifty Bank", "Automobile and Auto Components": "Nifty Auto",
                 "Fast Moving Consumer Goods": "Nifty FMCG", "Healthcare": "Nifty Pharma", "Metals & Mining": "Nifty Metal",
                 "Oil Gas & Consumable Fuels": "Nifty Energy", "Power": "Nifty Energy", "Realty": "Nifty Realty",
@@ -65,7 +80,13 @@ class Data:
             opts = _load(files[-1], {}) if files else {}
         self.tech = (tech if tech is not None else _load(ROOT / "docs/tech-today.json", {})).get("stocks", {})
         self.model = model if model is not None else _load(ROOT / "docs/tech-model.json", {})
-        self.tested = [k for k in ORDER if self.model.get("signals", {}).get(k, {}).get("tested")]
+        up = self.nifty_up_raw(nset)
+        flag = "tested_weak" if up is False else "tested"
+        sigs = self.model.get("signals", {})
+        # only signals that passed the back-test in the market condition we are in now, strongest first
+        self.tested = sorted([k for k, v in sigs.items() if v.get(flag) and k not in WARN_SIGNALS],
+                             key=lambda k: -((v := sigs[k]).get("lift_out_x10" if flag == "tested" else "lift_out_x10_weak") or 0))
+        self.regime_flag = flag
         self.asof = board.get("asof", "?")
         self.rows = board.get("rows", [])
         self.bysym = {r["s"]: r for r in self.rows}
@@ -85,12 +106,24 @@ class Data:
         hits = [r for r in self.rows if w in r["name"].upper().split() or r["name"].upper().startswith(w)]
         return hits[0] if len(hits) == 1 else None
 
-    def nifty_up(self):
-        """True when the Nifty 50 is above its 200-day average (the regime the signals were tested in)."""
-        c = self.idx.get("Nifty 50", {}).get("c", [])
+    @staticmethod
+    def nifty_up_raw(nset):
+        c = (nset or {}).get("idx", {}).get("Nifty 50", {}).get("c", [])
         if len(c) < 200:
             return None
         return c[-1] > sum(c[-200:]) / 200
+
+    def nifty_up(self):
+        """True when the Nifty 50 is above its 200-day average (the regime the signals were tested in)."""
+        return self.nifty_up_raw({"idx": self.idx})
+
+    def stat(self, sig):
+        side = "weak" if self.regime_flag == "tested_weak" else "up"
+        return self.model.get("signals", {}).get(sig, {}).get("out", {}).get(side, {})
+
+    def base(self):
+        side = "weak" if self.regime_flag == "tested_weak" else "up"
+        return self.model.get("base", {}).get("out", {}).get(side, {})
 
     def ret21(self, name):
         c = self.idx.get(name, {}).get("c", [])
@@ -100,8 +133,6 @@ class Data:
         peers = sorted(x["r21"] for x in self.rows if x.get("ind") == r.get("ind") and x["s"] != r["s"] and x.get("r21") is not None)
         return peers[len(peers) // 2] if len(peers) >= 3 else None
 
-    def stat(self, sig):
-        return self.model.get("signals", {}).get(sig, {}).get("out", {}).get("up", {})
 
 
 def rupee(x) -> str:
@@ -118,18 +149,18 @@ def top(d: Data) -> str:
         new = [k for k in d.tested if k in t.get("new", [])]
         r = d.bysym.get(sym)
         if new and r and r.get("status") in ("lead", "improve"):
-            cands.append((ORDER.index(new[0]), -(r.get("score") or 0), sym, new[0], t))
+            cands.append((d.tested.index(new[0]), -(r.get("score") or 0), sym, new[0], t))
     cands.sort()
     regime = d.nifty_up()
     head = f"<b>Top tested setups</b> · {esc(d.asof)} close"
     if not cands:
-        return head + "\nNone today among leading stocks."
+        return head + ("\nNone today among leading stocks." if d.tested else "\nNo signal has passed the back-test for the current market.")
     lines = [head]
     for i, (_, _, sym, sig, t) in enumerate(cands[:5], 1):
         a = t.get("atr") or 0
-        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}: {SIGNAL[sig]}. Stop {rupee(t['c'] - 2 * a)}, target {rupee(t['c'] + 3 * a)}.")
+        lines.append(f"{i}. <b>{esc(sym)}</b> {rupee(t['c'])}: {SIGNAL.get(sig, sig)}. Stop {rupee(t['c'] - 2 * a)}, target {rupee(t['c'] + 3 * a)}.")
     if regime is False:
-        lines.append("Nifty is below its 200-day average; these signals showed no edge in such markets.")
+        lines.append("Weak market: only signals that passed the back-test in weak markets are used.")
     return "\n".join(lines)
 
 
@@ -150,17 +181,17 @@ def technical(d: Data, r: dict, ltp: float | None = None) -> str:
     trade_levels = False
     st_, regime = r.get("status"), d.nifty_up()
     lines = [f"<b>{esc(sym)}</b> {rupee(last)} · trade"]
-    if new and regime is not False and st_ not in ("weak", "fade"):
+    mkt = "weak market (Nifty below its 200-day average)" if regime is False else "rising market"
+    if new and st_ not in ("weak", "fade"):
         sig = new[0]
-        s, b = d.stat(sig), d.model.get("base", {}).get("out", {}).get("up", {})
-        lines.append(f"<b>Buy candidate.</b> It just made {SIGNAL[sig]}.")
+        s, b = d.stat(sig), d.base()
+        lines.append(f"<b>Buy candidate.</b> It just made {SIGNAL.get(sig, sig)}, a signal that passed the back-test in a {mkt}.")
         trade_levels = True
         if s.get("n"):
             lines.append(f"Last 2 years, {s['n']:,} cases: beat the Nifty in {s['hit10'] * 100:.0f}% within 10 days, "
                          f"average {pct(s['x10'])} vs the Nifty (a typical stock: {pct(b.get('x10', 0))}).")
-    elif new and regime is False:
-        lines.append(f"<b>Wait.</b> It made {SIGNAL[new[0]]}, but the Nifty is below its 200-day average, where this signal had no edge.")
-        trade_levels = True
+    elif new:
+        lines.append(f"<b>Wait.</b> It made {SIGNAL.get(new[0], new[0])}, but the stock itself is lagging the Nifty 500.")
     elif st_ in ("weak", "fade"):
         lines.append(f"<b>Avoid.</b> It is {STATUS[st_]} against the Nifty 500 and has no tested entry signal.")
     elif st_ in ("lead", "improve"):

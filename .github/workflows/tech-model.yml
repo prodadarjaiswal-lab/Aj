@@ -1,8 +1,9 @@
 name: Technical model back-test
 
 on:
+  # Runs daily inside the nightly refresh (same Dhan login). This file is for a manual run and a Saturday catch-up.
   schedule:
-    - cron: "40 3 * * 6"     # Saturdays 09:10 IST, after the setup back-test
+    - cron: "40 3 * * 6"     # Saturdays 09:10 IST
   workflow_dispatch: {}
 
 permissions:
@@ -27,12 +28,13 @@ jobs:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           cd scripts/dhan_refresh
           python tech_model.py --root ../..
       - name: Commit result
         run: |
-          git add docs/tech-model.json docs/tech-today.json
+          git add docs/tech-model.json docs/tech-today.json docs/tech-model-history.json docs/technical-desk.md
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"

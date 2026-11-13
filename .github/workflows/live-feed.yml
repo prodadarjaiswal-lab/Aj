@@ -34,3 +34,8 @@ jobs:
           now=$(TZ=Asia/Kolkata date +%H%M)
           if [ "$now" -lt 1200 ] && [ "${{ github.event.schedule }}" = "37 3 * * 1-5" ]; then UNTIL=12:22; else UNTIL=15:35; fi
           python live_poller.py --until $UNTIL --every 5
+      - name: Tell the owner if this failed
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python scripts/dhan_refresh/telegram.py test "⚠️ NSE live price job stopped with an error. Alerts and replies are off until it restarts." || true

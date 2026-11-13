@@ -426,7 +426,7 @@ def main(argv=None) -> int:
     ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
     ap.add_argument("--with-n500", action="store_true", help="also rank the Nifty 500 and update the terminal page")
     ap.add_argument("--with-options", action="store_true", help="also save the options snapshot (same login)")
-    ap.add_argument("--with-tech", action="store_true", help="also compute today's technical signals (same login)")
+    ap.add_argument("--with-tech", action="store_true", help="also re-run the technical back-test and today's signals (same login)")
     a = ap.parse_args(argv)
     try:
         cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
@@ -458,7 +458,7 @@ def main(argv=None) -> int:
         if a.with_tech:
             try:
                 import tech_model
-                tech_model.run_today(client, Path(a.page).resolve().parents[1])
+                tech_model.run_full(client, Path(a.page).resolve().parents[1])
             except Exception as e:
                 print(f"  warning: technical signals failed: {e}")
         return 0

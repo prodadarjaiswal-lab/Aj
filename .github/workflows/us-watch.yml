@@ -38,3 +38,8 @@ jobs:
           cd scripts/dhan_refresh
           python bot.py menu || true
           if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 5; fi
+      - name: Tell the owner if this failed
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python scripts/dhan_refresh/telegram.py test "⚠️ US tracker stopped with an error. It restarts with the next scheduled run." || true
