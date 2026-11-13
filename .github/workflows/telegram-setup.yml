@@ -1,0 +1,28 @@
+name: Connect Telegram alerts
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Find your chat and send a test message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python scripts/dhan_refresh/telegram.py setup
+      - name: Save the chat id
+        run: |
+          git config user.name "dhan-live-bot"
+          git config user.email "dhan-live-bot@users.noreply.github.com"
+          git add config/telegram.json
+          git diff --cached --quiet || git commit -m "Connect Telegram alerts"
+          git pull -q --rebase origin main && git push -q origin HEAD:main

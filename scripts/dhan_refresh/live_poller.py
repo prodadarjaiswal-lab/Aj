@@ -18,7 +18,9 @@ import sys
 import time
 from pathlib import Path
 
+import alerts as AL
 import refresh as R
+import telegram as T
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "live-out"
@@ -60,12 +62,27 @@ def parse(resp: dict) -> dict:
     return out
 
 
-def push(payload: dict) -> None:
+def push(payload: dict, state: dict | None = None) -> None:
     (OUT / "live.json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    if state is not None:
+        (OUT / "alerts.json").write_text(json.dumps(state), encoding="utf-8")
     run = lambda *a: subprocess.run(["git", "-C", str(OUT), *a], check=True, capture_output=True)
-    run("add", "live.json")
+    run("add", "live.json", *(["alerts.json"] if (OUT / "alerts.json").exists() else []))
     run("commit", "-q", "--amend", "--no-edit", "--allow-empty")
     run("push", "-q", "-f", "origin", "HEAD:refs/heads/live")
+
+
+def prior_state(day: str) -> dict:
+    """Alerts already sent today (kept on the live branch so a restarted job does not repeat them)."""
+    try:
+        subprocess.run(["git", "-C", str(ROOT), "fetch", "-q", "origin", "live"], check=True, capture_output=True, timeout=60)
+        raw = subprocess.run(["git", "-C", str(ROOT), "show", "FETCH_HEAD:alerts.json"], check=True, capture_output=True, text=True).stdout
+        st = json.loads(raw)
+        if st.get("d") == day:
+            return st
+    except Exception:
+        pass
+    return {"d": day, "sent": []}
 
 
 def setup_branch() -> None:
@@ -96,18 +113,35 @@ def main() -> int:
     dhan = R.Dhan(cid, R.login(cid, pin, sec))
     setup_branch()
     body = {"NSE_EQ": eq[:990], "IDX_I": [int(k) for k in idx]}
+    day = dt.datetime.now(R.IST).date().isoformat()
+    al = AL.Alerts(idx, prior_state(day)["sent"])
+    print(f"telegram: {'on' if T.enabled() else 'off'}; {len(al.sent)} alerts already sent today")
+    state = lambda: {"d": day, "sent": sorted(al.sent)}
     n = fails = 0
-    first = None
+    first = last_q = None
+    reached_end = False
     while True:
         now = dt.datetime.now(R.IST)
         if now.time() >= until:
+            reached_end = True
             break
         t0 = time.time()
         try:
             q = parse(dhan._post("/marketfeed/ohlc", body))
             if not q:
                 raise R.RefreshError("empty reply")
-            push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q})
+            last_q = q
+            hhmm = now.strftime("%H:%M")
+            traded = any(v[1] > 0 for v in q.get("NSE_EQ", {}).values())
+            if traded and "brief" not in al.sent and now.time() < dt.time(12, 0):
+                html = (ROOT / "docs/nse-terminal.html").read_text(encoding="utf-8")
+                if T.send(AL.morning_brief(R.read_nset(html))):
+                    al.sent.add("brief")
+            if traded and now.time() >= dt.time(9, 15):
+                msgs = al.check(q, hhmm)
+                if msgs:
+                    T.send("\n".join(msgs))
+            push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q}, state())
             n += 1
             fails = 0
             if first is None:
@@ -128,6 +162,13 @@ def main() -> int:
                 return 1
             time.sleep(10)
         time.sleep(max(0.0, every - (time.time() - t0)))
+    if reached_end and until >= dt.time(15, 30) and last_q and "close" not in al.sent:
+        if T.send(AL.close_summary(last_q, idx, al.prev)):
+            al.sent.add("close")
+            try:
+                push({"t": dt.datetime.now(R.IST).strftime("%Y-%m-%d %H:%M:%S"), "d": day, "q": last_q}, state())
+            except Exception as e:
+                print(f"final push failed: {str(e)[:100]}")
     print(f"done: {n} pushes")
     return 0
 
