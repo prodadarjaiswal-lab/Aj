@@ -36,4 +36,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd scripts/dhan_refresh
-          if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 30; fi
+          python bot.py menu || true
+          if [ "${{ github.event.inputs.mode }}" = "now" ]; then python us_watch.py now; else python us_watch.py --max-minutes 345 --every 5; fi

@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import alerts as AL
+import bot as B
 import refresh as R
 import telegram as T
 
@@ -117,6 +118,7 @@ def main() -> int:
     al = AL.Alerts(idx, prior_state(day)["sent"])
     print(f"telegram: {'on' if T.enabled() else 'off'}; {len(al.sent)} alerts already sent today")
     state = lambda: {"d": day, "sent": sorted(al.sent)}
+    bot = B.Bot("NSE")
     n = fails = 0
     first = last_q = None
     reached_end = False
@@ -132,6 +134,16 @@ def main() -> int:
                 raise R.RefreshError("empty reply")
             last_q = q
             hhmm = now.strftime("%H:%M")
+            for sid, v in q.get("NSE_EQ", {}).items():
+                r = al.bysid.get(sid)
+                if r:
+                    bot.quotes[r["s"]] = (v[0], al.base("NSE_EQ", sid, v, hhmm))
+            bot.status_line = f"Last price {now:%H:%M:%S} IST."
+            bot.poll()
+            al.watch |= {str(al.bysym[x["sym"]]["sid"]) for x in bot.state["watch"] if x["mkt"] == "NSE" and x["sym"] in al.bysym}
+            fired = bot.check(hhmm)
+            if fired:
+                T.send("\n".join(fired))
             traded = any(v[1] > 0 for v in q.get("NSE_EQ", {}).values())
             if traded and "brief" not in al.sent and now.time() < dt.time(12, 0):
                 html = (ROOT / "docs/nse-terminal.html").read_text(encoding="utf-8")

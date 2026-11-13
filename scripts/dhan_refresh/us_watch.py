@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+import bot as B
 import refresh as R
 import telegram as T
 from telegram import esc
@@ -240,7 +241,10 @@ def refresh_running() -> bool:
         return False
 
 
-def open_feed(cfg: dict) -> DhanUS:
+_TOKEN = {}
+
+
+def open_feed(cfg: dict, relogin: bool = False) -> DhanUS:
     for _ in range(40):                            # wait up to 20 minutes for the nightly refresh to finish
         if not refresh_running():
             break
@@ -250,8 +254,9 @@ def open_feed(cfg: dict) -> DhanUS:
     if not ids:
         raise DhanError("none of the symbols were found in Dhan's US instrument list")
     print(f"Dhan US ids: {ids}")
-    cid, tok = dhan_login()
-    feed = DhanUS(cid, tok, ids)
+    if relogin or not _TOKEN:
+        _TOKEN["cid"], _TOKEN["tok"] = dhan_login()
+    feed = DhanUS(_TOKEN["cid"], _TOKEN["tok"], ids)
     feed.connect()
     return feed
 
@@ -278,21 +283,44 @@ def main() -> int:
     print(f"tracking {', '.join(cfg)} via Dhan; telegram {'on' if T.enabled() else 'off'}; {len(w.sent)} alerts already sent")
     while dt.datetime.now(NY).time() < dt.time(9, 25) and time.time() < t_end:
         time.sleep(30)                             # log in just before the open
-    feed, fails = None, 0
+    feed, fails, relogin = None, 0, False
+    bot = B.Bot("US")
+
+    def sync_symbols() -> bool:
+        """Add US symbols the user asked for by chat; True when the feed must resubscribe."""
+        added = False
+        for x in bot.state["alerts"] + bot.state["watch"]:
+            if x["mkt"] == "US" and x["sym"] not in cfg:
+                cfg[x["sym"]] = {"name": x["sym"], "move_pct": 3}
+                added = True
+        bot.us_symbols = set(cfg)
+        return added
+
+    sync_symbols()
     while time.time() < t_end:
         now = dt.datetime.now(NY)
         if now.weekday() >= 5 or now.time() >= dt.time(16, 2):
             break
         try:
             if feed is None:
-                feed = open_feed(cfg)
+                feed = open_feed(cfg, relogin)
+                relogin = False
             feed.pump(every)
             fails = 0
+            for sym, q in feed.q.items():
+                bot.quotes[sym] = (q["price"], q["prev"])
+            bot.status_line = f"Last check {now.astimezone(IST):%H:%M:%S} IST."
+            bot.poll()
+            if sync_symbols():
+                feed.close()
+                feed = None                            # resubscribe with the new symbols, same login
+                continue
         except DhanError as e:
             print(f"  {e}")
             if feed:
                 feed.close()
             feed = None
+            relogin = any(c in str(e) for c in ("807", "808", "809"))
             if "806" in str(e):
                 T.send(f"US alerts stopped: {esc(e)}. Enable US stocks data in your Dhan account.")
                 return 1
@@ -317,6 +345,7 @@ def main() -> int:
             q = feed.q.get(sym)
             if q and q["price"]:
                 msgs += w.check(sym, q, when)
+        msgs += bot.check(when)
         if "open" not in w.sent and now.time() >= dt.time(9, 35) and any(q["price"] for q in feed.q.values()):
             w.sent.add("open")
             msgs.insert(0, "<b>US market open (Dhan)</b>\n" + "\n".join(line(s, cfg[s], q) for s, q in feed.q.items() if q["price"]))
