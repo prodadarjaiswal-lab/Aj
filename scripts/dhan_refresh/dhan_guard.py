@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DHAN_JOBS = ("dhan-refresh.yml", "tech-model.yml", "setup-backtest.yml", "auction-backtest.yml")
+DHAN_JOBS = ("dhan-refresh.yml", "tech-model.yml", "setup-backtest.yml", "auction-backtest.yml", "markets.yml")
 
 
 def _runs(workflow: str) -> list:

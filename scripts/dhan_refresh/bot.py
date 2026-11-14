@@ -25,20 +25,22 @@ STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fad
 
 MENU = [("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
-        ("bargains", "Blue chips now cheap, India and US"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
-DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
+        ("bargains", "Blue chips now cheap, India and US"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
+DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
                "price TCS\n"
-               "TCS  (trade verdict)\n"
-               "value TCS  (investing verdict)\n"
+               "TCS (trade verdict)\n"
+               "value TCS (invest verdict)\n"
                "hedge TCS\n"
-               "flow TCS  (VWAP, volume and market profile, delta estimate)\n"
-               "options NIFTY  (expected move, OI walls, gamma)\n"
-               "rising  (turning bullish, with value)\n"
-               "dips  (proven stocks after a sharp fall)\n"
-               "bargains  (blue chips now cheap, India and US)\n"
-               "record  (how the bot's picks have done)\n"
-               "journal  (your last questions)\n"
-               "alert TCS above 3450  (alert alone lists; alert remove 1)")
+               "flow TCS (order flow)\n"
+               "options NIFTY\n"
+               "why TCS (news behind a move)\n"
+               "rising (turning bullish)\n"
+               "dips (proven stocks after a fall)\n"
+               "bargains (cheap blue chips, India+US)\n"
+               "markets (MCX, USD/INR, movers)\n"
+               "record (how picks did)\n"
+               "journal\n"
+               "alert TCS above 3450")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
           "nr7": "its tightest day in 7, inside the prior day, in an uptrend",
@@ -326,6 +328,47 @@ def options(d: Data, sym: str) -> str:
     return "\n".join(L)
 
 
+def markets_reply() -> str:
+    m = _load(ROOT / "docs/markets.json", {})
+    if not m:
+        return "Markets snapshot not available yet (it is saved by the nightly Dhan refresh)."
+    L = [f"<b>Markets</b> · Dhan, {esc(m.get('asof', ''))}"]
+    for k, f in (m.get("futures") or {}).items():
+        ch = f" ({f['chg'] * 100:+.2f}%)" if f.get("chg") is not None else ""
+        L.append(f"{esc(f['name'])}: {f['ltp']:,.2f}{ch}")
+    mv = m.get("movers") or []
+    if mv:
+        L.append("<b>Biggest moves today, with Dhan headlines</b> (a headline is a possible reason, not proof)")
+        for x in mv[:6] + mv[-0:]:
+            h = (x.get("headlines") or [{}])[0].get("title")
+            L.append(f"• {esc(x['s'])} {x['r1'] * 100:+.1f}%" + (f": {esc(h[:100])}" if h else ": no Dhan headline"))
+    if m.get("missing"):
+        L.append("Not available from Dhan: " + esc(", ".join(str(x) for x in m["missing"][:5])))
+    return "\n".join(L)
+
+
+def why(d: Data, sym: str) -> str:
+    """Why did it move: the day's move with Dhan headlines (movers) or NSE news and filings (Nifty 50)."""
+    r = d.find(sym)
+    if not r:
+        return f"{esc(sym)}: not a Nifty 500 stock."
+    s = r["s"]
+    L = [f"<b>{esc(s)}</b> {pct(r.get('r1') or 0)} on the day, {pct(r.get('r5') or 0)} over 5 days, {pct(r.get('r21') or 0)} over a month"]
+    m = _load(ROOT / "docs/markets.json", {})
+    hs = next((x.get("headlines") for x in m.get("movers", []) if x["s"] == s), None) or []
+    st_ = d.stocks.get(s) or {}
+    items = hs + [{"title": x.get("title"), "time": x.get("time", "")} for x in (st_.get("filings") or [])[:2] + (st_.get("news") or [])[:3]]
+    if items:
+        L.append("Possible reasons (headlines near the move; not proven causes):")
+        L += [f"• {esc(str(x.get('time', ''))[:10])} {esc(str(x.get('title', ''))[:120])}" for x in items[:5] if x.get("title")]
+    else:
+        L.append("No headline found in Dhan news or NSE filings for this stock.")
+    ind = d.industry_r21(r)
+    if ind is not None and r.get("r21") is not None:
+        L.append(f"Against its industry over a month: {pct(r['r21'] - ind)}.")
+    return "\n".join(L)
+
+
 def record() -> str:
     """The bot's own live track record (picks logged before the outcome existed)."""
     log = _load(ROOT / "docs/track-record.json", {})
@@ -593,6 +636,12 @@ class Bot:
         w = low.split(" ")
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
+        if low in ("markets", "market", "commodities", "mcx"):
+            return markets_reply()
+        if w[0] in ("why", "news") and len(w) == 2:
+            out = why(self.d, w[1])
+            self.log("why", w[1].upper(), out)
+            return out
         if low in ("journal", "my journal", "history"):
             j = self.state.get("journal", [])[-15:]
             if not j:

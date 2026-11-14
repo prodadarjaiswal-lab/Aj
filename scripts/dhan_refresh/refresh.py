@@ -449,6 +449,7 @@ def main(argv=None) -> int:
     ap.add_argument("--no-fund", action="store_true", help="skip company info calls")
     ap.add_argument("--with-n500", action="store_true", help="also rank the Nifty 500 and update the terminal page")
     ap.add_argument("--with-options", action="store_true", help="also save the options snapshot (same login)")
+    ap.add_argument("--with-markets", action="store_true", help="also save commodities, USDINR and Dhan news")
     ap.add_argument("--with-auction", action="store_true", help="also compute auction/order-flow levels from 1-minute bars")
     ap.add_argument("--with-tech", action="store_true", help="also re-run the technical back-test and today's signals (same login)")
     a = ap.parse_args(argv)
@@ -479,6 +480,12 @@ def main(argv=None) -> int:
                 print(n500.run(client, scrip, Path(a.page).resolve().parents[1], now))
             except Exception as e:
                 print(f"  warning: Nifty 500 board failed: {e}")
+        if a.with_markets:
+            try:
+                import markets
+                print(markets.run(client, scrip, Path(a.page).resolve().parents[1], now))
+            except Exception as e:
+                print(f"  warning: markets snapshot failed: {e}")
         if a.with_auction:
             try:
                 import auction
