@@ -56,6 +56,29 @@ def watching(rows: list) -> list:
     return other[:5]
 
 
+def desk_highlights() -> list:
+    """A few lines from the Technical Desk: dips, Nifty options positioning, Monte Carlo on the picks."""
+    out = []
+    q = _load(ROOT / "docs/quant.json", {})
+    model = _load(ROOT / "docs/tech-model.json", {}).get("signals", {})
+    today = _load(ROOT / "docs/tech-today.json", {}).get("stocks", {})
+    dips = [k for k in ("qdrop25", "qdrop", "qdrop10", "qdd", "qdd_hold") if model.get(k, {}).get("tested")]
+    dl = [s for s, t in today.items() if any(k in t.get("dip10", []) for k in dips)][:3]
+    if dl:
+        out.append("<b>Dips (tested)</b>: " + ", ".join(esc(s) for s in dl))
+    import glob as _g
+    of = sorted(_g.glob(str(ROOT / "data/options/*.json")))
+    o = (_load(of[-1], {}) if of else {}).get("rows", {}).get("NIFTY", {})
+    if o.get("exp_move"):
+        line = f"<b>Nifty options</b> ({esc(o.get('expiry', ''))}): expected move ±{o['exp_move'] * 100:.1f}%, put/call OI {o.get('pcr_oi', 0):.2f}"
+        if o.get("gamma_flip"):
+            line += f", gamma flip {o['gamma_flip']:,.0f} ({'positive' if (o.get('net_gex') or 0) > 0 else 'negative'} gamma)"
+        out.append(line)
+    if out:
+        out.insert(0, "")
+    return out
+
+
 def pct(x) -> str:
     return f"{x * 100:+.1f}%"
 
@@ -91,8 +114,10 @@ def morning_brief(nset: dict, b: dict | None = None) -> str:
                 plan = f"broke out above ₹{r['trig']:,.1f}; alert if it pulls back there"
             else:
                 plan = f"alert above ₹{r['trig']:,.1f}"
+            m = (_load(ROOT / "docs/quant.json", {}).get("mc") or {}).get(r["s"]) or {}
+            mc = f"; Monte Carlo: {m['p_up'] * 100:.0f}% chance higher in 21 days" if m.get("p_up") is not None else ""
             lines.append(f"• <b>{esc(r['s'])}</b> {esc(SETUP_NAME.get(r['setup'], r['setup']))}: ₹{r['last']:,.1f}, {plan}; "
-                         f"off below ₹{r['fail']:,.1f} (score {r.get('score')}{edge})")
+                         f"off below ₹{r['fail']:,.1f} (score {r.get('score')}{edge}{mc})")
     else:
         lines.append("No tested-edge setups on leading stocks today. Sitting out is a position.")
     w = watching(rows)
@@ -118,6 +143,7 @@ def morning_brief(nset: dict, b: dict | None = None) -> str:
             if r.get("status"):
                 bits.append(f"[{r['status']}]")
             lines.append(" ".join(bits))
+    lines += desk_highlights()
     lines.append("")
     lines.append("Research, not advice. Back-test: 6 years, Nifty 500, rising markets.")
     return "\n".join(lines)

@@ -491,6 +491,7 @@ def main(argv=None) -> int:
                 import auction
                 root_ = Path(a.page).resolve().parents[1]
                 syms = list(read_nset((root_ / "docs/nse-terminal.html").read_text(encoding="utf-8"))["stocks"])
+                syms += [r_["s"] for r_ in json.loads((root_ / "docs/n500.json").read_text(encoding="utf-8")).get("rows", []) if r_["s"] not in syms]
                 try:
                     import bot as B
                     st = B.load_state()

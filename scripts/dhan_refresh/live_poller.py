@@ -153,6 +153,14 @@ def main() -> int:
     flows = {sid: FL.Flow(fstate.get(sid)) for sid in fids}
     sym_of = {str(r["sid"]): r["s"] for r in al.bysid.values()} if hasattr(al, "bysid") else {}
     print(f"order flow: {len(fids)} stocks via /marketfeed/quote")
+    try:                                                        # last Dhan US prices, for 'price NVDA' during NSE hours
+        subprocess.run(["git", "-C", str(ROOT), "fetch", "-q", "origin", "us-watch"], capture_output=True, timeout=60)
+        us_st = json.loads(subprocess.run(["git", "-C", str(ROOT), "show", "FETCH_HEAD:state.json"],
+                                          capture_output=True, text=True).stdout or "{}")
+        bot.us_quotes = {s: {**v, "live": False} for s, v in (us_st.get("quotes") or {}).items()}
+        bot.us_symbols = set(bot.us_quotes)
+    except Exception:
+        pass
     flow_out = {}
     n = fails = relogins = 0
     first = last_q = None
@@ -174,10 +182,10 @@ def main() -> int:
                 if r:
                     bot.quotes[r["s"]] = (v[0], al.base("NSE_EQ", sid, v, hhmm))
             bot.status_line = f"Last price {now:%H:%M:%S} IST."
-            if n % 12 == 0:                                   # the listener edits alerts; pick them up each minute
-                st_ = B.load_state()
-                if st_:
-                    bot.state = {**bot.state, **st_}
+            ix = q.get("IDX_I", {})
+            bot.live_index = {k: ix[s_][0] for k, s_ in (("NIFTY", "13"), ("BANKNIFTY", "25")) if s_ in ix and ix[s_][0] > 0}
+            bot.feed_note = ""
+            bot.poll()                                         # Telegram is answered by this job during market hours
             al.watch |= {str(al.bysym[x["sym"]]["sid"]) for x in bot.state["watch"] if x["mkt"] == "NSE" and x["sym"] in al.bysym}
             fired = bot.check(hhmm)
             if fired:
@@ -207,6 +215,7 @@ def main() -> int:
                     flow_out = {"d": day, "t": now.strftime("%H:%M:%S"), "basis": "snapshot-derived from Dhan quotes every 5 s",
                                 "s": {sym_of.get(sid, sid): f.summary() for sid, f in flows.items() if f.tape}}
                     extra["flow.json"] = flow_out
+                    bot.live_flow = flow_out
                 if n % 60 == 0:
                     extra["flow-state.json"] = {"d": day, "s": {sid: f.state() for sid, f in flows.items()}}
             push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q}, state(), extra)

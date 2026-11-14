@@ -194,6 +194,42 @@ def delta_est(rows: list) -> dict:
             "divergence_est": div, "absorption_est": absorb}
 
 
+def footprint_est(rows: list, tick: float, levels: int = 24) -> dict:
+    """ESTIMATE. Buy and sell volume per price level from 1-minute bars: each bar's volume is split by where it
+    closed in its range and spread across its high-low range. Not a true bid/ask footprint."""
+    fp = {}
+    for _, _, h, l, c, v in rows:
+        if v <= 0:
+            continue
+        loc = (c - l) / (h - l) if h > l else 0.5
+        lo, hi = int(math.floor(l / tick)), int(math.floor(h / tick))
+        share = v / (hi - lo + 1)
+        for k in range(lo, hi + 1):
+            cell = fp.setdefault(k, [0.0, 0.0])
+            cell[0] += share * loc
+            cell[1] += share * (1 - loc)
+    if not fp:
+        return {}
+    keys = sorted(fp)
+    step = max(1, math.ceil(len(keys) / levels))
+    out = []
+    for i in range(0, len(keys), step):
+        grp = keys[i:i + step]
+        out.append([round((grp[0] + 0.5) * tick, 2), round(sum(fp[k][0] for k in grp)), round(sum(fp[k][1] for k in grp))])
+    imb = [[p, "buy" if b >= 3 * max(s, 1) else "sell"] for p, b, s in out if (b >= 3 * max(s, 1) or s >= 3 * max(b, 1)) and b + s > 0]
+    return {"levels": out[::-1], "imbalances": imb[:8]}
+
+
+def heavy_minutes(rows: list, n: int = 10) -> list:
+    """ESTIMATE of a trade tape: the heaviest-volume minutes of the session, side by the minute's close location."""
+    top = sorted(rows, key=lambda r: -r[5])[:n]
+    out = []
+    for m, o, h, l, c, v in sorted(top):
+        loc = (c - l) / (h - l) if h > l else 0.5
+        out.append([f"{m // 60:02d}:{m % 60:02d}", round(c, 2), round(v), 1 if loc > 0.6 else -1 if loc < 0.4 else 0])
+    return out
+
+
 # ---------------------------------------------------------------- gamma exposure
 def _bs_gamma(s, k, iv, t):
     if s <= 0 or k <= 0 or iv <= 0 or t <= 0:
@@ -255,9 +291,29 @@ def analyse(bars: dict, composite_days: int = 5) -> dict:
     out = {"date": d, "tick": tick, "bars": len(rows), "close": round(rows[-1][4], 2)}
     vp = volume_profile(rows, tick)
     out["vp"] = {k: vp[k] for k in ("poc", "vah", "val", "hvn", "lvn")}
+    keys = sorted(vp["hist"])
+    if keys:                                                # 30 bins for the chart
+        step = max(1, math.ceil(len(keys) / 30))
+        out["vp"]["hist"] = {keys[i]: sum(vp["hist"][k] for k in keys[i:i + step]) for i in range(0, len(keys), step)}
     out["tpo"] = market_profile(rows, tick)
     out["vwap"] = vwap(rows)
     out["delta"] = delta_est(rows)
+    out["footprint_est"] = footprint_est(rows, tick)
+    out["tape_est"] = heavy_minutes(rows)
+    pv = vv = 0.0
+    path = []
+    for i, (m, _, h, l, c, v) in enumerate(rows):          # minute path for charts: price, VWAP, cumulative delta (est)
+        pv, vv = pv + (h + l + c) / 3 * v, vv + v
+        if i % 5 == 4 or i == len(rows) - 1:
+            path.append([m, round(c, 2), round(pv / vv, 2) if vv else None])
+    out["path"] = path
+    cum, dpath = 0.0, []
+    for i, (m, _, h, l, c, v) in enumerate(rows):
+        loc = (c - l) / (h - l) if h > l else 0.5
+        cum += v * (2 * loc - 1)
+        if i % 5 == 4 or i == len(rows) - 1:
+            dpath.append([m, round(cum)])
+    out["delta_path_est"] = dpath
     if len(days) >= 2:
         prev = ses[days[-2]]
         pv = volume_profile(prev, tick)
@@ -293,13 +349,33 @@ def intraday(dhan, sid: str, segment: str, instrument: str, days: int = 8) -> di
             "c": r.get("close") or [], "v": r.get("volume") or []}
 
 
+def index_futures(scrip_csv: str, today) -> dict:
+    """Nearest-expiry NIFTY and BANKNIFTY futures (NSE_FNO): they trade volume, the index itself does not."""
+    import csv
+    import io
+    best = {}
+    for r in csv.DictReader(io.StringIO(scrip_csv)):
+        if r.get("SEM_EXM_EXCH_ID") != "NSE" or r.get("SEM_INSTRUMENT_NAME") != "FUTIDX":
+            continue
+        base = (r.get("SEM_TRADING_SYMBOL") or "").upper().split("-")[0]
+        name = {"NIFTY": "Nifty 50", "BANKNIFTY": "Nifty Bank"}.get(base)
+        exp = (r.get("SEM_EXPIRY_DATE") or "")[:10]
+        if not name or not exp or exp < today.isoformat():
+            continue
+        if name not in best or exp < best[name][1]:
+            best[name] = (r["SEM_SMST_SECURITY_ID"], exp, r.get("SEM_TRADING_SYMBOL"))
+    return best
+
+
 def run(dhan, scrip_csv: str, root, symbols: list, indexes=("Nifty 50", "Nifty Bank")) -> str:
     """Write docs/auction.json (levels per symbol) and docs/auction-desk.md for the pinned chat."""
     import json
     from pathlib import Path
     import refresh as R
     root = Path(root)
+    import datetime as _dt
     eq, ix = R.build_maps(scrip_csv, symbols, list(indexes))
+    fut = index_futures(scrip_csv, _dt.datetime.now(IST).date())
     out, errs = {}, 0
     for name, sid, seg, inst in [(n, ix[n], "IDX_I", "INDEX") for n in indexes if n in ix] + [(s, eq[s], "NSE_EQ", "EQUITY") for s in symbols if s in eq]:
         try:
@@ -307,10 +383,26 @@ def run(dhan, scrip_csv: str, root, symbols: list, indexes=("Nifty 50", "Nifty B
             if len(bars["t"]) < 100:
                 continue
             a = analyse(bars)
-            if seg == "IDX_I" or not sum(bars["v"][-375:]):      # an index has no traded volume: keep only the TPO read
-                for k in ("vp", "vwap", "delta", "composite", "prev", "auction"):
+            if seg == "IDX_I" or not sum(bars["v"][-375:]):
+                # the index has no traded volume: take VWAP, volume profile and delta from its nearest future
+                f = fut.get(name) if seg == "IDX_I" else None
+                fa = None
+                if f:
+                    try:
+                        fb = intraday(dhan, f[0], "NSE_FNO", "FUTIDX")
+                        if len(fb["t"]) >= 100 and sum(fb["v"][-375:]):
+                            fa = analyse(fb)
+                    except Exception as e:
+                        print(f"  futures {name}: {str(e)[:80]}")
+                for k in ("vp", "vwap", "delta", "composite", "prev", "auction", "footprint_est", "tape_est", "delta_path_est"):
                     a.pop(k, None)
-                a["note"] = "index: no traded volume, so no volume profile, VWAP or delta"
+                    if fa and k in fa:
+                        a[k] = fa[k]
+                if fa:
+                    a["path"] = fa.get("path", a.get("path"))
+                    a["note"] = f"index: VWAP, volume profile and delta from the {f[2]} future (the index has no volume); market profile from the index"
+                else:
+                    a["note"] = "index: no traded volume and no futures data, so no volume profile, VWAP or delta"
             out[name] = a
         except Exception as e:
             errs += 1

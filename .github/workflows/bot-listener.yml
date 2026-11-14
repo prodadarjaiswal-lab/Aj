@@ -1,8 +1,8 @@
 name: Telegram bot (always on)
 
+# Not scheduled: the owner chose market-hours replies only, which the live price job handles at no extra cost.
+# Run this by hand only if the bot must answer outside market hours.
 on:
-  schedule:
-    - cron: "*/30 * * * *"     # keeps one run queued, so a new run starts as soon as the current one ends
   workflow_dispatch: {}
 
 permissions:
