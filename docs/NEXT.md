@@ -54,9 +54,7 @@ Rules:
 - Every advanced check runs before the bot answers.
 - Replies work even when the market is closed, using the last close.
 
-1. ✅ **Always-on bot.** The repo goes public, so Actions minutes are free. `bot-listener.yml` runs 24/7 as back-to-back runs, queued by a 30-minute schedule.
-   - It long-polls Telegram and answers from the latest data, with live Dhan prices taken from the `live` and `us-watch` branches.
-   - The price jobs stop polling Telegram, so updates are not consumed twice, and reload alerts every minute.
+1. ✅ **Bot answers in market hours** (owner's choice, 14 Nov; the repo stays private). The live Dhan job polls Telegram every loop, with live prices, live order flow and US quotes. `bot-listener.yml` is manual only, for an out-of-hours session.
 2. ✅ **The 8 order-flow modules on live Dhan data.** (First live run: Mon 16 Nov.) The live job also polls Dhan `/marketfeed/quote` for the Nifty 50 and the stocks being watched. That reply carries last quantity, total buy and sell quantity, and 5-level depth. From it:
    - **Time and sales:** a tape built from changes between snapshots, with large prints flagged.
    - **Aggressor side:** the trade price against bid and ask.
@@ -69,10 +67,11 @@ Rules:
 3. 🟡 **Every market Dhan has:** MCX futures work. Dhan news returns 401 (not enabled on the account). USD/INR has no live contract in Dhan's list.
    - MCX commodities (gold, silver, crude, natural gas futures), USDINR, indices, F&O open interest, and US stocks through Dhan's global feed.
    - Dhan news headlines, linked to the day's biggest movers to explain why they rose or fell.
-4. ✅ **Technical Desk in two parts:**
-   - **Screener:** rising, dips, bargains, the tested signals and the original terminal's screens.
-   - **Analyzer:** for one stock, the technical verdict, auction and order flow, options, news, value and hedge.
-   - Better charts throughout.
+4. ✅ **Technical Desk in two tabs** (rebuilt 14 Nov):
+   - **Screener:** markets, rising, dips, bargains, movers, track record, Markowitz portfolio and pairs, scoreboards.
+   - **Analyze** (Analyzer and Quant merged): colour-coded scorecard (verdict, trend, momentum, value, Monte Carlo chance, worst day, buyers' share, VWAP, auction, options); every price level on one scale; price with VWAP shading, cumulative delta, footprint, heaviest minutes / tape, pressure gauges, Market Profile, volume profile; Monte Carlo fan and VaR; gamma by strike and Black-Scholes on the stock's own chain; indicator bars, value and hedge, news.
+   - Each item is tagged exact, derived or estimate.
+   - **Why VWAP and order flow were empty, and the fix:** the 1-minute run covered only the Nifty 50; it now covers all 490 Nifty 500 stocks. Indices have no volume, so NIFTY and BANKNIFTY VWAP, volume profile and delta now come from the near-month Dhan future. Outside market hours the order-flow cards show last session's estimates from Dhan 1-minute bars; live Dhan quote snapshots replace them from 09:15.
 5. ✅ **Refresh cadence:** hourly 09:25-15:25 IST (terminal and desk), 18:27 terminal, 22:37 desk. the terminal and the desk republish at the open (09:25), hourly during the session and after the close.
 6. ⬜ **Self-check:** the live track record of the bot's picks (built), plus weekly re-tests. Signals that stop working are dropped automatically (built).
 
@@ -85,6 +84,5 @@ Rules:
 - Everything reruns nightly inside the technical back-test, and the verdicts update themselves when results change.
 
 ## Order of work now
-1. The owner switches the repo to public (only they can).
-2. Monday 16 Nov: check the first live order-flow session, the listener, and the nightly run with markets, auction and track record.
+1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

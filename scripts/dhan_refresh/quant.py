@@ -371,6 +371,11 @@ def run(data: dict, nifty: dict, root, rf: float, n50: list, board_rows: list, o
     out["mc"] = {s: v for s, v in out["mc"].items() if v}
     out["mc_calibration"] = mc_calibration({s: closes[s] for s in n50 if s in closes})
     out["var"] = {s: var_report(logret(c)) for s, c in closes.items() if s in n50}
+    if len(nifty.get("c", [])) >= 300:                     # the index itself, for the desk's NIFTY view
+        m = monte_carlo(nifty["c"], None, fan=True)
+        if m:
+            out["mc"]["NIFTY"] = m
+        out["var"]["NIFTY"] = var_report(logret(nifty["c"]))
     vk = [kupiec(logret(closes[s])) for s in n50 if s in closes]
     vk = [x for x in vk if x]
     out["var_backtest"] = {"stocks": len(vk), "passed": sum(x["ok"] for x in vk),
