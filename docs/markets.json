@@ -1,0 +1,156 @@
+{
+ "asof": "2026-11-14 13:04",
+ "source": "Dhan",
+ "futures": {
+  "GOLD": {
+   "name": "Gold (MCX, Rs/10 g)",
+   "contract": "GOLD-04DEC2026-FUT",
+   "expiry": "2026-12-04",
+   "ltp": 136750.0,
+   "prev": 136225.0,
+   "chg": 0.00385,
+   "oi": 15974,
+   "high": 137587,
+   "low": 136055
+  },
+  "SILVER": {
+   "name": "Silver (MCX, Rs/kg)",
+   "contract": "SILVER-04DEC2026-FUT",
+   "expiry": "2026-12-04",
+   "ltp": 176543.0,
+   "prev": 178724.0,
+   "chg": -0.0122,
+   "oi": 17030,
+   "high": 180199,
+   "low": 175400
+  },
+  "CRUDEOIL": {
+   "name": "Crude oil (MCX, Rs/bbl)",
+   "contract": "CRUDEOIL-19NOV2026-FUT",
+   "expiry": "2026-11-19",
+   "ltp": 8372.0,
+   "prev": 8300.0,
+   "chg": 0.00867,
+   "oi": 7199,
+   "high": 8455,
+   "low": 8278
+  },
+  "NATURALGAS": {
+   "name": "Natural gas (MCX, Rs/mmBtu)",
+   "contract": "NATURALGAS-24NOV2026-FUT",
+   "expiry": "2026-11-24",
+   "ltp": 307.9,
+   "prev": 313.1,
+   "chg": -0.01661,
+   "oi": 34467,
+   "high": 316.4,
+   "low": 303.2
+  },
+  "COPPER": {
+   "name": "Copper (MCX, Rs/kg)",
+   "contract": "COPPER-30NOV2026-FUT",
+   "expiry": "2026-11-30",
+   "ltp": 1308.55,
+   "prev": 1328.2,
+   "chg": -0.01479,
+   "oi": 7692,
+   "high": 1331.5,
+   "low": 1306.45
+  }
+ },
+ "news": {},
+ "movers": [
+  {
+   "s": "TECHNOE",
+   "r1": -0.0564,
+   "last": 958.75,
+   "headlines": []
+  },
+  {
+   "s": "GABRIEL",
+   "r1": -0.0539,
+   "last": 1552.7,
+   "headlines": []
+  },
+  {
+   "s": "TMCV",
+   "r1": -0.0438,
+   "last": 433.55,
+   "headlines": []
+  },
+  {
+   "s": "RPOWER",
+   "r1": -0.0379,
+   "last": 18.55,
+   "headlines": []
+  },
+  {
+   "s": "MANAPPURAM",
+   "r1": -0.0373,
+   "last": 308.0,
+   "headlines": []
+  },
+  {
+   "s": "ABSLAMC",
+   "r1": -0.0366,
+   "last": 895.75,
+   "headlines": []
+  },
+  {
+   "s": "POWERINDIA",
+   "r1": 0.1068,
+   "last": 31595.0,
+   "headlines": []
+  },
+  {
+   "s": "AMBER",
+   "r1": 0.0907,
+   "last": 6772.0,
+   "headlines": []
+  },
+  {
+   "s": "ANURAS",
+   "r1": 0.0822,
+   "last": 1300.6,
+   "headlines": []
+  },
+  {
+   "s": "AEGISVOPAK",
+   "r1": 0.0705,
+   "last": 285.93,
+   "headlines": []
+  },
+  {
+   "s": "ITI",
+   "r1": 0.068,
+   "last": 268.07,
+   "headlines": []
+  },
+  {
+   "s": "GVT&D",
+   "r1": 0.0524,
+   "last": 4420.0,
+   "headlines": []
+  }
+ ],
+ "missing": [
+  "USDINR",
+  "news EQUITY_MARKETS: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
+  "news COMMODITIES: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
+  "news CURRENCY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
+  "news GLOBAL: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
+  "news INDIAN_ECONOMY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
+  "news TECHNOE: /data/newsheadline returned 401: {\"error",
+  "news GABRIEL: /data/newsheadline returned 401: {\"error",
+  "news TMCV: /data/newsheadline returned 401: {\"error",
+  "news RPOWER: /data/newsheadline returned 401: {\"error",
+  "news MANAPPURAM: /data/newsheadline returned 401: {\"error",
+  "news ABSLAMC: /data/newsheadline returned 401: {\"error",
+  "news POWERINDIA: /data/newsheadline returned 401: {\"error",
+  "news AMBER: /data/newsheadline returned 401: {\"error",
+  "news ANURAS: /data/newsheadline returned 401: {\"error",
+  "news AEGISVOPAK: /data/newsheadline returned 401: {\"error",
+  "news ITI: /data/newsheadline returned 401: {\"error",
+  "news GVT&D: /data/newsheadline returned 401: {\"error"
+ ]
+}
