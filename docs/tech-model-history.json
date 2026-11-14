@@ -10,11 +10,16 @@
    "rsnew",
    "qdrop10",
    "qdrop",
-   "qdd_hold"
+   "qdd_hold",
+   "flag"
   ],
   "weak": [
-   "qdrop"
+   "qdrop",
+   "os14"
   ],
-  "changes": []
+  "changes": [
+   "new, passes in rising markets: Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner)",
+   "new, passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)"
+  ]
  }
 ]
