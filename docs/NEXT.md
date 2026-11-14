@@ -98,6 +98,16 @@ Rules:
   - ⛔ Dhan has no US history API (checked DhanHQ-py v2.3.0). Daily US history is premium on Alpha Vantage, and so are US options, so there are no US option data.
 - ✅ **Telegram:** the desk and terminal links are pinned in the chat; new `desk` command; trade and value replies now end with the portfolio-fit line and any tested investor rule.
 
+## 14 Nov, part 3: screener, charts, audit
+- ✅ **Screener in dropdown sections**, each with a count and a "Basis" line saying exactly which back-test it rests on. Order: Markets, Turning bullish, Order-flow setups, Dips, Investor picks, Bargains, Movers, Your portfolio, Track record, Portfolio and pairs, Scoreboards, Data freshness.
+- ✅ **Bargains (India) now use only factors that passed a test** (book/price and residual-income value, Nifty 50). "P/E below its own median" failed its test and was dropped. US bargains remain an untested starting list, and say so.
+- ✅ **Order-flow and auction states tested over 5 and 10 sessions** (`auction_bt.swing_backtest`, Nifty 50, 12 months of Dhan 5-minute bars): value-area acceptance, POC shift, VWAP with buyer share, first-hour range extension, absorption, delta divergence. None passed (all |t| < 1), so no stock is listed from them; the scoreboard shows the numbers.
+- ✅ **Click any stock: 1-year price chart** with 50/200-day averages, weekly volume, stop and target (Dhan daily closes; US: weekly Alpha Vantage + Dhan).
+- ✅ **Desk works for every stock and loads fast on a phone:** page cut from 4.2 MB to 0.8 MB; each stock's detail loads from one of 25 small files when opened. Tested on 46 symbols at phone and desktop width: no errors, no sideways scroll.
+- ✅ **Data freshness check** in the screener: 20 sources with their dates.
+  - Stale, found by the audit: the NSE terminal's news and filings (10 Nov), FII/DII flows (9 Nov), global markets (23 Oct, old Yahoo series) and macro. The nightly job refreshes prices, technicals and Dhan fundamentals only.
+- All scheduled republish tasks now publish the page together with its detail files.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

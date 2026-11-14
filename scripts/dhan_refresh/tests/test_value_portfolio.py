@@ -228,3 +228,13 @@ def test_swing_flags_and_backtest():
     res = AB.swing_backtest(stocks, nifty)
     assert set(res["signals"]) == set(AB.SWING)
     assert all("tested" in r for r in res["signals"].values())
+
+
+def test_desk_page_is_light_and_split(tmp_path):
+    import desk_page as DP
+    r = DP.build(tmp_path / "desk.html")
+    files = list((tmp_path / "d").glob("*.json"))
+    assert r["bytes"] < 1_500_000, "the page must stay light for phones; per-stock detail belongs in d/*.json"
+    assert len(files) == r["detail_files"] > 0
+    html = (tmp_path / "desk.html").read_text()
+    assert '"chunks":[' in html and "function loadDetail" in html

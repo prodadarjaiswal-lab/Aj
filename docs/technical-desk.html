@@ -39,6 +39,18 @@ td a,button.link{color:var(--accent2);background:none;border:0;padding:0;font:in
 svg{max-width:100%;height:auto;display:block}
 svg text{fill:var(--mute);font:10px var(--mono)}
 [hidden]{display:none!important}
+.dd{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0;max-width:100%;overflow:hidden}
+section.wrap{min-width:0;width:100%}
+.dd>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;font-weight:600;font-size:15px}
+.dd>summary::-webkit-details-marker{display:none}
+.dd>summary .ddt::before{content:"▸";display:inline-block;width:16px;color:var(--mute)}
+.dd[open]>summary .ddt::before{content:"▾"}
+.dd[open]>summary{border-bottom:1px solid var(--line)}
+.ddb{padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cnt{font:500 12px var(--mono);color:var(--mute);white-space:nowrap}
+.cnt.has{color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 8px}
+.basisline{border-left:3px solid var(--accent2);padding-left:8px;margin:0}
+.fr-ok{color:var(--up);font-weight:600}.fr-old{color:var(--warn);font-weight:600}
 .part{font-size:18px;margin-top:10px;padding-top:10px;border-top:2px solid var(--line);scroll-margin-top:120px}
 .jump a{text-decoration:none}
 .combo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
@@ -70,35 +82,28 @@ details>summary{cursor:pointer;font-weight:600}
   </div>
 </header>
 
-<section id="screener" class="wrap" style="gap:14px">
-  <div class="pnl"><h2>Markets</h2><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div>
-  <div class="cards">
-    <div class="pnl"><h2>Turning bullish</h2><p class="note">Tested breakout signals on leading stocks; value support first.</p><div class="tw"><table id="rising"></table></div></div>
-    <div class="pnl"><h2>Dips in proven stocks</h2><p class="note">Only dip signals that passed the back-test.</p><div class="tw"><table id="dips"></table></div></div>
-  </div>
-  <div class="pnl"><h2>Bargains: blue chips now cheap</h2><p class="note">A valuation screen. Fundamentals have no history to back-test against.</p><div class="cards"><div><h3>India (Nifty 50)</h3><div class="tw"><table id="bargIN"></table></div></div><div><h3>US</h3><div class="tw"><table id="bargUS"></table></div></div></div></div>
-  <div class="cards">
-    <div class="pnl"><h2>Investor picks</h2><p class="note">Tested investor rules active today, ranked by fit with your portfolio.</p><div class="tw"><table id="invest"></table></div></div>
-    <div class="pnl"><h2>Your portfolio</h2><div id="mypf2"></div></div>
-  </div>
-  <div class="pnl"><h2>Biggest moves and possible reasons</h2><div class="tw"><table id="movers"></table></div><p class="note" id="newsnote"></p></div>
-  <div class="cards">
-    <div class="pnl"><h2>Live track record</h2><div id="track"></div></div>
-    <div class="pnl"><h2>What the back-test kept</h2><div id="kept"></div></div>
-  </div>
-  <h2 style="margin-top:4px">Portfolio and pairs (Nifty 50)</h2>
-  <div class="cards">
-    <div class="pnl"><h2>Markowitz: Nifty 50</h2><div id="front"></div><div id="wts"></div></div>
-    <div class="pnl"><h2>Walk-forward test and portfolio VaR</h2><div id="wf"></div></div>
-  </div>
-  <div class="pnl"><h2>Pairs and mean reversion</h2><div id="pairsS"></div><div class="cards"><div class="tw"><table id="pairsT"></table></div><div id="pairChart"></div></div></div>
-  <div class="pnl"><details><summary>Full back-test scoreboard</summary><div class="tw"><table id="board"></table></div><div class="tw" style="margin-top:10px"><table id="aboard"></table></div><p class="note" id="boardnote"></p></details></div>
+<section id="screener" class="wrap" style="gap:10px">
+  <div class="row" style="justify-content:space-between"><p class="note" style="margin:0">Tap a section to open it. Tap any stock for its chart and full analysis.</p><button class="chip" id="ddall">Open all</button></div>
+  <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
+  <details class="dd" id="dd-rising" open><summary><span class="ddt">Turning bullish (tested signals)</span><span class="cnt" id="n-rising"></span></summary><div class="ddb"><p class="note basisline" id="b-rising"></p><div class="tw"><table id="rising"></table></div></div></details>
+  <details class="dd" id="dd-swing"><summary><span class="ddt">Order-flow and auction setups</span><span class="cnt" id="n-swing"></span></summary><div class="ddb"><p class="note basisline" id="b-swing"></p><div class="tw"><table id="swingT"></table></div></div></details>
+  <details class="dd" id="dd-dips"><summary><span class="ddt">Dips in proven stocks</span><span class="cnt" id="n-dips"></span></summary><div class="ddb"><p class="note basisline" id="b-dips"></p><div class="tw"><table id="dips"></table></div></div></details>
+  <details class="dd" id="dd-invest"><summary><span class="ddt">Investor picks (6 to 12 months)</span><span class="cnt" id="n-invest"></span></summary><div class="ddb"><p class="note basisline" id="b-invest"></p><div class="tw"><table id="invest"></table></div></div></details>
+  <details class="dd" id="dd-barg"><summary><span class="ddt">Bargains: blue chips now cheap</span><span class="cnt" id="n-barg"></span></summary><div class="ddb"><p class="note basisline" id="b-barg"></p><div class="cards"><div><h3>India (Nifty 50)</h3><div class="tw"><table id="bargIN"></table></div></div><div><h3>US</h3><div class="tw"><table id="bargUS"></table></div></div></div></div></details>
+  <details class="dd" id="dd-movers"><summary><span class="ddt">Biggest moves and possible reasons</span><span class="cnt" id="n-movers"></span></summary><div class="ddb"><div class="tw"><table id="movers"></table></div><p class="note" id="newsnote"></p></div></details>
+  <details class="dd" id="dd-pf"><summary><span class="ddt">Your portfolio</span><span class="cnt" id="n-pf"></span></summary><div class="ddb"><div id="mypf2"></div></div></details>
+  <details class="dd" id="dd-track"><summary><span class="ddt">Track record and what the back-test kept</span><span class="cnt" id="n-track"></span></summary><div class="ddb"><div class="cards"><div><h3>Live track record</h3><div id="track"></div></div><div><h3>Signals kept</h3><div id="kept"></div></div></div></div></details>
+  <details class="dd" id="dd-quant"><summary><span class="ddt">Portfolio and pairs (Nifty 50)</span><span class="cnt" id="n-quant"></span></summary><div class="ddb"><div class="cards"><div><h3>Markowitz</h3><div id="front"></div><div id="wts"></div></div><div><h3>Walk-forward test and portfolio VaR</h3><div id="wf"></div></div></div><h3>Pairs and mean reversion</h3><div id="pairsS"></div><div class="cards"><div class="tw"><table id="pairsT"></table></div><div id="pairChart"></div></div></div></details>
+  <details class="dd" id="dd-board"><summary><span class="ddt">Full back-test scoreboards</span><span class="cnt" id="n-board"></span></summary><div class="ddb"><div class="tw"><table id="board"></table></div><div class="tw" style="margin-top:10px"><table id="aboard"></table></div><div class="tw" style="margin-top:10px"><table id="sboard"></table></div><p class="note" id="boardnote"></p></div></details>
+  <details class="dd" id="dd-fresh"><summary><span class="ddt">Data freshness check</span><span class="cnt" id="n-fresh"></span></summary><div class="ddb"><div class="tw"><table id="fresh"></table></div><p class="note">Green: from the latest trading session. Amber: older than that. Every section above is rebuilt from these files on each publish.</p></div></details>
 </section>
 
 <section id="analyze" class="wrap" style="gap:14px" hidden>
   <div class="row"><input id="q" placeholder="Analyse a stock: TCS, MCX, NIFTY" autocomplete="off" aria-label="Analyse a stock"><div class="row" id="quick"></div></div>
+  <p class="note" id="detailnote" role="status"></p>
   <div class="pnl" id="verdict"></div>
   <div class="pnl" id="combo"></div>
+  <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Price chart · 1 year</h2><span class="basis" id="chartbasis">exact (Dhan daily closes)</span></div><div id="pchart"></div></div>
   <nav class="row jump" aria-label="Sections"><a class="chip" href="#techsec">1 Technical</a><a class="chip" href="#valsec">2 Value</a><a class="chip" href="#fitsec">3 Verdict and your portfolio</a></nav>
   <h2 class="part" id="techsec">1 · Technical <span class="sub">for a trade over days to weeks</span></h2>
   <div class="score" id="score"></div>
@@ -211,21 +216,56 @@ function screener(){
   $("mktnote").textContent=`Prices from Dhan${m.asof?" · "+m.asof:""}.${gaps.length?" Not available from Dhan: "+gaps.join("; ")+".":""}`;
   const rs=[];Object.entries(today).forEach(([s,t])=>{const nw=tested.filter(k=>(t.new||[]).includes(k)),r=bySym[s]||{};if(nw.length&&["lead","improve"].includes(r.status)){const tag=valueTag(s);rs.push([{"value support":0,fair:1,"":2,expensive:3}[tag],tested.indexOf(nw[0]),-(r.score||0),s,nw[0],t,tag])}});
   rs.sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
-  $("rising").innerHTML=rs.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">Stop</th><th class="n">Target</th></tr>`+rs.slice(0,8).map(([,, ,s,k,t,tag])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button>${tag?` <span class="basis">${tag}</span>`:""}</td><td>${esc(sn(k))}</td><td class="n">${num(t.c,1)}</td><td class="n">${num(t.c-2*(t.atr||0),1)}</td><td class="n">${num(t.c+3*(t.atr||0),1)}</td></tr>`).join(""):`<tr><td class="note">${tested.length?"None today.":"No signal passed for the current market."}</td></tr>`;
+  const MCq=(D.quant||{}).mc||{};
+  $("rising").innerHTML=rs.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Edge 10d</th><th class="n">Up odds</th><th class="n">Stop</th><th class="n">Target</th></tr>`+rs.slice(0,15).map(([,, ,s,k,t,tag])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button>${tag?` <span class="basis">${tag}</span>`:""}</td><td>${esc(sn(k))}</td><td class="n good">${pc(sig[k][D.regimeUp===false?"lift_out_x10_weak":"lift_out_x10"],1)}</td><td class="n">${MCq[s]?Math.round(MCq[s].p_up*100)+"%":"–"}</td><td class="n">${num(t.c-2*(t.atr||0),1)}</td><td class="n">${num(t.c+3*(t.atr||0),1)}</td></tr>`).join(""):`<tr><td class="note">${tested.length?"None today.":"No signal passed for the current market."}</td></tr>`;
+  cnt("rising",rs.length);$("b-rising").textContent=`Basis: ${tested.length} of ${Object.keys(sig).length} signals passed a 6-year Dhan back-test on ${D.model.stocks||"~480"} stocks for ${D.regimeUp===false?"weak":"rising"} markets (positive in both periods, t ≥ 2 in the last 2 years). Only stocks leading or improving against the Nifty 500 are listed; all ${Object.keys(today).length} stocks are scanned. Edge = extra 10-day return vs a typical stock; up odds = Monte Carlo chance of being higher in 21 days.`;
   const dp=[];if(dipsOk.length)Object.entries(today).forEach(([s,t])=>{const h=dipsOk.filter(k=>(t.dip10||[]).includes(k));if(h.length)dp.push([s,h[0],t])});
   $("dips").innerHTML=!dipsOk.length?`<tr><td class="note">No dip signal passed the back-test for the current market.</td></tr>`:dp.length?`<tr><th>Stock</th><th>Fall</th><th class="n">Close</th><th class="n">From high</th></tr>`+dp.slice(0,8).map(([s,k,t])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td><td>${esc(sn(k))}</td><td class="n">${num(t.c,1)}</td><td class="n bad">${t.hi52}%</td></tr>`).join(""):`<tr><td class="note">None in the last 10 trading days.</td></tr>`;
-  const bi=Object.entries(D.n50).filter(([s,x])=>{const v=x.val||{},r=bySym[s]||{};return v.gap!=null&&v.gap<=-0.03&&v.g3>0.05&&v.pe&&v.pe_med&&v.pe<v.pe_med&&(r.hi52||0)<=-0.10}).sort((a,b)=>a[1].val.gap-b[1].val.gap);
-  $("bargIN").innerHTML=bi.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs median</th><th class="n">3y growth</th></tr>`+bi.slice(0,6).map(([s,x])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td><td class="n bad">${pc((bySym[s]||{}).hi52,0)}</td><td class="n">${num(x.val.pe,0)} / ${num(x.val.pe_med,0)}</td><td class="n">${pc(x.val.g3,0)}</td></tr>`).join(""):`<tr><td class="note">None passes today.</td></tr>`;
+  cnt("dips",dp.length);$("b-dips").textContent=dipsOk.length?`Basis: ${dipsOk.map(k=>sn(k)).join("; ")} passed the 21-day recovery test (beat the average stock in both periods, t ≥ 2).`:"Basis: no dip rule passed the back-test for the current market, so none is listed.";
+  const FQ=((D.vm||{}).fundamental||{}).quintiles||{},FP=((D.vm||{}).fundamental||{}).passed||[];
+  const bi=Object.entries(FQ).map(([s,q])=>[s,q,Object.values(q).reduce((a,b)=>a+b,0)/Math.max(1,Object.values(q).length)]).filter(([s,q,a])=>a>=4&&((bySym[s]||{}).hi52||0)<=-0.10).sort((a,b)=>b[2]-a[2]||((bySym[a[0]]||{}).hi52||0)-((bySym[b[0]]||{}).hi52||0));
+  $("bargIN").innerHTML=!FP.length?`<tr><td class="note">No fundamental factor passed its test, so nothing is listed.</td></tr>`:bi.length?`<tr><th>Stock</th>${FP.map(f=>`<th class="n">${esc(f.replace("Residual-income V/P","Resid. income").replace("B/P","Book/price"))}</th>`).join("")}<th class="n">From high</th></tr>`+bi.slice(0,10).map(([s,q])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td>${FP.map(f=>`<td class="n">${q[f]??"–"}/5</td>`).join("")}<td class="n bad">${pc((bySym[s]||{}).hi52,0)}</td></tr>`).join(""):`<tr><td class="note">None passes today.</td></tr>`;
   const gr=x=>{for(const y of [5,4]){const g=[x["eps_cagr"+y],x["rev_cagr"+y]].filter(v=>v!=null);if(g.length)return[Math.max(...g),y]}return[null,null]};
   const bu=(D.us.rows||[]).map(x=>[x,...gr(x)]).filter(([x,g])=>g>0.05&&(x.roe_avg||0)>0.15&&(x.off_high||0)<=-0.10&&x.pe_now>0&&x.pe_hist_median&&x.pe_now<x.pe_hist_median).sort((a,b)=>a[0].pe_now/a[0].pe_hist_median-b[0].pe_now/b[0].pe_hist_median);
   $("bargUS").innerHTML=bu.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs usual</th><th class="n">Growth</th></tr>`+bu.slice(0,6).map(([x,g,y])=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n bad">${pc(x.off_high,0)}</td><td class="n">${num(x.pe_now,0)} / ${num(x.pe_hist_median,0)}</td><td class="n">${pc(g,0)} (${y}y)</td></tr>`).join("")+`<tr><td colspan="4" class="note">Fundamentals ${esc(D.us.asof||"")} (FMP). US prices on the desk come from Dhan.</td></tr>`:`<tr><td class="note">None passes today.</td></tr>`;
+  cnt("barg",bi.length+bu.length);$("b-barg").textContent=`Basis, India: top two-fifths of the Nifty 50 on the fundamental factors that passed a 12-month test (${FP.join(", ")||"none"}), and at least 10% below the 52-week high. "P/E below its own median" failed that test and is no longer used. Basis, US: P/E below its usual level with growth and ROE filters; not back-tested (no US fundamentals history), so treat as a starting list.`;
   const mv=(m.movers||[]);
   $("movers").innerHTML=mv.length?`<tr><th>Stock</th><th class="n">Day</th><th>Possible reason</th></tr>`+mv.map(x=>{const h=((x.headlines||[])[0]||{}).title||(((D.n50[x.s]||{}).news||[])[0]||{}).title;return `<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n ${cls(x.r1)}">${pc(x.r1)}</td><td>${h?esc(h.slice(0,120)):'<span class="note">no headline found</span>'}</td></tr>`}).join(""):`<tr><td class="note">Movers appear after the nightly refresh.</td></tr>`;
   $("newsnote").textContent="A headline next to a move is a possible reason, not a proven cause."+((m.missing||[]).some(x=>String(x).includes("newsheadline"))?" Dhan's news service is not enabled on this account, so headlines come from NSE filings and the terminal's news feed.":"");
   const tr=(D.track||{}).summary||{};
   $("track").innerHTML=Object.keys(tr).length?["rising","dips"].map(k=>{const r=tr[k]||{};if(!r.picks)return"";return `<p><b>${k==="rising"?"Turning bullish":"Dips"}</b>: ${r.picks} picks, ${r.open} open.${r.n10?` After 10 days (${r.n10}): beat the Nifty ${Math.round(r.beat10*100)}%, average ${pc(r.avg10)}.`:""}${r.n21?` After 21 days: ${Math.round(r.beat21*100)}%, ${pc(r.avg21)}.`:""}</p>`}).join("")+`<p class="note">Logged before the outcome existed, then scored nightly.</p>`:`<p class="note">Starts with the next nightly refresh.</p>`;
   $("kept").innerHTML=`<p>${tested.length} trade signals and ${dipsOk.length} dip signals passed for the current market. No order-flow or auction signal has passed yet, so those stay context only.</p>`+hbars(tested.map(k=>[sn(k).slice(0,11),(sig[k].lift_out_x10||0)*100,"var(--accent)"]),{})+`<p class="note">Bars: extra 10-day return vs a typical stock, last 2 years, %.</p>`;
-  board();
+  cnt("movers",mv.length);swingTable();freshTable();board();
+}
+function cnt(k,n){const e=$("n-"+k);if(e){e.textContent=n?n+(n===1?" stock":" stocks"):"none today";e.classList.toggle("has",!!n)}}
+function swingTable(){
+  const sw=(D.abt||{}).swing,S=(sw||{}).signals||{},ok=Object.keys(S).filter(k=>S[k].tested&&k!=="sw_va_dn"),A_=D.auction.symbols||{},rows=[];
+  if(ok.length)Object.entries(A_).forEach(([s,a])=>{const h=(a.swing||[]).filter(k=>ok.includes(k));if(h.length&&bySym[s]&&!(a.swing||[]).includes("sw_va_dn"))rows.push([-h.length,-((S[h[0]][S[h[0]].h]||{}).lift_out||0),s,h,a])});
+  rows.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  $("swingT").innerHTML=!sw?`<tr><td class="note">The swing test of order-flow states has not run yet.</td></tr>`:!ok.length?`<tr><td class="note">None of the ${Object.keys(S).length} order-flow and auction states passed the swing test, so no stock is listed. See the scoreboard below.</td></tr>`:rows.length?`<tr><th>Stock</th><th>State (last session)</th><th class="n">Edge</th><th class="n">Close</th></tr>`+rows.slice(0,15).map(([,,s,h,a])=>{const r=S[h[0]],x=r[r.h]||{};return `<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button>${h.length>1?` <span class="basis">+${h.length-1}</span>`:""}</td><td>${esc(r.name)}</td><td class="n good">${pc(x.lift_out,1)} / ${r.h}d</td><td class="n">${num(a.close,1)}</td></tr>`}).join(""):`<tr><td class="note">No stock shows a tested state in the last session.</td></tr>`;
+  cnt("swing",ok.length?rows.length:0);
+  $("b-swing").textContent=sw?`Basis: value-area acceptance, point-of-control shift, VWAP with buyer share, first-hour range extension, absorption and delta divergence, measured at the close from Dhan intraday bars, then held 5 or 10 sessions. Tested on the Nifty 50 over 12 months, split in two halves; ${ok.length} of ${Object.keys(S).length} passed. States are computed for all ${Object.keys(A_).length} symbols each night.`:"";
+  $("sboard").innerHTML=sw?`<tr><th>Order-flow state held 5 / 10 sessions</th><th>Result</th><th class="n">Cases</th><th class="n">Edge 5d</th><th class="n">Edge 10d</th></tr>`+Object.entries(S).map(([k,r])=>`<tr><td>${esc(r.name)}</td><td>${r.tested?'<span class="good">passed</span>':'<span class="note">failed</span>'}</td><td class="n">${num((r["5"]||{}).n,0)}</td><td class="n">${pc((r["5"]||{}).lift_out,2)}<div class="note">t ${(r["5"]||{}).t??"–"}</div></td><td class="n">${pc((r["10"]||{}).lift_out,2)}<div class="note">t ${(r["10"]||{}).t??"–"}</div></td></tr>`).join(""):"";
+}
+function freshTable(){
+  const F=D.fresh||{},last=F.session;
+  $("fresh").innerHTML=`<tr><th>Data</th><th>As of</th><th>Covers</th><th></th></tr>`+(F.rows||[]).map(([n,d,cov,cad])=>{const ok=cad==="live"?true:cad==="weekly"?d&&last&&(new Date(last)-new Date(String(d).slice(0,10)))/864e5<=8:cad==="monthly"?d&&last&&(new Date(last)-new Date(String(d).slice(0,7)+"-01"))/864e5<=62:d&&last&&String(d).slice(0,10)>=last;return `<tr><td>${esc(n)}</td><td>${esc(d||"–")}</td><td class="note">${esc(cov)}</td><td class="${ok?"fr-ok":"fr-old"}">${ok?"current":"older"}</td></tr>`}).join("");
+  const old=[...document.querySelectorAll("#fresh .fr-old")].length;const e=$("n-fresh");e.textContent=old?old+" older":"all current";e.classList.toggle("has",!old);
+}
+function priceChart(c){
+  let ch=((D.chart||{}).s||{})[c.sym]||(c.us?((D.usw||{})[c.sym]):null),el=$("pchart");
+  if(ch&&ch.x&&!ch.c)ch=Object.assign({},ch,{c:ch.x.map(v=>ch.b+v/ch.k)});
+  if(!ch||!ch.c||ch.c.length<20){el.innerHTML=`<p class="note">${c.us?"Weekly history for this US stock arrives with the next Alpha Vantage batch.":"No daily history for this symbol yet (the chart covers the Nifty 500 and the Nifty)."}</p>`;return}
+  const px=ch.c,n=px.length,W=360,H=210,L=40,Rr=8,T=8,Bv=H-18,Vh=ch.v?28:0,Bp=Bv-Vh-4,dts=c.us?ch.d:(D.chart.d||[]).slice(-n);
+  const lines=[];if(c.t&&c.t.atr&&c.last){lines.push(["stop",c.last-2*c.t.atr,"var(--down)"]);lines.push(["target",c.last+3*c.t.atr,"var(--up)"])}
+  const all=[...px,...(ch.m50||[]).filter(x=>x),...(ch.m200||[]).filter(x=>x),...lines.map(l=>l[1])];let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*0.04||1;lo-=pad;hi+=pad;
+  const X=i=>L+i/(n-1)*(W-L-Rr),Y=v=>Bp-(v-lo)/(hi-lo)*(Bp-T),path=a=>a.map((v,i)=>v==null?"":(i&&a[i-1]!=null?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join("");
+  const ma=(a,col)=>{if(!a)return"";const off=n-1-(a.length-1)*5;let d="",pen=false;a.forEach((v,k)=>{const i=off+k*5;if(v==null||i<0){pen=false;return}d+=(pen?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1);pen=true});return `<path d="${d}" fill="none" stroke="${col}" stroke-width="1.2" stroke-dasharray="4 2"/>`};
+  let g="";for(let k=0;k<=3;k++){const v=lo+(hi-lo)*k/3;g+=`<line x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".5"/><text x="${L-4}" y="${Y(v)+3}" text-anchor="end">${num(v,0)}</text>`}
+  let vb="";if(ch.v){const mv=Math.max(...ch.v)||1,off=n-1-(ch.v.length-1)*5,bw=(W-L-Rr)/ch.v.length*0.7;ch.v.forEach((v,k)=>{const i=off+k*5;if(i<0)return;const h=v/mv*Vh;vb+=`<rect x="${(X(i)-bw/2).toFixed(1)}" y="${(Bv-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="var(--bar)"/>`})}
+  const up=px[n-1]>=px[0],tk=[0,Math.floor(n/2),n-1].map((i,j)=>dts&&dts[i]?`<text x="${X(i)}" y="${H-4}" text-anchor="${["start","middle","end"][j]}">${esc(String(dts[i]).slice(2,10))}</text>`:"").join("");
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Price chart">${g}${vb}<path d="${path(px)}L${X(n-1)} ${Bp}L${X(0)} ${Bp}Z" fill="${up?"var(--up)":"var(--down)"}" opacity=".08"/>${ma(ch.m200,"var(--accent2)")}${ma(ch.m50,"var(--warn)")}<path d="${path(px)}" fill="none" stroke="${up?"var(--up)":"var(--down)"}" stroke-width="1.6"/>${lines.map(([nm,v,col])=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${col}" stroke-dasharray="6 3"/><text x="${W-Rr-2}" y="${Y(v)-3}" text-anchor="end" style="fill:${col}">${nm} ${num(v,0)}</text>`).join("")}<circle cx="${X(n-1)}" cy="${Y(px[n-1])}" r="2.8" fill="var(--ink)"/>${tk}</svg><p class="note">${c.us?"Weekly closes, 2 years (Alpha Vantage, split-adjusted, plus Dhan closes).":`<span class="sw" style="background:var(--warn)"></span>50-day average <span class="sw" style="background:var(--accent2)"></span>200-day average · grey bars: weekly volume · 1 year ${pc(px[n-1]/px[0]-1,0)}.`}</p>`;
+  $("chartbasis").textContent=c.us?"weekly (Alpha Vantage + Dhan)":"exact (Dhan daily closes)";
 }
 function board(){
   const rows=Object.entries(sig).sort((a,b)=>(b[1].lift_out_x10||0)-(a[1].lift_out_x10||0));
@@ -458,6 +498,7 @@ function investPicks(){
   Object.entries(T).forEach(([s,x])=>{const hits=(x.on||[]).filter(k=>vTested.includes(k));if(!hits.length)return;const f=(PF.fit||{})[s];rows.push([f?rank[f.v]:2,-hits.length,s,hits,f])});
   rows.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
   $("invest").innerHTML=!vTested.length?`<tr><td class="note">No investor rule passed the back-test for the current market${VM.rules?"":" (runs nightly)"}.</td></tr>`:rows.length?`<tr><th>Stock</th><th>Rule</th><th>Your portfolio</th></tr>`+rows.slice(0,10).map(([,,s,h,f])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td><td>${esc(VM.names[h[0]])}</td><td>${f?`<span class="tag ${FITL[f.v][1]}" style="font-size:11px">${FITL[f.v][0]}</span>`:"–"}</td></tr>`).join(""):`<tr><td class="note">None today.</td></tr>`;
+  cnt("invest",vTested.length?rows.length:0);$("b-invest").textContent=`Basis: ${vTested.length} of ${Object.keys(VM.rules||{}).length-1} investor rules passed on 6 years of Dhan prices (${VM.stocks||"?"} stocks) for ${vside==="up"?"rising":"weak"} markets: ${vTested.map(k=>VM.names[k]).join("; ")||"none"}. Ranked by fit with your portfolio.`;
 }
 function fitCard(c){
   const f=fitOf(c),src=PF.check_src||{};
@@ -500,9 +541,19 @@ function mcvar(c){
 }
 function hist(h){if(!h)return"";const c=h.counts,e=h.edges,mx=Math.max(...c)||1,W=320,H=90,bw=(W-12)/c.length;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="10-day return distribution">${c.map((n,i)=>`<rect x="${6+i*bw}" y="${H-14-n/mx*(H-24)}" width="${bw-1}" height="${n/mx*(H-24)}" fill="${e[i+1]<0?"var(--down)":"var(--up)"}"/>`).join("")}<text x="6" y="${H-2}">${pc(e[0],0)}</text><text x="${W-6}" y="${H-2}" text-anchor="end">${pc(e[e.length-1],0)}</text></svg>`}
-function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;$("q").value=sym;const c=ctx(sym),v=verdict(c),cb=combo(c,v);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);try{localStorage.setItem("td-last",sym)}catch(e){}}
+const CH={};
+function chunkOf(k){const c=[...String(k).toUpperCase()].find(x=>/[A-Z0-9]/.test(x))||"_";return /[A-Z]/.test(c)?c:"0"}
+function loadDetail(sym){
+  const keys=[sym,IDXKEY[sym]].filter(Boolean),names=[...new Set(keys.map(chunkOf))].filter(n=>(D.chunks||[]).includes(n)&&!CH[n]);
+  return Promise.all(names.map(n=>fetch("d/"+n+".json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{CH[n]=j;
+    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc})}).catch(e=>{CH[n]={_err:String(e)}})));
+}
+let SHOWN="";
+function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym)render(sym);const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}
+function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);try{localStorage.setItem("td-last",sym)}catch(e){}}
 function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));["screener","analyze"].forEach(x=>$(x).hidden=t!==x);if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
+$("ddall").addEventListener("click",e=>{const all=[...document.querySelectorAll("#screener .dd")],open=all.some(d=>!d.open);all.forEach(d=>d.open=open);e.target.textContent=open?"Close all":"Open all"});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b){tab("analyze");show(b.dataset.s);window.scrollTo(0,0)}});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter")show(e.target.value)});
 $("quick").innerHTML=["NIFTY","BANKNIFTY","TCS","RELIANCE","HDFCBANK","NVDA"].map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join("");
@@ -542,5 +593,5 @@ function quantTab(){
 }
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
-screener();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+screener();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 </script>
