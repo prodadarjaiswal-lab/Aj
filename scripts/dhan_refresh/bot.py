@@ -23,7 +23,13 @@ SETUP = {"volbreak": "volume breakout", "pullback": "pullback in an uptrend", "b
          "coiled": "coiled range", "turn": "turn up"}
 STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fade": "fading", "weak": "weak"}
 
-MENU = [("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
+DESK_URL = "https://claude.ai/artifact/QHCtbgKuHA17eSSS4zbd9h"
+TERMINAL_URL = "https://claude.ai/artifact/JBe9w1vLcwPQFyfmYHoRDz"
+LINKS = (f'📌 <b>Your trading desks</b>\n<a href="{DESK_URL}">Technical Desk</a>: screener, then Analyze for any stock '
+         f'(technical, value, combined verdict and fit with your portfolio).\n<a href="{TERMINAL_URL}">NSE Terminal</a>: '
+         "markets, sectors and valuations.\nOpen while signed in to claude.ai. Prices from Dhan.")
+
+MENU = [("desk", "Open the Technical Desk and NSE Terminal"), ("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
         ("bargains", "Blue chips now cheap, India and US"), ("portfolio", "Markowitz portfolios (Nifty 50)"), ("pairs", "Pairs trading scan"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
@@ -43,7 +49,8 @@ DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
                "bs NIFTY 25500 CE (Black-Scholes)\n"
                "record (how picks did)\n"
                "journal\n"
-               "alert TCS above 3450")
+               "alert TCS above 3450\n"
+               "desk (links to the desk and terminal)")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
           "nr7": "its tightest day in 7, inside the prior day, in an uptrend",
@@ -112,6 +119,8 @@ class Data:
         self.stocks = nset.get("stocks", {})
         self.idx = nset.get("idx", {})
         self.opts = opts.get("rows", {})
+        self.pf = _load(ROOT / "docs/portfolio.json", {})
+        self.vm = _load(ROOT / "docs/value-model.json", {})
         self.auction = _load(ROOT / "docs/auction.json", {}).get("symbols", {})
 
     def last(self, r: dict) -> float:
@@ -548,7 +557,33 @@ def technical(d: Data, r: dict, ltp: float | None = None) -> str:
     ol = options_line(d, sym)
     if ol:
         lines.append(ol)
+    fl = fit_line(d, sym)
+    if fl:
+        lines.append(fl)
     return "\n".join(lines)
+
+
+def fit_line(d: Data, sym: str) -> str:
+    """One line: does it suit the owner's portfolio (docs/portfolio.json, rules from the owner's notes)."""
+    f = ((getattr(d, "pf", None) or {}).get("fit") or {}).get(sym)
+    if not f:
+        return ""
+    lab = {"suits": "Suits your portfolio", "partly": "Partly suits your portfolio", "no": "Does not suit your portfolio"}[f["v"]]
+    why = "; ".join((f.get("why") or [])[:2])
+    size = f" Start at {f['w'] * 100:.0f}%." if f.get("w") and f["v"] != "no" else ""
+    basis = " (vs the Nifty: no Dhan holdings found)" if ((d.pf.get("summary") or {}).get("proxy")) else ""
+    return f"<b>{lab}</b>{basis}: {esc(why)}.{size}"
+
+
+def tested_value_line(d: Data, sym: str) -> str:
+    vm = getattr(d, "vm", None) or {}
+    side = "weak" if d.regime_flag == "tested_weak" else "up"
+    on = ((vm.get("today") or {}).get(sym) or {}).get("on") or []
+    hits = [k for k in on if (vm.get("rules") or {}).get(k, {}).get(f"tested_{side}")]
+    if not hits:
+        return ""
+    r = vm["rules"][hits[0]][f"12m_{side}"]
+    return f"Tested investor rule active: {esc(vm['names'][hits[0]])} (beat the average stock by {r['lift'] * 100:+.1f}% over 12 months, t {r['t']})."
 
 
 def value(d: Data, sym: str, ltp: float | None = None) -> str:
@@ -575,6 +610,9 @@ def value(d: Data, sym: str, ltp: float | None = None) -> str:
         lines.append(f"P/E {v['pe']:.0f} against its own median of {v['pe_med']:.0f}.")
     if v.get("fair_at_g3") and last:
         lines.append(f"Value if growth stays at the delivered rate: {rupee(v['fair_at_g3'])} ({pct(v['fair_at_g3'] / last - 1, 0)}).")
+    for extra in (tested_value_line(d, sym), fit_line(d, sym)):
+        if extra:
+            lines.append(extra)
     return "\n".join(lines)
 
 
@@ -744,6 +782,8 @@ class Bot:
     def handle(self, text: str) -> str:
         low = re.sub(r"\s+", " ", text.strip()).lower().lstrip("/")
         w = low.split(" ")
+        if low in ("desk", "terminal", "links", "link", "dashboard"):
+            return LINKS
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
         if w[0] in ("mc", "montecarlo", "simulate") and len(w) == 2:
@@ -931,6 +971,17 @@ def save_state(st: dict) -> None:
         print(f"bot: state not saved: {str(e)[:100]}")
 
 
+def pin_links() -> str:
+    """Pin the desk links in the owner's chat, once: skipped when the pinned message already carries them."""
+    chat = T.call("getChat", chat_id=T.chat_id())
+    pinned = (chat.get("pinned_message") or {})
+    if DESK_URL in str(pinned.get("text", "")) + str(pinned.get("entities", "")):
+        return "links already pinned"
+    m = T.call("sendMessage", chat_id=T.chat_id(), text=LINKS, parse_mode="HTML", disable_web_page_preview=True)
+    T.call("pinChatMessage", chat_id=T.chat_id(), message_id=m["message_id"], disable_notification=True)
+    return "links pinned"
+
+
 def set_menu() -> None:
     """Register the command menu and description shown in Telegram."""
     T.call("setMyCommands", commands=[{"command": c, "description": d} for c, d in MENU])
@@ -943,5 +994,9 @@ if __name__ == "__main__":
     if sys.argv[1:2] == ["menu"]:
         set_menu()
         print("menu set")
+        try:
+            print(pin_links())
+        except Exception as e:
+            print(f"pin failed: {str(e)[:200]}")
     elif sys.argv[1:2] == ["say"]:
         print(re.sub(r"<[^>]+>", "", Bot("NSE", state={}).handle(" ".join(sys.argv[2:]))))

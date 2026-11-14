@@ -150,4 +150,31 @@ def test_run_with_holdings(tmp_path):
     out = json.loads((tmp_path / "docs/portfolio.json").read_text())
     assert out["summary"]["proxy"] is False and out["summary"]["count"] == 3
     assert 0 < out["summary"]["us_share"] < 1 and "US stocks" in out["summary"]["sectors"]
-    assert out["fit"]["S1"]["v"] in ("suits", "partly", "no")
+    assert out["fit"]["S1"]["v"] in ("suits", "partly", "no") and out["fit"]["S1"]["c"] and out["check_src"]
+
+
+def test_bot_desk_command_and_fit_line():
+    import bot as B
+    b = B.Bot("NSE", state={})
+    assert B.DESK_URL in b.handle("desk") and len(B.DESCRIPTION) <= 512
+    b.d.pf = {"fit": {"TCS": {"v": "partly", "w": 0.05, "why": ["correlation: 0.6"]}}, "summary": {"proxy": False}}
+    line = B.fit_line(b.d, "TCS")
+    assert "Partly suits" in line and "5%" in line
+    assert B.fit_line(b.d, "NOPE") == ""
+
+
+def test_pin_links_once(monkeypatch):
+    import bot as B
+    calls = []
+
+    def fake(method, **kw):
+        calls.append(method)
+        if method == "getChat":
+            return {"pinned_message": {"text": "x", "entities": [{"url": B.DESK_URL}]}} if len(calls) > 3 else {}
+        if method == "sendMessage":
+            return {"message_id": 7}
+        return True
+    monkeypatch.setattr(B.T, "call", fake)
+    monkeypatch.setattr(B.T, "chat_id", lambda: "1")
+    assert B.pin_links() == "links pinned" and calls == ["getChat", "sendMessage", "pinChatMessage"]
+    assert B.pin_links() == "links already pinned"

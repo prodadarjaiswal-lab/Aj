@@ -39,6 +39,11 @@ td a,button.link{color:var(--accent2);background:none;border:0;padding:0;font:in
 svg{max-width:100%;height:auto;display:block}
 svg text{fill:var(--mute);font:10px var(--mono)}
 [hidden]{display:none!important}
+.part{font-size:18px;margin-top:10px;padding-top:10px;border-top:2px solid var(--line);scroll-margin-top:120px}
+.jump a{text-decoration:none}
+.combo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.final{font:700 22px var(--sans)}.final.good{color:var(--up)}.final.bad{color:var(--down)}.final.warn{color:var(--warn)}
+td.ok{color:var(--up);font-weight:600}td.no{color:var(--down);font-weight:600}
 details>summary{cursor:pointer;font-weight:600}
 .score{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .sc{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--mute);border-radius:8px;padding:8px 10px;min-width:0}
@@ -72,6 +77,10 @@ details>summary{cursor:pointer;font-weight:600}
     <div class="pnl"><h2>Dips in proven stocks</h2><p class="note">Only dip signals that passed the back-test.</p><div class="tw"><table id="dips"></table></div></div>
   </div>
   <div class="pnl"><h2>Bargains: blue chips now cheap</h2><p class="note">A valuation screen. Fundamentals have no history to back-test against.</p><div class="cards"><div><h3>India (Nifty 50)</h3><div class="tw"><table id="bargIN"></table></div></div><div><h3>US</h3><div class="tw"><table id="bargUS"></table></div></div></div></div>
+  <div class="cards">
+    <div class="pnl"><h2>Investor picks</h2><p class="note">Tested investor rules active today, ranked by fit with your portfolio.</p><div class="tw"><table id="invest"></table></div></div>
+    <div class="pnl"><h2>Your portfolio</h2><div id="mypf2"></div></div>
+  </div>
   <div class="pnl"><h2>Biggest moves and possible reasons</h2><div class="tw"><table id="movers"></table></div><p class="note" id="newsnote"></p></div>
   <div class="cards">
     <div class="pnl"><h2>Live track record</h2><div id="track"></div></div>
@@ -89,18 +98,21 @@ details>summary{cursor:pointer;font-weight:600}
 <section id="analyze" class="wrap" style="gap:14px" hidden>
   <div class="row"><input id="q" placeholder="Analyse a stock: TCS, MCX, NIFTY" autocomplete="off" aria-label="Analyse a stock"><div class="row" id="quick"></div></div>
   <div class="pnl" id="verdict"></div>
+  <div class="pnl" id="combo"></div>
+  <nav class="row jump" aria-label="Sections"><a class="chip" href="#techsec">1 Technical</a><a class="chip" href="#valsec">2 Value</a><a class="chip" href="#fitsec">3 Verdict and your portfolio</a></nav>
+  <h2 class="part" id="techsec">1 · Technical <span class="sub">for a trade over days to weeks</span></h2>
   <div class="score" id="score"></div>
   <p class="note legend"><span class="sw good"></span>supports a buy <span class="sw bad"></span>argues against <span class="sw warn"></span>mixed <span class="sw mute"></span>context only · tags show the source: <b>exact</b> (Dhan figures), <b>derived</b> (calculated from them), <b>estimate</b> (approximation).</p>
   <div class="pnl"><div class="row" style="justify-content:space-between"><h2>All price levels on one scale</h2><span class="basis" id="lvlbasis"></span></div><div id="levels"></div></div>
-  <h2 style="margin-top:4px">Session: price, VWAP and order flow <span class="sub" id="sesswhen"></span></h2>
+  <div id="sesswrap"><h2 style="margin-top:4px">Session: price, VWAP and order flow <span class="sub" id="sesswhen"></span></h2>
   <p class="note" id="flownote"></p>
-  <div class="cards" id="flowcards"></div>
+  <div class="cards" id="flowcards"></div></div>
   <h2 style="margin-top:4px">Risk and scenarios</h2>
   <div class="cards">
     <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Monte Carlo · 21 days</h2><span class="basis">derived · 10,000 paths</span></div><div id="mc"></div></div>
     <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Value at Risk</h2><span class="basis">derived · per ₹1,00,000</span></div><div id="var"></div></div>
   </div>
-  <h2 style="margin-top:4px">Options</h2>
+  <div id="optwrap"><h2 style="margin-top:4px">Options</h2>
   <div class="cards">
     <div class="pnl"><div class="row" style="justify-content:space-between"><h2 id="gexh">Gamma by strike</h2><span class="basis">derived from Dhan chain</span></div><div id="opts"></div></div>
     <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Black-Scholes</h2><span class="basis">IV from Dhan chain</span></div>
@@ -116,13 +128,22 @@ details>summary{cursor:pointer;font-weight:600}
       <details><summary>Price grid and Greeks across spot</summary><div class="tw" id="bsSurf"></div><div id="bsGreeks"></div></details>
       <p class="note" id="bsNote"></p>
     </div>
-  </div>
-  <h2 style="margin-top:4px">Indicators, value and news</h2>
+  </div></div>
+  <div class="pnl"><h2>Indicators</h2><div id="readout"></div></div>
+  <h2 class="part" id="valsec">2 · Value <span class="sub">investor view, 6 to 12 months and longer</span></h2>
+  <div class="score" id="vscore"></div>
   <div class="cards">
-    <div class="pnl"><h2>Indicators</h2><div id="readout"></div></div>
-    <div class="pnl"><h2>Value and hedge</h2><div id="valhedge"></div></div>
-    <div class="pnl"><h2>News and filings</h2><div id="news"></div></div>
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Valuation</h2><span class="basis" id="valbasis">derived</span></div><div id="valhedge"></div></div>
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>What the investor back-test kept</h2><span class="basis">Dhan prices, 6 years</span></div><div id="vbt"></div></div>
   </div>
+  <div class="pnl"><details><summary>Fundamental factor back-test (NSE terminal)</summary><div id="fbt"></div></details></div>
+  <div class="pnl"><h2>News and filings</h2><div id="news"></div></div>
+  <h2 class="part" id="fitsec">3 · Combined verdict and your portfolio</h2>
+  <div class="cards">
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Does it suit your portfolio?</h2><span class="basis">your Drive notes</span></div><div id="fit"></div></div>
+    <div class="pnl"><h2>Your portfolio</h2><div id="mypf"></div></div>
+  </div>
+  <div class="pnl"><h2>Size and hedge</h2><div id="hedge"></div></div>
 </section>
 
 
@@ -197,7 +218,7 @@ function screener(){
   $("bargIN").innerHTML=bi.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs median</th><th class="n">3y growth</th></tr>`+bi.slice(0,6).map(([s,x])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td><td class="n bad">${pc((bySym[s]||{}).hi52,0)}</td><td class="n">${num(x.val.pe,0)} / ${num(x.val.pe_med,0)}</td><td class="n">${pc(x.val.g3,0)}</td></tr>`).join(""):`<tr><td class="note">None passes today.</td></tr>`;
   const gr=x=>{for(const y of [5,4]){const g=[x["eps_cagr"+y],x["rev_cagr"+y]].filter(v=>v!=null);if(g.length)return[Math.max(...g),y]}return[null,null]};
   const bu=(D.us.rows||[]).map(x=>[x,...gr(x)]).filter(([x,g])=>g>0.05&&(x.roe_avg||0)>0.15&&(x.off_high||0)<=-0.10&&x.pe_now>0&&x.pe_hist_median&&x.pe_now<x.pe_hist_median).sort((a,b)=>a[0].pe_now/a[0].pe_hist_median-b[0].pe_now/b[0].pe_hist_median);
-  $("bargUS").innerHTML=bu.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs usual</th><th class="n">Growth</th></tr>`+bu.slice(0,6).map(([x,g,y])=>`<tr><td>${esc(x.s)}</td><td class="n bad">${pc(x.off_high,0)}</td><td class="n">${num(x.pe_now,0)} / ${num(x.pe_hist_median,0)}</td><td class="n">${pc(g,0)} (${y}y)</td></tr>`).join("")+`<tr><td colspan="4" class="note">Fundamentals ${esc(D.us.asof||"")} (FMP). US prices on the desk come from Dhan.</td></tr>`:`<tr><td class="note">None passes today.</td></tr>`;
+  $("bargUS").innerHTML=bu.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs usual</th><th class="n">Growth</th></tr>`+bu.slice(0,6).map(([x,g,y])=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n bad">${pc(x.off_high,0)}</td><td class="n">${num(x.pe_now,0)} / ${num(x.pe_hist_median,0)}</td><td class="n">${pc(g,0)} (${y}y)</td></tr>`).join("")+`<tr><td colspan="4" class="note">Fundamentals ${esc(D.us.asof||"")} (FMP). US prices on the desk come from Dhan.</td></tr>`:`<tr><td class="note">None passes today.</td></tr>`;
   const mv=(m.movers||[]);
   $("movers").innerHTML=mv.length?`<tr><th>Stock</th><th class="n">Day</th><th>Possible reason</th></tr>`+mv.map(x=>{const h=((x.headlines||[])[0]||{}).title||(((D.n50[x.s]||{}).news||[])[0]||{}).title;return `<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n ${cls(x.r1)}">${pc(x.r1)}</td><td>${h?esc(h.slice(0,120)):'<span class="note">no headline found</span>'}</td></tr>`}).join(""):`<tr><td class="note">Movers appear after the nightly refresh.</td></tr>`;
   $("newsnote").textContent="A headline next to a move is a possible reason, not a proven cause."+((m.missing||[]).some(x=>String(x).includes("newsheadline"))?" Dhan's news service is not enabled on this account, so headlines come from NSE filings and the terminal's news feed.":"");
@@ -221,11 +242,15 @@ function ctx(sym){
   const oo=D.opts.rows[sym]||null,o=oo||D.opts.rows.NIFTY||null,t=today[sym]||{},r=bySym[sym]||{},Qd=D.quant||{};
   const last=(lf&&lf.last)||t.c||r.last||(a&&a.close)||(oo&&oo.spot);
   const fut=a&&/future/i.test(a.note||"")&&a.path&&a.path.length?a.path[a.path.length-1][1]:null;
-  return{sym,key,a,lf,fs,oo,o,t,r,last,fut,mc:(Qd.mc||{})[sym],v:(Qd.var||{})[sym],val:((D.n50[sym]||{}).val)||{}};
+  const usr=!t.c&&!r.last?usRow(sym):null,us=!!(usr||(!t.c&&!r.last&&(D.usd||{}).stocks&&D.usd.stocks[sym])),ud=USD[sym]||{},uq=(D.usq||{})[sym]||{};
+  if(us)return{sym,key,a:null,lf:null,fs:null,oo:null,o:null,t:{},r:{},us,usr,ud,uq,cur:"$",last:uq.price||(usr||{}).price,mc:ud.mc,v:ud.var,val:{}};
+  return{sym,key,a,lf,fs,oo,o,t,r,last,fut,cur:"₹",mc:(Qd.mc||{})[sym],v:(Qd.var||{})[sym],val:((D.n50[sym]||{}).val)||{}};
 }
 function call(c){
   const {t,r}=c,nw=tested.filter(k=>(t.new||[]).includes(k)),st=r.status;
-  if(!t.c&&!r.last)return{call:"No data",cl:"",why:"Not in the Nifty 500 data."};
+  if(c.us){const x=(c.ud||{}).tech||{};return x.vs200!=null?(x.vs50>0&&x.vs200>0?{call:"Uptrend",cl:"good",why:"Above its 50- and 200-day averages. The technical signals are tested on NSE stocks only, so this is context."}:x.vs50<0&&x.vs200<0?{call:"Downtrend",cl:"bad",why:"Below its 50- and 200-day averages (context: signals are tested on NSE only)."}:{call:"Mixed",cl:"warn",why:"Mixed trend (context: signals are tested on NSE only)."}):{call:"Context only",cl:"warn",why:`US price from Dhan${c.uq.t?" ("+esc(c.uq.t)+")":""}. Dhan has no US price history, so trend tests need the FMP key (or a year of recorded Dhan closes).`}}
+  if(IDXKEY[c.sym])return D.regimeUp==null?{call:"Index",cl:"",why:"Index: context only."}:{call:D.regimeUp?"Uptrend":"Downtrend",cl:D.regimeUp?"good":"bad",why:`Index. The Nifty is ${D.regimeUp?"above":"below"} its 200-day average, so the desk uses the ${D.regimeUp?"rising":"weak"}-market test results.`,idx:true};
+  if(!t.c&&!r.last)return{call:"No data",cl:"",why:"Not found in the Nifty 500 or the US list. Check the symbol (NSE symbols like TCS, US tickers like NVDA).",none:true};
   if(nw.length&&!["weak","fade"].includes(st)){const s=((sig[nw[0]]||{}).out||{})[side]||{};return{call:"Buy candidate",cl:"good",nw,why:`${esc(NAMES[nw[0]]||nw[0])}. Last 2 years: ${num(s.n,0)} cases, beat the Nifty ${Math.round((s.hit10||0)*100)}% within 10 days, average ${pc(s.x10)} vs ${pc(((D.model.base||{}).out||{})[side]?.x10)} for a typical stock.`}}
   if(nw.length)return{call:"Wait",cl:"warn",nw,why:"A tested signal fired, but the stock lags the Nifty 500."};
   if(["weak","fade"].includes(st))return{call:"Avoid",cl:"bad",why:`${st==="weak"?"Weak":"Fading"} against the Nifty 500, no tested entry signal.`};
@@ -236,13 +261,14 @@ function verdict(c){
   const {sym,t,r,last}=c,v=call(c),el=$("verdict"),a=t.atr;
   const lv=(v.call==="Buy candidate"||v.call==="Wait")&&a?` Stop ${num(last-2*a)} (${pc(-2*a/last)}), target ${num(last+3*a)} (${pc(3*a/last)}).`:"";
   const other=(t.new||[]).filter(k=>!tested.includes(k)&&!DIPS.includes(k));
-  el.innerHTML=`<div class="row"><h2>${esc(sym)}${last?" ₹"+num(last,2):""}</h2><span class="tag ${v.cl}">${v.call}</span><span class="sub">${r.rank!=null?`rank ${r.rank} · ${esc(r.status||"–")} · day ${pc(r.r1)} · month ${pc(r.r21)}`:c.a?"index":""}</span></div><p>${v.why}${lv}</p>${other.length?`<p class="note">Also fired but failed the back-test, so ignored: ${other.map(k=>esc(NAMES[k]||k)).join("; ")}.</p>`:""}<p class="note">Only back-tested signals set the verdict. Everything below is context: it helps you judge the entry, the risk and the levels.</p>`;
+  el.innerHTML=`<div class="row"><h2>${esc(sym)}${last?" "+c.cur+num(last,2):""}${c.us?' <span class="basis">US · Dhan</span>':""}</h2><span class="tag ${v.cl}">${v.call}</span><span class="sub">${c.us&&c.uq.prev?`day ${pc(c.uq.price/c.uq.prev-1)}`:""}${r.rank!=null?`rank ${r.rank} · ${esc(r.status||"–")} · day ${pc(r.r1)} · month ${pc(r.r21)}`:c.a?"index":""}</span></div><p>${v.why}${lv}</p>${other.length?`<p class="note">Also fired but failed the back-test, so ignored: ${other.map(k=>esc(NAMES[k]||k)).join("; ")}.</p>`:""}<p class="note">Only back-tested signals set the verdict. Everything below is context: it helps you judge the entry, the risk and the levels.</p>`;
   return v;
 }
 function scorecard(c,v){
   const {t,a,lf,o,oo,mc,val}=c,tiles=[];
   const T=(k,val_,d,cl,src)=>tiles.push(`<div class="sc ${cl||""}"><div class="k"><span>${k}</span><span>${src||""}</span></div><div class="v">${val_}</div><div class="d">${d}</div></div>`);
-  T("Verdict",v.call,"tested signals only",v.cl,"");
+  T("Technical",v.call,c.us?"context (NSE-tested signals)":"tested signals only",v.cl,"");
+  if(c.us){const x=(c.ud||{}).tech||{};if(x.rsi!=null)T("RSI (14)",x.rsi,"Dhan/FMP closes",x.rsi>70?"warn":x.rsi<30?"warn":"","derived");if(x.rs3!=null)T("3m vs S&P 500",(x.rs3>0?"+":"")+x.rs3+"%","vs SPY",x.rs3>0?"good":"bad","derived");if(x.hi52!=null)T("From 52w high",x.hi52+"%","",x.hi52<-30?"warn":"","derived");}
   if(t.vs200!=null){const up=t.vs50>0&&t.vs200>0,dn=t.vs50<0&&t.vs200<0;T("Trend",up?"Up":dn?"Down":"Mixed",`${t.vs50>0?"+":""}${t.vs50}% vs 50-day, ${t.vs200>0?"+":""}${t.vs200}% vs 200-day`,up?"good":dn?"bad":"warn","exact")}
   if(t.rs3!=null)T("Momentum",(t.rs3>0?"+":"")+t.rs3+"%",`3 months vs Nifty · RSI ${t.rsi??"–"}`,t.rs3>3?"good":t.rs3<-3?"bad":"warn","exact");
   if(val.gap!=null)T("Value",val.gap<=-0.03?"Cheap":val.gap<0.05?"Fair":"Expensive",`P/E ${num(val.pe,0)} vs median ${num(val.pe_med,0)}`,val.gap<=-0.03?"good":val.gap<0.05?"warn":"bad","derived");
@@ -341,48 +367,142 @@ function opts(c){
   if(o&&[...$("bsU").options].some(x=>x.value===(oo?sym:"NIFTY"))){$("bsU").value=oo?sym:"NIFTY";bsLoad()}
 }
 function readout(c){
-  const t=c.t,rows=[ // [label, value, min, max, good side, text]
+  const t=c.us?Object.assign({},(c.ud||{}).tech||{}):c.t,rows=[ // [label, value, min, max, good side, text]
     ["RSI (14)",t.rsi,0,100,null,t.rsi],["ADX (14)",t.adx,0,60,null,t.adx==null?null:`${t.adx} ${t.di||""}`],
     ["vs 50-day",t.vs50,-20,20,1,t.vs50==null?null:t.vs50+"%"],["vs 200-day",t.vs200,-40,40,1,t.vs200==null?null:t.vs200+"%"],
-    ["From 52w high",t.hi52,-60,0,1,t.hi52==null?null:t.hi52+"%"],["3m vs Nifty",t.rs3,-30,30,1,t.rs3==null?null:t.rs3+"%"],
+    ["From 52w high",t.hi52,-60,0,1,t.hi52==null?null:t.hi52+"%"],[c.us?"3m vs S&P 500":"3m vs Nifty",t.rs3,-30,30,1,t.rs3==null?null:t.rs3+"%"],
     ["Volume vs 50d",t.volx,0,3,null,t.volx==null?null:t.volx+"×"],["Daily range",t.atr_pct,0,6,null,t.atr_pct==null?null:t.atr_pct+"%"]];
   const bar=(v,lo,hi,g)=>{if(v==null)return"";const z=lo<0&&hi>0,f=x=>Math.max(0,Math.min(100,(x-lo)/(hi-lo)*100));const col=g?(v>=0?"var(--up)":"var(--down)"):"var(--accent2)";
     return z?`<i style="left:${Math.min(f(0),f(v))}%;width:${Math.abs(f(v)-f(0))}%;background:${col}"></i><i style="left:${f(0)}%;width:1px;background:var(--mute)"></i>`:`<i style="left:0;width:${f(v)}%;background:${col}"></i>`};
-  $("readout").innerHTML=rows.filter(r=>r[5]!=null).map(([k,v,lo,hi,g,txt])=>`<div class="ind"><span>${k}</span><div class="bar">${bar(v,lo,hi,g)}</div><span class="val">${esc(txt)}</span></div>`).join("")+(t.st||t.macd?`<p class="note">Supertrend ${esc(t.st||"–")} · MACD ${esc(t.macd||"–")}</p>`:"")||`<p class="note">Indicators cover the Nifty 500.</p>`;
-}
-function valhedge(c){
-  const {sym,val:v,t,last}=c;let h="";
-  if(v.gap!=null){const k=v.gap<=-0.03?["Reasonable to accumulate","good"]:v.gap<0.05?["Fairly priced","warn"]:["Expensive","bad"];
-    h+=`<p><span class="tag ${k[1]}">${k[0]}</span></p>${hbars([["needs/yr",(v.g_impl||0)*100,"var(--warn)"],["did 3y/yr",(v.g3||0)*100,(v.g3||0)>=(v.g_impl||0)?"var(--up)":"var(--down)"]],{fmt:x=>x.toFixed(0)+"%"})}<p class="note">Growth the price needs for 10 years (${pc(v.g_impl,0)}) vs what it delivered over 3 years (${pc(v.g3,0)}). P/E ${num(v.pe,0)} vs its median ${num(v.pe_med,0)}.</p>`}
-  else h+=`<p class="note">The investing view covers the Nifty 50.</p>`;
-  if(last&&t.atr)h+=`<p><b>Hedge</b>: 1) across asset classes first (gold, bond or liquid fund; US holdings gain when the rupee falls); 2) market or sector risk: short Nifty ${num(v.beta||1,2)}× the position; company risk: protective put${D.opts.rows[sym]?` (about ${num(D.opts.rows[sym].straddle/2/D.opts.rows[sym].spot*100,1)}% to ${esc(D.opts.rows[sym].expiry)})`:" (no stock options)"}; 3) stop ${num(last-2*t.atr)} (2 daily ranges). The bot's <code>hedge ${esc(sym)}</code> adds the sector and news check.</p>`;
-  $("valhedge").innerHTML=h;
+  $("readout").innerHTML=rows.filter(r=>r[5]!=null).map(([k,v,lo,hi,g,txt])=>`<div class="ind"><span>${k}</span><div class="bar">${bar(v,lo,hi,g)}</div><span class="val">${esc(txt)}</span></div>`).join("")+(t.st||t.macd?`<p class="note">Supertrend ${esc(t.st||"–")} · MACD ${esc(t.macd||"–")}</p>`:"")||`<p class="note">${c.us?"US indicators need price history (FMP key or recorded Dhan closes).":"Indicators cover the Nifty 500."}</p>`;
 }
 function news(c){
   const {sym}=c,x=D.n50[sym]||{},mv=((D.markets||{}).movers||[]).find(m=>m.s===sym),items=[...((mv||{}).headlines||[]),...(x.filings||[]),...(x.news||[])].slice(0,6);
   $("news").innerHTML=items.length?items.map(i=>`<p><span class="note">${esc(String(i.time||"").slice(0,10))}</span> ${esc(String(i.title||"").slice(0,140))}</p>`).join("")+`<p class="note">Possible reasons for a move, not proven causes.</p>`:`<p class="note">No headline or filing found (news covers the Nifty 50 and the day's biggest movers).</p>`;
 }
-function mcvar(sym){
-  const Qd=D.quant||{},m=(Qd.mc||{})[sym],cal=Qd.mc_calibration||{};
+/* ---------- value, portfolio fit and the combined verdict ---------- */
+const VM=D.vm||{},PF=D.pf||{},USD=(D.usd||{}).stocks||{},NV=D.nval||{};
+const usRow=s=>(D.us.rows||[]).find(x=>x.s===s);
+const vside=D.regimeUp===false?"weak":"up";
+const vTested=Object.keys(VM.rules||{}).filter(k=>VM.rules[k]["tested_"+vside]);
+function valueCall(c){ // tested rules first, then the passed fundamental factors; P/E vs its median is context (failed its test)
+  const on=((VM.today||{})[c.sym]||{}).on||[],hits=on.filter(k=>vTested.includes(k)),q=((VM.fundamental||{}).quintiles||{})[c.sym]||{};
+  const qv=Object.values(q),qhi=qv.filter(x=>x>=4).length,qlo=qv.filter(x=>x<=2).length;
+  let score=hits.length+0.5*qhi-0.5*qlo,why=[];
+  hits.forEach(k=>{const r=VM.rules[k][`12m_${vside}`];why.push(`${esc(VM.names[k])}: beat the average stock by ${pc(r.lift)} over 12 months (t ${r.t})`)});
+  Object.entries(q).forEach(([f,x])=>why.push(`${esc(f)}: ${x>=4?"cheap":x<=2?"expensive":"middle"} vs the Nifty 50 (quintile ${x}/5, a tested factor)`));
+  if(c.us){const u=c.usr||{};if(u.pe_now&&u.pe_hist_median){const r=u.pe_now/u.pe_hist_median;score+=r<0.85?0.5:r>1.2?-0.5:0;why.push(`P/E ${num(u.pe_now,0)} vs its usual ${num(u.pe_hist_median,0)} (context; untested for US)`)}}
+  const cl=score>=1?["Attractive","good"]:score>=0.5?["Supportive","good"]:score<=-0.5?["Unattractive","bad"]:["Neutral","warn"];
+  if(!why.length)why.push(c.us?"No US valuation history to test against.":vTested.length?"No tested investor rule is active today.":"No investor rule passed the back-test for this market.");
+  return{call:cl[0],cl:cl[1],score,why,hits};
+}
+function fitOf(c){
+  if(c.us){const f=(USD[c.sym]||{}).fit;return f?{v:f.v,why:f.why,w:null,c:[],us:true}:null}
+  return (PF.fit||{})[c.sym]||null;
+}
+const FITL={suits:["Suits your portfolio","good"],partly:["Partly suits","warn"],no:["Does not suit","bad"]};
+function combo(c,tv){
+  const vv=valueCall(c),f=fitOf(c),T=tv.call==="Buy candidate"?1:tv.call==="Avoid"?-1:0,F=f?{suits:1,partly:0,no:-1}[f.v]:0;
+  let fin,cl,why;
+  if(tv.none){fin="No data";cl="";why=tv.why}
+  else if(tv.idx){fin=tv.call;cl=tv.cl;why="Indices are scored for trend only; value and portfolio fit apply to stocks."}
+  else if(f&&F<0){fin="Don't add now";cl="bad";why="It does not suit your portfolio: "+esc((f.why||[])[0]||"")+"."}
+  else if(T===1&&vv.score>=0){fin="Buy for a trade";cl="good";why="A tested technical signal, value is not against it"+(f?", and it "+(F>0?"suits":"partly suits")+" your portfolio":"")+"."}
+  else if(vv.score>=1&&T>=0){fin="Accumulate slowly";cl="good";why="Tested investor rules support it and the trend is not against it. Buy in parts over weeks."}
+  else if(T===-1&&vv.score<0.5){fin="Avoid";cl="bad";why="Weak trend and no tested value support."}
+  else if(T===-1&&vv.score>=0.5){fin="Wait for the trend";cl="warn";why="Value is supportive but the trend is weak; tested dip signals in the screener time entries better."}
+  else{fin="Wait";cl="warn";why="No tested signal on either side today."}
+  const tile=(k,v,cl,d)=>`<div class="sc ${cl}"><div class="k"><span>${k}</span></div><div class="v" style="font-size:15px">${v}</div><div class="d">${d}</div></div>`;
+  $("combo").innerHTML=`<div class="row" style="justify-content:space-between"><h2>Combined verdict</h2><span class="basis">technical + value + your portfolio</span></div><div class="row" style="gap:12px;align-items:baseline"><span class="final ${cl}">${fin}</span><span>${why}</span></div><div class="combo">${tile("1 Technical",tv.call,tv.cl,"tested signals, days–weeks")}${tile("2 Value",vv.call,vv.cl,"tested investor rules, 6–12 months")}${tile("3 Your portfolio",f?FITL[f.v][0]:"Not scored",f?FITL[f.v][1]:"",f?(f.w!=null?`start at ${Math.round(f.w*100)}%`:"US allocation check"):"needs Dhan history")}</div>`;
+  return{vv,f};
+}
+function vscore(c,vv){
+  const tiles=[],T=(k,v,d,cl,src)=>tiles.push(`<div class="sc ${cl||""}"><div class="k"><span>${k}</span><span>${src||""}</span></div><div class="v">${v}</div><div class="d">${d}</div></div>`);
+  T("Value call",vv.call,vv.hits.length?vv.hits.length+" tested rule"+(vv.hits.length>1?"s":"")+" active":"tested rules only",vv.cl,"");
+  const q=((VM.fundamental||{}).quintiles||{})[c.sym]||{};
+  Object.entries(q).forEach(([f,x])=>T(f.replace(" V/P",""),x+"/5",x>=4?"cheaper than most Nifty 50":x<=2?"dearer than most":"middle",x>=4?"good":x<=2?"bad":"warn","tested"));
+  const v=c.val||{};
+  if(v.pe&&v.pe_med)T("P/E vs its median",num(v.pe,0)+" / "+num(v.pe_med,0),"context: this failed its back-test",v.pe<v.pe_med*0.9?"good":v.pe>v.pe_med*1.1?"bad":"warn","exact");
+  if(v.g_impl!=null&&v.g3!=null)T("Growth priced in",pc(v.g_impl,0)+"/yr",`delivered ${pc(v.g3,0)}/yr over 3 years`,v.g3>=v.g_impl?"good":"bad","derived");
+  const dd=(VM.dd||{})[c.sym];if(dd!=null)T("From 52-week high",pc(dd,0),"Dhan closes",dd<=-0.3?"warn":"","exact");
+  const fd=(NV[c.sym]||{}).fund||{};if(fd.roe!=null)T("Return on equity",pc(fd.roe,0),`normal ${pc(fd.roe_n,0)} · cost of equity ${pc(fd.ke,1)}`,fd.roe>(fd.ke||0.12)?"good":"bad","derived");
+  if(c.us){const u=c.usr||{};if(u.pe_now)T("P/E vs usual",num(u.pe_now,0)+" / "+num(u.pe_hist_median,0),"FMP fundamentals",u.pe_now<u.pe_hist_median?"good":"bad","exact");
+    const g=[u.eps_cagr5,u.eps_cagr4,u.rev_cagr4].find(x=>x!=null);if(g!=null)T("Growth",pc(g,0)+"/yr","earnings or revenue, 4–5 years",g>0.08?"good":g<0?"bad":"warn","exact");
+    if(u.roe_avg!=null)T("ROE (avg)",pc(u.roe_avg,0),"FMP",u.roe_avg>0.15?"good":"warn","exact");if(u.off_high!=null)T("From year high",pc(u.off_high,0),"FMP",u.off_high<=-0.2?"warn":"","exact")}
+  $("vscore").innerHTML=tiles.join("");
+}
+function valuation(c){
+  const {sym,val:v}=c;let h="";
+  if(v.gap!=null){const k=v.gap<=-0.03?["Priced below delivered growth","good"]:v.gap<0.05?["Fairly priced","warn"]:["Priced above delivered growth","bad"];
+    h+=`<p><span class="tag ${k[1]}">${k[0]}</span></p>${hbars([["needs/yr",(v.g_impl||0)*100,"var(--warn)"],["did 3y/yr",(v.g3||0)*100,(v.g3||0)>=(v.g_impl||0)?"var(--up)":"var(--down)"]])}<p class="note">Growth the price needs for 10 years (${pc(v.g_impl,0)}, reverse DCF at a ${pc(v.r,1)} cost of equity) vs what it delivered (${pc(v.g3,0)}). ${v.fair_at_g3?`At delivered growth the value is about ₹${num(v.fair_at_g3,0)}.`:""}</p>`}
+  else if(c.us&&c.usr){const u=c.usr;h+=`<p>P/E ${num(u.pe_now,1)} vs its usual ${num(u.pe_hist_median,1)} · price/free cash flow ${num(u.pfcf,1)} · dividend yield ${pc(u.div_yield,1)} · net margin ${pc(u.net_margin,0)}.</p><p class="note">Fundamentals from FMP (${esc(D.us.asof||"")}). The investor back-test covers NSE stocks only.</p>`}
+  else h+=`<p class="note">Detailed valuation covers the Nifty 50; the investor back-test (right) covers the Nifty 500.</p>`;
+  const fd=(NV[sym]||{}).fund||{};if(fd.verdict)h+=`<p class="note">Sustainable-growth check (NSE terminal): ${esc(fd.verdict)}.</p>`;
+  $("valhedge").innerHTML=h;$("valbasis").textContent=c.us?"FMP fundamentals":"NSE terminal (quarterly results)";
+}
+function vbt(c){
+  const R=VM.rules||{},ks=Object.keys(R);if(!ks.length){$("vbt").innerHTML=`<p class="note">Appears after the next back-test run.</p>`;return}
+  const on=((VM.today||{})[c.sym]||{}).on||[];
+  const rows=ks.filter(k=>k!=="lt_winner").map(k=>{const x=R[k][`12m_${vside}`]||{};return[k,x.lift,R[k]["tested_"+vside],x]}).sort((a,b)=>(b[1]||0)-(a[1]||0));
+  const mx=Math.max(...rows.map(r=>Math.abs(r[1]||0)))||1,W=320,rh=16,L=150,C=L+(W-L)/2,H=rows.length*rh+6;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="12-month lift by rule"><line x1="${C}" x2="${C}" y1="0" y2="${H}" stroke="var(--line)"/>${rows.map(([k,l,ok],i)=>{const y=i*rh+3,w=Math.abs(l||0)/mx*((W-L)/2-4);return `<text x="${L-4}" y="${y+10}" text-anchor="end" style="${on.includes(k)?"fill:var(--ink);font-weight:600":""}">${on.includes(k)?"● ":""}${esc((VM.names[k]||k).slice(0,26))}</text><rect x="${(l||0)>=0?C:C-w}" y="${y}" width="${w.toFixed(1)}" height="${rh-5}" rx="2" fill="${ok?"var(--up)":(l||0)<0?"var(--down)":"var(--bar)"}"/>`}).join("")}</svg>`;
+  $("vbt").innerHTML=`${svg}<p class="note">Extra 12-month return vs the average stock in ${vside==="up"?"rising":"weak"} markets (today's condition). Green bars passed: positive in both halves of ${esc(VM.from||"")}–${esc(VM.asof||"")} and t ≥ 2. ● = active for ${esc(c.sym)} today.</p><details><summary>All rules, both market conditions</summary><div class="tw"><table><tr><th>Rule</th><th class="n">Rising 12m</th><th class="n">t</th><th class="n">Weak 12m</th><th class="n">t</th></tr>${ks.map(k=>{const u=R[k]["12m_up"]||{},w=R[k]["12m_weak"]||{};return `<tr><td>${esc(VM.names[k])}</td><td class="n ${R[k].tested_up?"ok":""}">${pc(u.lift)}</td><td class="n">${u.t??"–"}</td><td class="n ${R[k].tested_weak?"ok":""}">${pc(w.lift)}</td><td class="n">${w.t??"–"}</td></tr>`}).join("")}</table></div><p class="note">${esc(VM.method||"")}</p></details>`;
+}
+function fbt(){
+  const F=VM.fundamental||{},t=F.tests||[];
+  $("fbt").innerHTML=t.length?`<div class="tw"><table><tr><th>Factor (12 months)</th><th class="n">IC</th><th class="n">t</th><th class="n">Hit</th><th>Result</th></tr>${t.map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${x.ic==null?"–":x.ic.toFixed(3)}</td><td class="n">${x.t==null?"–":x.t.toFixed(2)}</td><td class="n">${x.hit==null?"–":Math.round(x.hit*100)+"%"}</td><td class="${x.passed?"ok":""}">${x.passed?"passed":"failed"}</td></tr>`).join("")}</table></div><p class="note">${esc(F.note||"")} Factors with a negative t (quality, "no profit spike") lost money in this period; they are not used. Graham-style screens also worked poorly for years (your Damodaran notes).</p>`:`<p class="note">No fundamental back-test in the terminal data.</p>`;
+}
+function investPicks(){
+  const T=VM.today||{},rank={suits:0,partly:1,no:3},rows=[];
+  Object.entries(T).forEach(([s,x])=>{const hits=(x.on||[]).filter(k=>vTested.includes(k));if(!hits.length)return;const f=(PF.fit||{})[s];rows.push([f?rank[f.v]:2,-hits.length,s,hits,f])});
+  rows.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  $("invest").innerHTML=!vTested.length?`<tr><td class="note">No investor rule passed the back-test for the current market${VM.rules?"":" (runs nightly)"}.</td></tr>`:rows.length?`<tr><th>Stock</th><th>Rule</th><th>Your portfolio</th></tr>`+rows.slice(0,10).map(([,,s,h,f])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td><td>${esc(VM.names[h[0]])}</td><td>${f?`<span class="tag ${FITL[f.v][1]}" style="font-size:11px">${FITL[f.v][0]}</span>`:"–"}</td></tr>`).join(""):`<tr><td class="note">None today.</td></tr>`;
+}
+function fitCard(c){
+  const f=fitOf(c),src=PF.check_src||{};
+  if(!f){$("fit").innerHTML=`<p class="note">${IDXKEY[c.sym]?"Fit applies to stocks, not indices.":c.us?"No US data yet.":!PF.fit?"Appears after the next nightly run reads your Dhan holdings.":"Needs a year of Dhan history for this stock."}</p>`;return}
+  const L=FITL[f.v];
+  let h=`<p><span class="tag ${L[1]}">${L[0]}</span> ${f.w!=null&&f.v!=="no"?`Suggested start: <b>${Math.round(f.w*100)}%</b> of the portfolio.`:""}</p>`;
+  if(f.c&&f.c.length)h+=`<div class="tw"><table><tr><th>Check</th><th>Value</th><th>Needs</th><th></th></tr>${f.c.map(([k,ok,v,need])=>`<tr><td title="${esc(src[k]||"")}">${esc(k)}</td><td>${esc(v)}</td><td class="note">${esc(need)}</td><td class="${ok?"ok":"no"}">${ok?"✓":"✗"}</td></tr>`).join("")}</table></div>`;
+  else h+=(f.why||[]).map(w=>`<p>${esc(w)}</p>`).join("");
+  h+=`<p class="note">${esc(PF.basis||"")} Rules from your portfolio notes (correlation, two-asset volatility, beta, Jensen's α and information ratio, ~30 holdings, utility U = E(R) − ½Aσ², VaR). Caps and bands the notes do not give are assumptions (stock 10%, sector 25%, start 5%): edit config/portfolio.json.</p>`;
+  $("fit").innerHTML=h;
+}
+function mypf(){
+  const s=PF.summary||{};if(!PF.summary){$("mypf").innerHTML=`<p class="note">Appears after the next nightly run reads your Dhan holdings.</p>`;return}
+  if(s.proxy){$("mypf").innerHTML=`<p>No holdings found in your Dhan account${(PF.notes||[]).length?` (${esc(PF.notes[0]).slice(0,90)})`:""}. Fit is measured against the Nifty 50 instead.</p><p class="note">Holdings outside Dhan (mutual funds, other brokers) can be listed in config/portfolio.json under "extra".</p>`;return}
+  const sec=Object.entries(s.sectors||{}).slice(0,8);
+  $("mypf").innerHTML=`<div class="tiles"><div class="tile"><div class="k">Holdings</div><div class="v">${s.count}</div><div class="d">notes: ~30 for most of the benefit</div></div><div class="tile"><div class="k">Value</div><div class="v">₹${cmp(s.value_inr)}</div></div><div class="tile"><div class="k">Beta</div><div class="v">${s.beta??"–"}</div></div><div class="tile"><div class="k">Volatility / yr</div><div class="v">${pc(s.vol,0)}</div><div class="d">worst day 95%: ${pc(-s.var95_1d,1)}</div></div></div>${hbars(sec.map(([k,v])=>[k.slice(0,10),v*100,v>0.25?"var(--down)":"var(--accent)"]))}<p class="note">Sector weights; red is over the 25% cap (assumed). US share ${pc(s.us_share,0)}.</p>`;
+}
+function hedgeCard(c,cb){
+  const {sym,t,last,val:v}=c,f=cb.f;let h="";
+  if(f&&f.w!=null&&f.v!=="no")h+=`<p><b>Size</b>: start at ${Math.round(f.w*100)}% of the portfolio${(PF.summary||{}).value_inr&&!(PF.summary||{}).proxy?` (about ₹${cmp(f.w*PF.summary.value_inr)})`:""}; add the rest in parts if the verdict holds.</p>`;
+  if(last&&t.atr)h+=`<p><b>Hedge</b>, in the order from your notes: 1) across asset classes first (gold, bonds or a liquid fund; US holdings gain when the rupee falls); 2) market or sector risk: short Nifty ${num(v.beta||1,2)}× the position; company risk: protective put${D.opts.rows[sym]?` (about ${num(D.opts.rows[sym].straddle/2/D.opts.rows[sym].spot*100,1)}% to ${esc(D.opts.rows[sym].expiry)})`:" (no stock options)"}; 3) stop ${num(last-2*t.atr)} (2 daily ranges). The bot's <code>hedge ${esc(sym)}</code> adds the sector and news check.</p>`;
+  else if(c.us)h+=`<p><b>Hedge</b>: US positions add currency risk (they gain when the rupee falls). No US option chains are available from Dhan or a free source, so no option hedge is shown.</p>`;
+  $("hedge").innerHTML=h||`<p class="note">No sizing or hedge data for ${esc(sym)}.</p>`;
+}
+
+function mcvar(c){
+  const Qd=D.quant||{},m=c.mc,cal=Qd.mc_calibration||{},cur=c.cur;
   if(m){const fan=m.fan;let ch="";
     if(fan){const W=320,H=150,lo=Math.min(...fan.map(f=>f[0]),m.last),hi=Math.max(...fan.map(f=>f[4]),m.last),X=i=>6+i/(fan.length-1||1)*(W-12),Y=v=>H-14-(v-lo)/(hi-lo||1)*(H-26);
       const band=(a,b,c)=>`<path d="${fan.map((f,i)=>(i?"L":"M")+X(i)+" "+Y(f[a])).join("")}${fan.map((f,i)=>"L"+X(fan.length-1-i)+" "+Y(fan[fan.length-1-i][b])).join("")}Z" fill="${c}" opacity=".35"/>`;
       ch=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monte Carlo fan">${band(0,4,"var(--bar)")}${band(1,3,"var(--accent)")}<path d="${fan.map((f,i)=>(i?"L":"M")+X(i)+" "+Y(f[2])).join("")}" fill="none" stroke="var(--accent)" stroke-width="1.5"/><line x1="6" x2="${W-6}" y1="${Y(m.last)}" y2="${Y(m.last)}" stroke="var(--ink)" stroke-dasharray="3 3"/><text x="6" y="${H-2}">${num(lo,0)}</text><text x="${W-6}" y="10" text-anchor="end">${num(hi,0)}</text></svg>`}
-    $("mc").innerHTML=`<p>From ₹${num(m.last,2)}: median ₹${num(m.p50,0)}; middle 50% ₹${num(m.p25,0)}–${num(m.p75,0)}; 90% range ₹${num(m.p5,0)}–${num(m.p95,0)}.</p><p>Chance higher in 21 days <b>${Math.round(m.p_up*100)}%</b>${m.p_target_first!=null?` · target before stop <b>${Math.round(m.p_target_first*100)}%</b>, stop first ${Math.round(m.p_stop_first*100)}%`:""}.</p>${ch}<p class="note">${cal.inside_90!=null?`Check: on Nifty 50 history the 90% range held ${Math.round(cal.inside_90*100)}% of the time (${cal.cases} cases). `:""}Resamples the stock's own last 2 years of daily moves in 5-day blocks.</p>`}
-  else $("mc").innerHTML=`<p class="note">Monte Carlo covers stocks with 300+ days of Dhan history and the Nifty (from tonight's run).</p>`;
-  const v=(Qd.var||{})[sym],bt=Qd.var_backtest||{};
+    $("mc").innerHTML=`<p>From ${cur}${num(m.last,2)}: median ${cur}${num(m.p50,0)}; middle 50% ${cur}${num(m.p25,0)}–${num(m.p75,0)}; 90% range ${cur}${num(m.p5,0)}–${num(m.p95,0)}.</p><p>Chance higher in 21 days <b>${Math.round(m.p_up*100)}%</b>${m.p_target_first!=null?` · target before stop <b>${Math.round(m.p_target_first*100)}%</b>, stop first ${Math.round(m.p_stop_first*100)}%`:""}.</p>${ch}<p class="note">${cal.inside_90!=null?`Check: on Nifty 50 history the 90% range held ${Math.round(cal.inside_90*100)}% of the time (${cal.cases} cases). `:""}Resamples the stock's own last 2 years of daily moves in 5-day blocks.</p>`}
+  else $("mc").innerHTML=`<p class="note">${c.us?"US Monte Carlo needs 300+ days of history (FMP key, or Dhan closes recorded over time).":"Monte Carlo covers stocks with 300+ days of Dhan history and the Nifty."}</p>`;
+  const v=c.v,bt=Qd.var_backtest||{};
   if(v){const r=(k,lab)=>`<tr><td>${lab}</td><td class="n">₹${num(v["95"][k],0)}</td><td class="n">₹${num(v["99"][k],0)}</td></tr>`;
     $("var").innerHTML=`<div class="tw"><table><tr><th>Method</th><th class="n">95%</th><th class="n">99%</th></tr>${r("hist_1d","Historical, 1 day")}${r("param_1d","Normal, 1 day")}${r("mc_1d","Simulated, 1 day")}${r("es_1d","Expected shortfall, 1 day")}${r("mc_10d","Simulated, 10 days")}${r("mc_es_10d","Expected shortfall, 10 days")}</table></div>${hist(v.loss_hist_10d)}<p class="note">${bt.stocks?`Check: 99% historical VaR passed the exceedance test on ${bt.passed} of ${bt.stocks} Nifty 50 stocks over 2 years.`:""}</p>`}
-  else $("var").innerHTML=`<p class="note">VaR covers the Nifty 50 stocks and the Nifty (nightly).</p>`;
+  else $("var").innerHTML=`<p class="note">${c.us?"US VaR needs 300+ days of history.":"VaR covers the Nifty 50 stocks and the Nifty (nightly)."}</p>`;
 }
 function hist(h){if(!h)return"";const c=h.counts,e=h.edges,mx=Math.max(...c)||1,W=320,H=90,bw=(W-12)/c.length;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="10-day return distribution">${c.map((n,i)=>`<rect x="${6+i*bw}" y="${H-14-n/mx*(H-24)}" width="${bw-1}" height="${n/mx*(H-24)}" fill="${e[i+1]<0?"var(--down)":"var(--up)"}"/>`).join("")}<text x="6" y="${H-2}">${pc(e[0],0)}</text><text x="${W-6}" y="${H-2}" text-anchor="end">${pc(e[e.length-1],0)}</text></svg>`}
-function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;$("q").value=sym;const c=ctx(sym),v=verdict(c);scorecard(c,v);levels(c);flowcards(c);mcvar(sym);opts(c);readout(c);valhedge(c);news(c);try{localStorage.setItem("td-last",sym)}catch(e){}}
+function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;$("q").value=sym;const c=ctx(sym),v=verdict(c),cb=combo(c,v);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);try{localStorage.setItem("td-last",sym)}catch(e){}}
 function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));["screener","analyze"].forEach(x=>$(x).hidden=t!==x);if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
 document.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b){tab("analyze");show(b.dataset.s);window.scrollTo(0,0)}});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter")show(e.target.value)});
-$("quick").innerHTML=["NIFTY","BANKNIFTY","TCS","RELIANCE","HDFCBANK"].map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join("");
+$("quick").innerHTML=["NIFTY","BANKNIFTY","TCS","RELIANCE","HDFCBANK","NVDA"].map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join("");
 /* ---------- Black-Scholes and portfolio ---------- */
 const erf=x=>{const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y};
 const N=x=>0.5*(1+erf(x/Math.SQRT2)),n=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
@@ -419,5 +539,5 @@ function quantTab(){
 }
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
-screener();bsInit();quantTab();let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+screener();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 </script>

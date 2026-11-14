@@ -43,7 +43,14 @@ class DhanError(RuntimeError):
 
 def config() -> dict:
     c = json.loads((ROOT / "config/us_watch.json").read_text(encoding="utf-8"))
-    return {k: v for k, v in c.items() if not k.startswith("_")}
+    out = {k: v for k, v in c.items() if not k.startswith("_")}
+    try:                                           # the desk's US list: priced by Dhan too, but no move alerts
+        for r in json.loads((ROOT / "docs/us-value.json").read_text(encoding="utf-8")).get("rows", []):
+            if r.get("s") and r["s"] not in out:
+                out[r["s"]] = {"name": r.get("name") or r["s"], "move_pct": 1000, "quiet": True}
+    except Exception:
+        pass
+    return out
 
 
 def security_ids(symbols: list) -> dict:
@@ -203,9 +210,22 @@ def load_state(day: str) -> dict:
                                        check=True, capture_output=True, text=True).stdout)
         if st.get("d") == day:
             return st
+        return {"d": day, "sent": [], "hist": st.get("hist", {})}     # daily closes carry over
     except Exception:
         pass
-    return {"d": day, "sent": []}
+    return {"d": day, "sent": [], "hist": {}}
+
+
+def add_closes(hist: dict, day: str, quotes: dict, keep: int = 800) -> dict:
+    """Daily [high, low, close] per US symbol from Dhan's feed; builds a price history over time."""
+    for s, q in quotes.items():
+        if q.get("price"):
+            h = hist.setdefault(s, {})
+            h[day] = [round(q.get("high") or q["price"], 4), round(q.get("low") or q["price"], 4), round(q["price"], 4)]
+            if len(h) > keep:
+                for d in sorted(h)[:-keep]:
+                    del h[d]
+    return hist
 
 
 _HAS_COMMIT = {}
@@ -278,6 +298,8 @@ def main() -> int:
         feed.close()
         msg = ["<b>US price check (Dhan)</b> · " + dt.datetime.now(IST).strftime("%d %b %H:%M IST")]
         for sym, c in cfg.items():
+            if c.get("quiet"):
+                continue
             q = feed.q.get(sym)
             msg.append(line(sym, c, q) if q and q["price"] else f"{esc(c.get('name', sym))}: no price from Dhan yet (market closed?)")
         print("\n".join(msg))
@@ -320,8 +342,10 @@ def main() -> int:
             if time.time() - _PUB.get("t", 0) >= 60 and any(q["price"] for q in feed.q.values()):
                 _PUB["t"] = time.time()
                 stamp = now.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")
-                save_state({"d": day, "sent": sorted(w.sent),
-                            "quotes": {s: {"price": q["price"], "prev": q["prev"], "t": stamp} for s, q in feed.q.items() if q["price"]}})
+                st["hist"] = add_closes(st.get("hist", {}), day, feed.q)
+                save_state({"d": day, "sent": sorted(w.sent), "hist": st["hist"],
+                            "quotes": {s: {"price": q["price"], "prev": q["prev"], "high": q["high"], "low": q["low"], "t": stamp}
+                                       for s, q in feed.q.items() if q["price"]}})
             bot.status_line = f"Last check {now.astimezone(IST):%H:%M:%S} IST."
             if time.time() - _PUB.get("r", 0) >= 60:          # the listener edits alerts; pick them up each minute
                 _PUB["r"] = time.time()
@@ -365,19 +389,22 @@ def main() -> int:
         msgs += bot.check(when)
         if "open" not in w.sent and now.time() >= dt.time(9, 35) and any(q["price"] for q in feed.q.values()):
             w.sent.add("open")
-            msgs.insert(0, "<b>US market open (Dhan)</b>\n" + "\n".join(line(s, cfg[s], q) for s, q in feed.q.items() if q["price"]))
+            msgs.insert(0, "<b>US market open (Dhan)</b>\n" + "\n".join(line(s, cfg[s], q) for s, q in feed.q.items() if q["price"] and not cfg[s].get("quiet")))
         if msgs:
             T.send("\n".join(msgs))
         if len(w.sent) != n0:
-            save_state({"d": day, "sent": sorted(w.sent), "quotes": {s: {"price": q["price"], "prev": q["prev"],
+            save_state({"d": day, "sent": sorted(w.sent), "hist": st.get("hist", {}), "quotes": {s: {"price": q["price"], "prev": q["prev"],
                         "t": now.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")} for s, q in feed.q.items() if q["price"]}})
     now = dt.datetime.now(NY)
     if feed and now.time() >= dt.time(16, 0) and "close" not in w.sent:
         feed.pump(5)
         if T.send("<b>US close (Dhan)</b> · " + now.astimezone(IST).strftime("%H:%M IST") + "\n" +
-                  "\n".join(line(s, cfg[s], q) for s, q in feed.q.items() if q["price"])):
+                  "\n".join(line(s, cfg[s], q) for s, q in feed.q.items() if q["price"] and not cfg[s].get("quiet"))):
             w.sent.add("close")
-            save_state({"d": day, "sent": sorted(w.sent)})
+        st["hist"] = add_closes(st.get("hist", {}), day, feed.q)            # the closing prices become the day's bar
+        save_state({"d": day, "sent": sorted(w.sent), "hist": st["hist"],
+                    "quotes": {s: {"price": q["price"], "prev": q["prev"], "high": q["high"], "low": q["low"],
+                               "t": now.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")} for s, q in feed.q.items() if q["price"]}})
     if feed:
         feed.close()
     print("done")

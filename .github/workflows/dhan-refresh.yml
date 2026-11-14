@@ -33,13 +33,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html --with-options --with-n500 --with-markets --with-auction --with-tech
+      - name: US desk data (Dhan US closes; FMP history if the FMP_API_KEY secret exists)
+        env:
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        run: cd scripts/dhan_refresh && python us_model.py || true
       - name: Commit if changed
         run: |
-          git add -N docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json data/nifty500.csv 2>/dev/null || true
+          git add -N docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json data/us-history.json data/nifty500.csv 2>/dev/null || true
           if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          git add docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/nse-terminal.html data/nifty500.csv 2>/dev/null || git add docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html
+          for f in docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/nse-terminal.html data/nifty500.csv data/us-history.json; do [ -e "$f" ] && git add "$f"; done
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git pull -q --rebase -X theirs origin main || { git rebase --abort; git pull -q --no-rebase -X ours origin main; }
           git push

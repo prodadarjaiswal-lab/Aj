@@ -29,6 +29,14 @@ def _branch(branch: str, path: str):
         return None
 
 
+def _vm(v: dict) -> dict:
+    """Value model, trimmed for the page: rules and today's active rules (non-empty only)."""
+    if not v:
+        return {}
+    return {k: v.get(k) for k in ("asof", "from", "stocks", "split", "names", "method", "rules", "fundamental")} | \
+        {"today": {s: x for s, x in (v.get("today") or {}).items() if x.get("on")}, "dd": {s: x.get("dd") for s, x in (v.get("today") or {}).items()}}
+
+
 def build(out: Path) -> dict:
     import datetime as dt
     import refresh as R
@@ -68,7 +76,12 @@ def build(out: Path) -> dict:
             "flow": flow if flow.get("d") == today_ist else {}, "flowState": {"s": fs},
             "track": {"summary": track.get("summary", {})}, "us": _j(ROOT / "docs/us-value.json", {"rows": []}),
             "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx,
-            "quant": _j(ROOT / "docs/quant.json", {})}
+            "quant": _j(ROOT / "docs/quant.json", {}),
+            "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
+            "usd": _j(ROOT / "docs/us-desk.json", {}),
+            "nval": {s: {"sector": v.get("sector"), "val": v.get("val"),
+                         "fund": {k: (nset.get("fund", {}).get("stk", {}).get(s) or {}).get(k) for k in ("pb", "rim_vp", "roe", "roe_n", "g_sus", "ke", "v_perm", "verdict")}}
+                     for s, v in nset.get("stocks", {}).items()}}
     html = (ROOT / "docs/technical-desk.html").read_text(encoding="utf-8")
     blob = json.dumps(data, separators=(",", ":"), default=str).replace("</", "<\\/")
     html = re.sub(r"/\*DATA\*/.*?/\*DATA\*/", lambda m: "/*DATA*/" + blob + "/*DATA*/", html, count=1, flags=re.S)

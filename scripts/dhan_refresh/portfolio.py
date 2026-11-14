@@ -273,7 +273,7 @@ def run(client, data: dict, nifty: dict, root: Path, nset: dict, us_px: dict | N
         pb = ba["beta"] if ba else None
     elif proxy:
         pb = 1.0
-    out = {}
+    out, check_src = {}, {}
     for s, r in rets.items():
         o = data.get(s) or {}
         tcr = None
@@ -282,8 +282,9 @@ def run(client, data: dict, nifty: dict, root: Path, nset: dict, us_px: dict | N
             tcr = _mean(tv) / 1e7 if tv else None
         f = fit(s, r, p, m, held if not proxy else {}, sectors, cfg, rf, erp, tcr, pb)
         out[s] = {k: f[k] for k in ("v", "w", "rho", "sig", "beta", "why") if k in f}
-        if s in ("TCS",) or s in held:
-            out[s]["checks"] = f.get("checks", [])
+        out[s]["c"] = [[x["k"], 1 if x["ok"] else 0, x["v"], x["need"]] for x in f.get("checks", [])]
+        for x in f.get("checks", []):
+            check_src[x["k"]] = x["src"]
     secw = {}
     for h in hold:
         k = "US stocks" if h["mkt"] == "US" else (sectors.get(h["sym"]) or "Other")
@@ -295,7 +296,7 @@ def run(client, data: dict, nifty: dict, root: Path, nset: dict, us_px: dict | N
                "proxy": proxy, "usdinr": usdinr}
     res = {"asof": nifty["d"][-1], "config": cfg, "sources": SOURCE, "notes": book["notes"],
            "holdings": [{k: h.get(k) for k in ("sym", "mkt", "qty", "avg", "px", "value", "manual")} for h in hold],
-           "weights": {k: round(v, 4) for k, v in held.items()}, "summary": summary, "fit": out,
+           "weights": {k: round(v, 4) for k, v in held.items()}, "summary": summary, "fit": out, "check_src": check_src,
            "basis": ("Fit measured against your Dhan holdings." if not proxy else
                      "No holdings found in Dhan, so fit is measured against the Nifty 50 as a stand-in portfolio.")}
     (root / "docs/portfolio.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")
