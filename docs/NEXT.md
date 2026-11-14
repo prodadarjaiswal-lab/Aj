@@ -120,6 +120,12 @@ Rules:
 - ✅ **Research factors tested on 6 years:** 6-month relative strength, accumulation and the trend stack were positive in both halves but t 1.7–1.8 (just short of 2), so they are context. "Near the 52-week high" showed nothing.
 - **Score counts only tested evidence;** everything else is a filter.
 
+## 14 Nov, part 5: daily digest, journal review, chat cleanup
+- ✅ **Daily Telegram digest** after the nightly Dhan run (once per trading day): market condition, best-evidence stocks, follow-ups on stocks you researched, strong stocks and industries you haven't looked at, a habit check, and the desk link. First one sent 14 Nov.
+- ✅ **Journal review** (`daily_digest.py`), on the desk ("Your research journal") and via the bot's `review` command: what happened since you looked, follow-ups, blind spots, habits.
+- ✅ **Bug fixed: the journal was being wiped.** Three jobs save the bot state, and the last writer overwrote the others' journal entries; the state had no journal at all. Saves now merge journals. Questions asked before 14 Nov are lost.
+- ✅ **Telegram chat cleared** (ids 1–26; Telegram only lets bots delete messages under 48 hours old) and the desk links re-pinned. `telegram-clean.yml` does it again on demand.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.
