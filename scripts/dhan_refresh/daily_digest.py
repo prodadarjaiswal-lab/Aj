@@ -105,6 +105,9 @@ def main() -> int:
     import bot as B
     import telegram as T
     st = B.load_state() if T.enabled() else {}
+    j = st.get("journal", [])
+    print(f"bot state: {'read' if st else 'EMPTY or unreadable'}; keys {sorted(st)[:8]}; journal {len(j)} entries"
+          + (f", {j[0].get('t')} to {j[-1].get('t')}" if j else ""))
     rs, board = _j("docs/research.json", {}), _j("docs/n500.json", {"rows": []})
     rv = review(st.get("journal", []), rs, board)
     (ROOT / "docs/journal-review.json").write_text(json.dumps(rv, separators=(",", ":")), encoding="utf-8")

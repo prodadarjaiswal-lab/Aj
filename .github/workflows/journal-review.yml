@@ -1,0 +1,30 @@
+name: Journal review (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Review the research journal against the desk (no Telegram message)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: cd scripts/dhan_refresh && python daily_digest.py
+      - name: Commit
+        run: |
+          git add docs/journal-review.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "Journal review $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin main
+          git push
