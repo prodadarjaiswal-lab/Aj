@@ -64,7 +64,10 @@ def test_save_snapshot_uses_given_client(tmp_path):
         def __init__(self):
             pass
     O.OptionsClient = lambda d: d          # no 3-second spacing in tests
-    nset_day = O.dt.datetime.now(O.R.IST).date().isoformat()
+    d0 = O.dt.datetime.now(O.R.IST).date()
+    if d0.weekday() >= 5:                              # weekend captures are dated the last trading day
+        d0 -= O.dt.timedelta(days=d0.weekday() - 4)
+    nset_day = d0.isoformat()
     O.TODAY_OVERRIDE = None
     msg = O.save_snapshot(Client(), "\n".join(rows), tmp_path)
     assert "options snapshot" in msg or "already saved" in msg
