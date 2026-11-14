@@ -29,7 +29,7 @@ LINKS = (f'📌 <b>Your trading desks</b>\n<a href="{DESK_URL}">Technical Desk</
          f'(technical, value, combined verdict and fit with your portfolio).\n<a href="{TERMINAL_URL}">NSE Terminal</a>: '
          "markets, sectors and valuations.\nOpen while signed in to claude.ai. Prices from Dhan.")
 
-MENU = [("desk", "Open the Technical Desk and NSE Terminal"), ("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
+MENU = [("desk", "Open the Technical Desk and NSE Terminal"), ("review", "What am I missing? Your research journal checked against the desk"), ("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
         ("bargains", "Blue chips now cheap, India and US"), ("portfolio", "Markowitz portfolios (Nifty 50)"), ("pairs", "Pairs trading scan"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
@@ -786,6 +786,10 @@ class Bot:
         w = low.split(" ")
         if low in ("desk", "terminal", "links", "link", "dashboard"):
             return LINKS
+        if low in ("review", "missing", "blind spots", "what am i missing", "journal review"):
+            import daily_digest as DD
+            rv = DD.review(self.state.get("journal", []), _load(ROOT / "docs/research.json", {}), _load(ROOT / "docs/n500.json", {"rows": []}))
+            return DD.digest_text(rv, _load(ROOT / "docs/research.json", {}), DESK_URL)
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
         if w[0] in ("mc", "montecarlo", "simulate") and len(w) == 2:

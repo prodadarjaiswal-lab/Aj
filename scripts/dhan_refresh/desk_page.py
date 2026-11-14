@@ -118,6 +118,7 @@ def build(out: Path) -> dict:
             "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
             "usd": _j(ROOT / "docs/us-desk.json", {}),
             "rs": _j(ROOT / "docs/research.json", {}),
+            "jr": _j(ROOT / "docs/journal-review.json", {}),
             "chart": _chart(_index_charts(_j(ROOT / "docs/chart-data.json", {}), nset)),
             "usw": {k: {"d": v["d"][-104:], "c": v["c"][-104:]} for k, v in _j(ROOT / "data/us-weekly.json", {}).items()},
             "nval": {s: {"sector": v.get("sector"), "val": v.get("val"),

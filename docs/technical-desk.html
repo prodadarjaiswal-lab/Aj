@@ -102,6 +102,7 @@ details>summary{cursor:pointer;font-weight:600}
     <div class="tw"><table id="rsT"></table></div>
     <div class="row"><button class="chip" id="rsMore" hidden>Show more</button><span class="note" id="rsNote"></span></div>
   </div></details>
+  <details class="dd" id="dd-jr"><summary><span class="ddt">Your research journal: what you may be missing</span><span class="cnt" id="n-jr"></span></summary><div class="ddb"><div id="jr"></div></div></details>
   <details class="dd" id="dd-mkts"><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
   <details class="dd" id="dd-rising" open><summary><span class="ddt">Turning bullish (tested signals)</span><span class="cnt" id="n-rising"></span></summary><div class="ddb"><p class="note basisline" id="b-rising"></p><div class="tw"><table id="rising"></table></div></div></details>
   <details class="dd" id="dd-swing"><summary><span class="ddt">Order-flow and auction setups</span><span class="cnt" id="n-swing"></span></summary><div class="ddb"><p class="note basisline" id="b-swing"></p><div class="tw"><table id="swingT"></table></div></div></details>
@@ -302,6 +303,18 @@ function researchInit(){
   ["fInd","fVal","fTr","fTo"].forEach(id=>$(id).addEventListener("change",()=>{LIM=25;research()}));
   $("rsMore").addEventListener("click",()=>{LIM+=25;research()});
   research();
+}
+function journalReview(){
+  const J=D.jr||{},el=$("jr");
+  if(!J.asof){el.innerHTML=`<p class="note">Builds from the stocks you ask the Telegram bot about, after the next nightly run.</p>`;$("n-jr").textContent="";return}
+  const L=s=>`<button class="link" data-s="${esc(s)}">${esc(s)}</button>`;
+  let h=`<p class="note">Last ${J.days} days: ${J.lookups} questions about ${J.stocks} stocks${J.my_avg_since!=null?`; since you looked, they moved ${pc(J.my_avg_since,1)} on average`:""}. Built from your Telegram questions; checked against the research screener every night.</p>`;
+  if((J.follow||[]).length)h+=`<h3>Follow up: stocks you researched that changed</h3><div class="tw"><table>${J.follow.map(f=>`<tr><td>${L(f.s)}</td><td>${esc(f.why.join("; "))}</td></tr>`).join("")}</table></div>`;
+  if((J.blind||[]).length)h+=`<h3>Strong evidence you haven't looked at</h3><div class="tw"><table><tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th>Industry</th></tr>${J.blind.map(b=>`<tr><td>${L(b.s)}</td><td class="n good">${b.score}</td><td>${b.ev.map(k=>`<span class="ev t">${esc(NM(k))}</span>`).join("")}</td><td class="note">${esc(b.ind||"")}</td></tr>`).join("")}</table></div>`;
+  if((J.blind_ind||[]).length)h+=`<h3>Industries with strong evidence you skip</h3><p>${J.blind_ind.map(([i,n,ex])=>`<b>${esc(i)}</b> (${n}: ${ex.map(L).join(", ")})`).join(" · ")}</p>`;
+  if((J.habit||[]).length)h+=`<h3>Habit check</h3>`+J.habit.map(x=>`<p>${esc(x)}</p>`).join("");
+  if((J.looked||[]).length)h+=`<details><summary>Everything you researched</summary><div class="tw"><table><tr><th>Stock</th><th>First asked</th><th class="n">Then</th><th class="n">Now</th><th class="n">Since</th></tr>${J.looked.map(x=>`<tr><td>${L(x.s)}</td><td>${esc(x.first)}</td><td class="n">${num(x.price,1)}</td><td class="n">${num(x.now,1)}</td><td class="n ${cls(x.chg)}">${pc(x.chg,1)}</td></tr>`).join("")}</table></div></details>`;
+  el.innerHTML=h;const n=(J.follow||[]).length+(J.blind||[]).length;$("n-jr").textContent=n?n+" to check":"nothing new";$("n-jr").classList.toggle("has",!!n);
 }
 function cnt(k,n){const e=$("n-"+k);if(e){e.textContent=n?n+(n===1?" stock":" stocks"):"none today";e.classList.toggle("has",!!n)}}
 function swingTable(){
@@ -659,5 +672,5 @@ function quantTab(){
 }
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
-screener();researchInit();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+screener();researchInit();journalReview();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 </script>

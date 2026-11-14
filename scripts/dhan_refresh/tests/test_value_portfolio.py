@@ -251,3 +251,26 @@ def test_research_why_move_and_fund():
     assert w["driver"] == "stock" and w["total"] < -0.2
     assert any("FIIs cut" in n for n in w["notes"]) and any("EPS down" in n for n in w["notes"])
     assert RS.why_move("X", stock[:10], nifty, [], 1.0, {}, None) == {}
+
+
+def test_journal_review_finds_followups_and_blind_spots():
+    import datetime as _dt
+    import daily_digest as DD
+    d = (_dt.date.today() - _dt.timedelta(days=5)).isoformat()
+    journal = [{"t": d + " 10:00", "cmd": "trade", "sym": "AAA", "price": 100.0, "said": ""},
+               {"t": d + " 11:00", "cmd": "value", "sym": "BBB", "price": 50.0, "said": ""}]
+    rs = {"asof": "2026-11-13", "side": "up", "tested": {"tech": ["flag"], "inv": ["recovered"]},
+          "stocks": {"AAA": {"last": 88.0, "setups": ["flag"], "inv": [], "warn": [], "score": 2, "r3m": -0.2, "rs3": -0.1, "ind": "IT"},
+                     "BBB": {"last": 50.5, "setups": [], "inv": [], "warn": [], "score": 0, "r3m": -0.15, "rs3": -0.05, "ind": "IT"},
+                     "CCC": {"last": 10.0, "setups": ["flag"], "inv": ["recovered"], "warn": [], "score": 6, "ind": "Metals",
+                             "ev": [["tech", "flag"], ["inv", "recovered"]]},
+                     "DDD": {"last": 10.0, "setups": [], "inv": [], "warn": [], "score": 5, "ind": "Metals", "ev": [["inv", "recovered"]]}}}
+    rv = DD.review(journal, rs, {"rows": []})
+    assert rv["stocks"] == 2 and rv["looked"][0]["s"] in ("AAA", "BBB")
+    f = {x["s"]: x["why"] for x in rv["follow"]}
+    assert "AAA" in f and any("tested signal" in w for w in f["AAA"]) and any("-12%" in w for w in f["AAA"])
+    assert [b["s"] for b in rv["blind"]] == ["CCC", "DDD"] and rv["blind_ind"][0][0] == "Metals"
+    assert rv["habit"]
+    import telegram as T
+    txt = DD.digest_text(rv, rs, "https://x")
+    assert "Follow up" in txt and "CCC" in txt and T.esc("<") == "&lt;"

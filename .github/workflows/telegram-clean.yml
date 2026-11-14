@@ -1,0 +1,18 @@
+name: Telegram chat cleanup (manual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Delete chat messages the bot can delete (last 48 hours), re-pin the desk links
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: cd scripts/dhan_refresh && python tg_clean.py
