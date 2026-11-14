@@ -93,9 +93,9 @@ Rules:
 - ✅ **Portfolio fit** (`portfolio.py`, nightly): rules from the owner's Drive notes (`docs/portfolio-model.md`): correlation with the portfolio, two-asset volatility, beta and portfolio beta, Jensen's alpha and information ratio, ~30 holdings, utility, VaR.
   - Caps the notes do not give are ASSUMED and editable in `config/portfolio.json`.
   - Dhan holdings: India returns "No holdings available"; US returns "User not found" (no Dhan US account). Fit is measured against the Nifty 50 until holdings exist or are added under `extra`.
-- 🟡 **US stocks on the desk:** prices from Dhan's US feed (30 stocks now tracked quietly) and FMP fundamentals.
-  - ⛔ Dhan has no US history API, and Alpha Vantage's US options are premium only, so no US option data.
-  - US trend, Monte Carlo and VaR need history: add an `FMP_API_KEY` GitHub secret (picked up nightly), or wait as Dhan's daily closes accumulate (recorded from 16 Nov).
+- 🟡 **US stocks on the desk:** prices from Dhan's US feed (30 stocks tracked quietly); history from Alpha Vantage's free split-adjusted WEEKLY series (10 years), extended with Dhan's daily US closes. Trend, Monte Carlo (4 weeks) and VaR (1 week) are computed on weekly data and labelled so.
+  - 8 of 31 loaded on 14 Nov (NVDA, SPY, AAPL, MSFT, GOOGL, AMZN, META, JPM; each checked against FMP's price). The other 23 load on 15 Nov (free key: 25 calls a day); refreshed every Saturday and Sunday.
+  - ⛔ Dhan has no US history API (checked DhanHQ-py v2.3.0). Daily US history is premium on Alpha Vantage, and so are US options, so there are no US option data.
 - ✅ **Telegram:** the desk and terminal links are pinned in the chat; new `desk` command; trade and value replies now end with the portfolio-fit line and any tested investor rule.
 
 ## Order of work now
