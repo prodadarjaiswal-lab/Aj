@@ -6,15 +6,16 @@ Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 202
 
 | Signal | Market | Cases (last 2y) | Beat Nifty | Avg excess 10d | Typical stock |
 |---|---|---|---|---|---|
-| New 52-week closing high on 1.5x average volume | rising | 1,045 | 55% | +1.57% | +0.19% |
-| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,251 | 52% | +0.74% | +0.19% |
-| Volume breakout above the 20-day high (existing setup) | rising | 2,507 | 49% | +0.56% | +0.19% |
-| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,540 | 51% | +0.81% | +0.19% |
-| MACD crosses above its signal line while above zero | rising | 1,750 | 48% | +0.51% | +0.19% |
-| Relative strength line at a 1-year high before the price is | rising | 277 | 56% | +1.75% | +0.19% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 175 | 57% | +1.55% | +0.19% |
-| Proven stock 25% below its 52-week high, first close back above its 20-day average | rising | 877 | 55% | +1.56% | +0.19% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | weak | 622 | 53% | +0.72% | +0.42% |
+| New 52-week closing high on 1.5x average volume | rising | 1,045 | 55% | +1.57% | +0.20% |
+| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,251 | 52% | +0.74% | +0.20% |
+| Volume breakout above the 20-day high (existing setup) | rising | 2,507 | 49% | +0.56% | +0.20% |
+| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,540 | 51% | +0.81% | +0.20% |
+| MACD crosses above its signal line while above zero | rising | 1,750 | 48% | +0.51% | +0.20% |
+| Relative strength line at a 1-year high before the price is | rising | 277 | 56% | +1.75% | +0.20% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | rising | 797 | 57% | +1.34% | +0.20% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 175 | 57% | +1.55% | +0.20% |
+| Proven stock 25% below its 52-week high, first close back above its 20-day average | rising | 884 | 55% | +1.57% | +0.20% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | weak | 623 | 53% | +0.73% | +0.42% |
 
 ## Signals that failed (do not use for a verdict)
 
@@ -30,6 +31,7 @@ Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 202
 - Three down closes in a row while above the 200-day average
 - Closes in the bottom 20% of its day's range while above the 200-day average
 - Closes back above the 200-day average after 20+ days below
+- Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days
 - Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high
 - Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)
 - Downtrend: below a falling 200-day average and 50-day below 200-day (warning)
@@ -388,7 +390,7 @@ PCBL: 282.6 | new - | RSI 42.3 | ADX 24.8 sellers | ST down | MACD above signal 
 PERSISTENT: 6003.0 | new ibs | RSI 57.6 | ADX 13.4 buyers | ST up | MACD below signal | 5.6/13.1 | hi -9.0 | RS 5.6 | vol 0.59x | ATR 2.64%
 PETRONET: 324.1 | new ibs | RSI 64.4 | ADX 29.0 buyers | ST up | MACD above signal | 10.0/14.0 | hi -3.6 | RS 13.0 | vol 3.72x | ATR 2.48%
 PFC: 334.2 | new - | RSI 52.8 | ADX 24.5 buyers | ST up | MACD above signal | -0.0/-15.5 | hi -31.3 | RS -14.9 | vol 0.66x | ATR 2.47%
-PFOCUS: 269.9 | new qdd | RSI 42.6 | ADX 12.0 sellers | ST down | MACD below signal | -9.3/-3.4 | hi -26.4 | RS -4.7 | vol 0.83x | ATR 5.82%
+PFOCUS: 269.9 | new qdd,qdrop10 | RSI 42.6 | ADX 12.0 sellers | ST down | MACD below signal | -9.3/-3.4 | hi -26.4 | RS -4.7 | vol 0.83x | ATR 5.82%
 PGEL: 566.8 | new accum | RSI 63.1 | ADX 19.5 buyers | ST up | MACD above signal | 7.6/3.9 | hi -12.0 | RS -10.9 | vol 0.36x | ATR 3.24%
 PHOENIXLTD: 2255.0 | new accum | RSI 73.6 | ADX 35.0 buyers | ST up | MACD above signal | 15.6/22.6 | hi -2.0 | RS 15.7 | vol 1.0x | ATR 2.97%
 PIDILITIND: 1525.7 | new ibs,rsi2 | RSI 50.5 | ADX 23.2 buyers | ST up | MACD above signal | 0.1/1.5 | hi -10.6 | RS -13.1 | vol 1.1x | ATR 2.49%

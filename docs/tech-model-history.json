@@ -8,12 +8,15 @@
    "don55",
    "macd0",
    "rsnew",
+   "qdrop10",
    "qdrop",
    "qdd_hold"
   ],
   "weak": [
    "qdrop"
   ],
-  "changes": []
+  "changes": [
+   "new, passes in rising markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days"
+  ]
  }
 ]
