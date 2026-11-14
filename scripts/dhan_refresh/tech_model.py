@@ -519,6 +519,19 @@ def run_full(dhan, root: Path) -> dict:
     (root / "docs/tech-model.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
     (root / "docs/tech-today.json").write_text(json.dumps({"asof": res["asof"], "stocks": td}, separators=(",", ":")), encoding="utf-8")
     (root / "docs/technical-desk.md").write_text(desk(res, td), encoding="utf-8")
+    try:                                                # 1 year of closes per stock for the desk's price chart
+        ch = {"d": nifty["d"][-250:], "s": {}}
+        for sym, o in data.items():
+            c = o["c"]
+            if len(c) < 60:
+                continue
+            ma = lambda n: [round(sum(c[k - n + 1:k + 1]) / n, 2) if k >= n - 1 else None for k in range(len(c) - 250, len(c), 5) if k >= 0]
+            ch["s"][sym] = {"c": [round(x, 2) for x in c[-250:]], "m50": ma(50), "m200": ma(200),
+                            "v": [int(x) for x in (o.get("v") or [])[-250:][::5]]}
+        ch["s"]["NIFTY"] = {"c": [round(x, 1) for x in nifty["c"][-250:]]}
+        (root / "docs/chart-data.json").write_text(json.dumps(ch, separators=(",", ":")), encoding="utf-8")
+    except Exception as e:
+        print(f"  chart data failed: {str(e)[:120]}")
     try:                                                # quant modules on the same Dhan history
         import glob as _g
         import quant

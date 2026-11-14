@@ -130,6 +130,101 @@ def backtest(stocks: dict, nifty: dict) -> dict:
     return out
 
 
+# ---------------------------------------------------------------- swing test: end-of-day order-flow / auction states
+SWING = {
+    "sw_va_up": "Closed above yesterday's value area (auction accepted higher)",
+    "sw_poc_up": "Today's point of control moved above yesterday's value area",
+    "sw_vwap_buy": "Closed above VWAP all afternoon with buyers at 55%+ of volume (delta estimate)",
+    "sw_ib_up": "Extended above the first hour's range and closed above it",
+    "sw_absorb": "Closed in the top third after trading below yesterday's value (sellers absorbed)",
+    "sw_cvd_div": "Price fell on the day but estimated delta was positive (bullish divergence)",
+    "sw_va_dn": "Closed below yesterday's value area (warning)",
+}
+SWING_WARN = ("sw_va_dn",)
+SWING_H = (5, 10)
+
+
+def day_flags(rows: list, prev_rows: list | None) -> set:
+    """End-of-day states from one session's intraday bars [(minute, o, h, l, c, v)] and the previous session."""
+    out = set()
+    if len(rows) < 30:
+        return out
+    tick = A.tick_for(rows[-1][4])
+    close, hi, lo = rows[-1][4], max(r[2] for r in rows), min(r[3] for r in rows)
+    vp = A.volume_profile(rows, tick)
+    de = A.delta_est(rows)
+    vw = A.vwap(rows)
+    ib = [r for r in rows if r[0] < IB_END]
+    if ib:
+        ib_h = max(r[2] for r in ib)
+        if hi > ib_h and close > ib_h:
+            out.add("sw_ib_up")
+    pvv = cum = 0.0
+    above_pm = True
+    for m, _, h, l, c, v in rows:
+        pvv, cum = pvv + (h + l + c) / 3 * v, cum + v
+        if m >= 13 * 60 and cum > 0 and c < pvv / cum:
+            above_pm = False
+    if above_pm and vw.get("vwap") and close > vw["vwap"] and (de.get("buy_share_est") or 0) >= 0.55:
+        out.add("sw_vwap_buy")
+    if (de.get("cum_delta_est") or 0) > 0 and close < rows[0][1]:
+        out.add("sw_cvd_div")
+    if prev_rows and len(prev_rows) >= 30:
+        pv = A.volume_profile(prev_rows, A.tick_for(prev_rows[-1][4]))
+        if pv["vah"] is not None:
+            if close > pv["vah"]:
+                out.add("sw_va_up")
+            if close < pv["val"]:
+                out.add("sw_va_dn")
+            if vp.get("poc") is not None and vp["poc"] > pv["vah"]:
+                out.add("sw_poc_up")
+            if lo < pv["val"] and hi > lo and (close - lo) / (hi - lo) >= 0.67 and close >= pv["val"]:
+                out.add("sw_absorb")
+    return out
+
+
+def swing_backtest(stocks: dict, nifty: dict) -> dict:
+    """Hold from the close for 5 and 10 sessions; excess over the Nifty; lift over the average stock-day.
+    Passes: lift positive in both halves, t >= 2 on the later half after an overlap adjustment, 100+ cases."""
+    days = sorted(nifty)
+    cut = days[len(days) // 2] if days else ""
+    nclose = {d: nifty[d][-1][4] for d in days}
+    res = {(k, h): [] for k in SWING for h in SWING_H}
+    base = {h: [] for h in SWING_H}
+    for sym, ses in stocks.items():
+        ds = [d for d in sorted(ses) if d in nclose]
+        cl = [ses[d][-1][4] for d in ds]
+        for j in range(1, len(ds)):
+            fl = day_flags(ses[ds[j]], ses[ds[j - 1]])
+            for h in SWING_H:
+                if j + h >= len(ds) or not cl[j]:
+                    continue
+                x = (cl[j + h] / cl[j] - 1) - (nclose[ds[j + h]] / nclose[ds[j]] - 1)
+                base[h].append((x, ds[j] >= cut))
+                for k in fl:
+                    res[(k, h)].append((x, ds[j] >= cut))
+    out = {"cutoff": cut, "names": SWING, "signals": {}}
+    mean = lambda a: sum(a) / len(a) if a else 0.0
+    for k in SWING:
+        r = {"name": SWING[k], "tested": False, "h": None}
+        for h in SWING_H:
+            b_in, b_out = mean([x for x, o in base[h] if not o]), mean([x for x, o in base[h] if o])
+            a_in, a_out = [x for x, o in res[(k, h)] if not o], [x for x, o in res[(k, h)] if o]
+            if len(a_in) < 30 or len(a_out) < 30:
+                r[str(h)] = {"n": len(a_in) + len(a_out)}
+                continue
+            li, lo_ = mean(a_in) - b_in, mean(a_out) - b_out
+            sd = st.pstdev(a_out) or 1e-9
+            t = lo_ / (sd / math.sqrt(len(a_out))) / math.sqrt(h)
+            r[str(h)] = {"n": len(a_in) + len(a_out), "n_out": len(a_out), "lift_in": round(li, 5), "lift_out": round(lo_, 5),
+                         "t": round(t, 2), "hit_out": round(sum(x > 0 for x in a_out) / len(a_out), 3)}
+            good = (li < 0 and lo_ < 0 and t <= -2) if k in SWING_WARN else (li > 0 and lo_ > 0 and t >= 2)
+            if good and len(a_out) >= 100 and not r["tested"]:
+                r["tested"], r["h"] = True, h
+        out["signals"][k] = r
+    return out
+
+
 def fetch(dhan, symbols: list, months: int = 12):
     """5-minute bars in 60-day chunks."""
     import refresh as R
@@ -167,12 +262,17 @@ def main() -> int:
     dhan = R.Dhan(cid, R.login(cid, pin, sec))
     stocks, nifty = fetch(dhan, list(nset["stocks"]))
     res = backtest(stocks, nifty)
+    res["swing"] = swing_backtest(stocks, nifty)
+    res["swing"]["note"] = ("End-of-day states from 5-minute Dhan bars, bought at the close and held 5 or 10 sessions; excess over "
+                            "the Nifty 50 minus the average stock-day. Nifty 50 members today, 12 months.")
     res.update({"asof": max(nifty) if nifty else None, "from": min(nifty) if nifty else None, "stocks": len(stocks),
                 "note": "Same-day trade from the trigger bar to the close, in the signal's direction, excess over Nifty 50, "
                         "net of 0.06% round trip. 5-minute Dhan bars; Nifty 50 members today."})
     (root / "docs/auction-backtest.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
     for k, r in res["signals"].items():
         print(f"{k:13s} tested={r['tested']!s:5s} in={r['in']} out={r['out']}")
+    for k, r in res["swing"]["signals"].items():
+        print(f"{k:12s} tested={r['tested']!s:5s} 5d={r.get('5')} 10d={r.get('10')}")
     return 0
 
 

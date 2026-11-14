@@ -298,6 +298,11 @@ def analyse(bars: dict, composite_days: int = 5) -> dict:
     out["tpo"] = market_profile(rows, tick)
     out["vwap"] = vwap(rows)
     out["delta"] = delta_est(rows)
+    try:                                               # end-of-day states used by the swing back-test (auction_bt.day_flags)
+        import auction_bt
+        out["swing"] = sorted(auction_bt.day_flags(rows, ses[days[-2]] if len(days) >= 2 else None))
+    except Exception:
+        out["swing"] = []
     out["footprint_est"] = footprint_est(rows, tick)
     out["tape_est"] = heavy_minutes(rows)
     pv = vv = 0.0

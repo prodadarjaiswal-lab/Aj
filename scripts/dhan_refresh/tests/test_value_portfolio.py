@@ -195,3 +195,36 @@ def test_us_weekly_model():
     m = U.weekly_mc(c)
     assert m["p_up"] > 0.99 and len(m["fan"]) == 5
     assert U.weekly_var(c)["99"]["hist_1w"] <= 0
+
+
+def test_swing_flags_and_backtest():
+    import random as _r
+    import auction_bt as AB
+    rnd = _r.Random(5)
+
+    def session(start, drift):
+        rows, px = [], start
+        for k in range(75):
+            o = px
+            px = px * (1 + drift + rnd.gauss(0, 0.0008))
+            rows.append((555 + 5 * k, o, max(o, px) * 1.0004, min(o, px) * 0.9996, px, 1000 + rnd.randint(0, 500)))
+        return rows
+    prev = session(100, 0)
+    up = session(prev[-1][4] * 1.01, 0.0004)
+    f = AB.day_flags(up, prev)
+    assert "sw_va_up" in f and "sw_va_dn" not in f
+    assert AB.day_flags(up[:10], prev) == set()
+    days = [f"2026-01-{d:02d}" for d in range(1, 29)] + [f"2026-02-{d:02d}" for d in range(1, 29)] + [f"2026-03-{d:02d}" for d in range(1, 29)]
+    nifty, stocks = {}, {f"S{i}": {} for i in range(12)}
+    px = 100
+    for d in days:
+        nifty[d] = session(px, 0)
+        px = nifty[d][-1][4]
+    for s in stocks:
+        p = 100
+        for d in days:
+            stocks[s][d] = session(p, rnd.choice([-0.0003, 0, 0.0003]))
+            p = stocks[s][d][-1][4]
+    res = AB.swing_backtest(stocks, nifty)
+    assert set(res["signals"]) == set(AB.SWING)
+    assert all("tested" in r for r in res["signals"].values())
