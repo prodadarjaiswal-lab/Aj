@@ -489,7 +489,8 @@ class Bot:
     """Polls Telegram, answers commands, and checks user alerts against live prices."""
 
     def __init__(self, market: str, data: Data | None = None, state: dict | None = None):
-        self.market = market                      # "NSE" or "US"
+        self.market = market                      # "NSE", "US" (alert checking) or "ANY" (the listener)
+        self.reload = state is None
         self.d = data or Data()
         self.state = state if state is not None else load_state()
         self.state.setdefault("offset", 0)
@@ -498,7 +499,9 @@ class Bot:
         self.dirty = False
         self.quotes = {}                          # NSE: {sym: (ltp, prev)}; US: {sym: (ltp, prev)}
         self.us_symbols = set()
+        self.us_quotes = {}                       # {sym: {price, prev, t, live}} from the US tracker
         self.status_line = ""
+        self.feed_note = ""
         self.state.setdefault("journal", [])
 
     # -- Telegram ---------------------------------------------------------
@@ -539,13 +542,18 @@ class Bot:
         if sym in self.quotes and self.quotes[sym][0]:
             ltp, prev = self.quotes[sym]
             chg = f" ({(ltp / prev - 1) * 100:+.2f}%)" if prev else ""
-            cur = "$" if self.market == "US" else "₹"
-            return f"<b>{esc(sym)}</b> {cur}{ltp:,.2f}{chg}, live from Dhan"
+            return f"<b>{esc(sym)}</b> ₹{ltp:,.2f}{chg}, live from Dhan"
+        if sym in self.us_quotes and self.us_quotes[sym].get("price"):
+            q = self.us_quotes[sym]
+            chg = f" ({(q['price'] / q['prev'] - 1) * 100:+.2f}%)" if q.get("prev") else ""
+            when = "live from Dhan" if q.get("live") else f"last Dhan price, {esc(q.get('t', ''))}"
+            return f"<b>{esc(sym)}</b> ${q['price']:,.2f}{chg}, {when}"
         r = self.d.find(word)
         if r:
             t = self.d.tech.get(r["s"], {})
             day = t["d"] if t.get("c") and t.get("d", "") >= self.d.asof else self.d.asof
-            return f"<b>{esc(r['s'])}</b> {rupee(self.d.last(r))}, {esc(day)} close. Live prices 09:15 to 15:30 IST."
+            why = self.feed_note or "Market closed"
+            return f"<b>{esc(r['s'])}</b> {rupee(self.d.last(r))}, Dhan close of {esc(day)}. {why}."
         return f"{esc(sym)}: not a Nifty 500 stock, and not tracked in the US session."
 
     def log(self, cmd: str, sym: str, reply: str) -> None:
@@ -609,7 +617,7 @@ class Bot:
                 out = technical(self.d, r, self.ltp(r["s"]))
                 self.log("trade", r["s"], out)
                 return out
-            if w[0].upper() in self.quotes:
+            if w[0].upper() in self.quotes or w[0].upper() in self.us_quotes:
                 return self.price(w[0])
             return f"{esc(w[0].upper())}: not a Nifty 500 stock."
         return "Not a command. The six commands are in my description."
@@ -651,11 +659,23 @@ class Bot:
 
     # -- user alerts ------------------------------------------------------
     def check(self, when: str) -> list:
-        """Fire user alerts for this market against self.quotes. Each fires once, then is deleted."""
+        """Fire user alerts for this market against self.quotes. Each fires once, then is deleted.
+        The listener edits alerts too, so the stored state is re-read before anything is removed."""
         out, keep = [], []
+        quotes = self.quotes if self.market == "NSE" else {k: (v.get("price"), v.get("prev")) for k, v in self.us_quotes.items()}
+        fired = []
         for x in self.state["alerts"]:
-            q = self.quotes.get(x["sym"])
-            hit = x["mkt"] == self.market and q and q[0] and (q[0] >= x["level"] if x["side"] == "above" else q[0] <= x["level"])
+            q = quotes.get(x["sym"])
+            if x["mkt"] == self.market and q and q[0] and (q[0] >= x["level"] if x["side"] == "above" else q[0] <= x["level"]):
+                fired.append(x)
+        if not fired:
+            return []
+        fresh = load_state() if self.reload else self.state
+        if fresh:
+            self.state = fresh
+        for x in self.state["alerts"]:
+            q = quotes.get(x["sym"])
+            hit = x in fired or (x["mkt"] == self.market and q and q[0] and (q[0] >= x["level"] if x["side"] == "above" else q[0] <= x["level"]))
             if hit:
                 cur = "$" if x["mkt"] == "US" else "₹"
                 out.append(f"🔔 <b>{esc(x['sym'])}</b> is {x['side']} {cur}{x['level']:,.2f}: now {cur}{q[0]:,.2f} ({when}).")

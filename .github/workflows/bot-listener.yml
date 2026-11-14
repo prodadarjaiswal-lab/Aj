@@ -1,0 +1,28 @@
+name: Telegram bot (always on)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"     # keeps one run queued, so a new run starts as soon as the current one ends
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot-listener          # one listener at a time; at most one waiting
+  cancel-in-progress: false
+
+jobs:
+  listen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Answer Telegram for up to 5 h 40 m
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: cd scripts/dhan_refresh && python listener.py --minutes 340

@@ -140,7 +140,10 @@ def main() -> int:
                 if r:
                     bot.quotes[r["s"]] = (v[0], al.base("NSE_EQ", sid, v, hhmm))
             bot.status_line = f"Last price {now:%H:%M:%S} IST."
-            bot.poll()
+            if n % 12 == 0:                                   # the listener edits alerts; pick them up each minute
+                st_ = B.load_state()
+                if st_:
+                    bot.state = {**bot.state, **st_}
             al.watch |= {str(al.bysym[x["sym"]]["sid"]) for x in bot.state["watch"] if x["mkt"] == "NSE" and x["sym"] in al.bysym}
             fired = bot.check(hhmm)
             if fired:

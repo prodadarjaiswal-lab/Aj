@@ -208,6 +208,9 @@ def load_state(day: str) -> dict:
     return {"d": day, "sent": []}
 
 
+_HAS_COMMIT = {}
+
+
 def save_state(st: dict) -> None:
     try:
         run = lambda *a: subprocess.run(["git", "-C", str(OUT), *a], check=True, capture_output=True)
@@ -225,7 +228,8 @@ def save_state(st: dict) -> None:
             run("checkout", "-q", "--orphan", "us-watch")
         (OUT / "state.json").write_text(json.dumps(st), encoding="utf-8")
         run("add", "state.json")
-        run("commit", "-q", "--allow-empty", "-m", "US watch state")
+        run("commit", "-q", "--allow-empty", "--amend" if _HAS_COMMIT.get("y") else "--allow-empty", "-m", "US watch state")
+        _HAS_COMMIT["y"] = True
         run("push", "-q", "-f", "origin", "HEAD:refs/heads/us-watch")
     except Exception as e:
         print(f"  state not saved: {str(e)[:100]}")
@@ -248,6 +252,7 @@ def refresh_running() -> bool:
 
 
 _TOKEN = {}
+_PUB = {}
 
 
 def open_feed(cfg: dict, relogin: bool = False) -> DhanUS:
@@ -311,9 +316,18 @@ def main() -> int:
             feed.pump(every)
             fails = 0
             for sym, q in feed.q.items():
-                bot.quotes[sym] = (q["price"], q["prev"])
+                bot.us_quotes[sym] = {"price": q["price"], "prev": q["prev"]}
+            if time.time() - _PUB.get("t", 0) >= 60 and any(q["price"] for q in feed.q.values()):
+                _PUB["t"] = time.time()
+                stamp = now.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")
+                save_state({"d": day, "sent": sorted(w.sent),
+                            "quotes": {s: {"price": q["price"], "prev": q["prev"], "t": stamp} for s, q in feed.q.items() if q["price"]}})
             bot.status_line = f"Last check {now.astimezone(IST):%H:%M:%S} IST."
-            bot.poll()
+            if time.time() - _PUB.get("r", 0) >= 60:          # the listener edits alerts; pick them up each minute
+                _PUB["r"] = time.time()
+                st_ = B.load_state()
+                if st_:
+                    bot.state = {**bot.state, **st_}
             if sync_symbols():
                 feed.close()
                 feed = None                            # resubscribe with the new symbols, same login
@@ -355,7 +369,8 @@ def main() -> int:
         if msgs:
             T.send("\n".join(msgs))
         if len(w.sent) != n0:
-            save_state({"d": day, "sent": sorted(w.sent)})
+            save_state({"d": day, "sent": sorted(w.sent), "quotes": {s: {"price": q["price"], "prev": q["prev"],
+                        "t": now.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")} for s, q in feed.q.items() if q["price"]}})
     now = dt.datetime.now(NY)
     if feed and now.time() >= dt.time(16, 0) and "close" not in w.sent:
         feed.pump(5)

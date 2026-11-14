@@ -73,7 +73,7 @@ def test_hedge_flags_adverse_company_news():
 
 def test_price_live_and_close():
     b = bot()
-    assert "2026-11-13 close" in b.handle("price AAA")
+    assert "Dhan close of 2026-11-13" in b.handle("price AAA")
     b.quotes["AAA"] = (105.5, 104.0)
     assert "₹105.50 (+1.44%), live from Dhan" in b.handle("price aaa")
 
