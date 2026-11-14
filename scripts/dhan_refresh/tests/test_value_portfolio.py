@@ -42,7 +42,7 @@ def test_backtest_shape_and_no_false_pass_on_noise():
     assert set(res["rules"]) == set(V.NAMES)
     for k, r in res["rules"].items():
         assert "tested_up" in r and "tested_weak" in r
-        assert r["12m_up"]["dates"] + r["12m_weak"]["dates"] > 0 or k in ("fallen_leader", "recovered", "dd30", "near_lo52")
+        assert r["12m_up"]["dates"] + r["12m_weak"]["dates"] > 0 or k in ("fallen_leader", "recovered", "dd30", "near_lo52", "accum", "near_hi", "stack")
     assert res["rules"]["lt_winner"]["tested_up"] is False      # the control can never pass
 
 
@@ -238,3 +238,16 @@ def test_desk_page_is_light_and_split(tmp_path):
     assert len(files) == r["detail_files"] > 0
     html = (tmp_path / "desk.html").read_text()
     assert '"chunks":[' in html and "function loadDetail" in html
+
+
+def test_research_why_move_and_fund():
+    import research as RS
+    f = RS.compact_fund({"data": {"CO": {"EPS": 10, "SECTOR": "IT"}, "RATIOS": {"PE_RATIO": 20, "PE_TO_SECTOR_PE": 0.7, "ROCE": 25},
+                                  "SHP": {"FII_HOLDING": 20, "CHANGE_IN_FII_HOLDING": -1.2}}})
+    assert f["pe"] == 20 and f["pe_sec"] == 0.7 and f["d_fii"] == -1.2
+    nifty = [100.0] * 100 + [100 * (1 - 0.001 * k) for k in range(64)]          # market down ~6%
+    stock = [100.0] * 100 + [100 * (1 - 0.004 * k) for k in range(64)]          # stock down ~25%
+    w = RS.why_move("X", stock, nifty, [-0.07, -0.06, -0.05], 1.0, f, [["2026-08-01", 25, 12, 20, 0, 50, 21, 10], ["2026-11-01", 20, 10, 20, 0, 50, 20, 10]])
+    assert w["driver"] == "stock" and w["total"] < -0.2
+    assert any("FIIs cut" in n for n in w["notes"]) and any("EPS down" in n for n in w["notes"])
+    assert RS.why_move("X", stock[:10], nifty, [], 1.0, {}, None) == {}

@@ -47,6 +47,11 @@ NAMES = {
     "qdrop25": "Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days",
     "qdd": "Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high",
     "qdd_hold": "Proven stock 25% below its 52-week high, first close back above its 20-day average",
+    "brk20": "20-day closing-high breakout with turnover of Rs 10 crore or more (nse-day-trader / trader-scanner)",
+    "flag": "Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner)",
+    "reclaim20": "Closes back above the 20-day average after 5+ days below, in an uptrend (trader-scanner)",
+    "os14": "Oversold: RSI(14) under 30 (trader-scanner)",
+    "os_bounce": "Oversold bounce: RSI(14) under 30 yesterday, closes up today (trader-scanner)",
     "extended": "Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)",
     "downtrend": "Downtrend: below a falling 200-day average and 50-day below 200-day (warning)",
 }
@@ -214,6 +219,19 @@ class Tech:
                 f.add("qdd")
                 if S.m20[i] and last > S.m20[i] and c[i - 1] <= (S.m20[i - 1] or 0):
                     f.add("qdd_hold")
+        # setups from the owner's nse-day-trader and trader-scanner skills
+        turnover_ok = bool(v and v[i] and last * v[i] >= 1e8)
+        if turnover_ok and last > max(c[i - 20:i]):
+            f.add("brk20")
+        if c[i - 15] and c[i - 5] / c[i - 15] - 1 >= 0.10 and max(c[i - 4:i + 1]) <= 1.05 * min(c[i - 4:i + 1]):
+            f.add("flag")
+        if S.m20[i] and last > S.m20[i] and all(S.m20[k] and c[k] < S.m20[k] for k in range(i - 5, i)) and last > m200:
+            f.add("reclaim20")
+        r14, r14p = S.rsi[i], S.rsi[i - 1]
+        if r14 is not None and r14 < 30:
+            f.add("os14")
+        if r14p is not None and r14p < 30 and last > c[i - 1]:
+            f.add("os_bounce")
         t = S.tag(i)
         if t in ("volbreak", "pullback"):
             f.add(t)
@@ -555,6 +573,8 @@ def run_full(dhan, root: Path) -> dict:
         except Exception:
             usq = {}
         print(portfolio.run(dhan, data, nifty, root, nset, usq))
+        import research
+        print(research.run(data, nifty, root, dhan))
     except Exception as e:
         print(f"  value / portfolio modules failed: {str(e)[:200]}")
     if changes:
