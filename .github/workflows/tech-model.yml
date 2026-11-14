@@ -34,7 +34,7 @@ jobs:
           python tech_model.py --root ../..
       - name: Commit result
         run: |
-          git add docs/tech-model.json docs/tech-today.json docs/tech-model-history.json docs/technical-desk.md docs/quant.json
+          for f in docs/tech-model.json docs/tech-today.json docs/tech-model-history.json docs/technical-desk.md docs/quant.json docs/value-model.json docs/portfolio.json; do [ -f "$f" ] && git add "$f"; done
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"

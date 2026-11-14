@@ -477,6 +477,15 @@ def desk(res: dict, td: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def _git_show(root: Path, branch: str, path: str) -> str | None:
+    import subprocess
+    try:
+        subprocess.run(["git", "-C", str(root), "fetch", "-q", "origin", branch], check=True, capture_output=True, timeout=60)
+        return subprocess.run(["git", "-C", str(root), "show", f"FETCH_HEAD:{path}"], check=True, capture_output=True, text=True).stdout
+    except Exception:
+        return None
+
+
 def run_full(dhan, root: Path) -> dict:
     """Daily: re-run the 6-year back-test, promote or drop signals, write today's signals and the desk file."""
     data, nifty, end = fetch(dhan, root, 6)
@@ -522,6 +531,19 @@ def run_full(dhan, root: Path) -> dict:
         print(quant.run(data, nifty, root, rf, list(nset.get("stocks", {})), board_rows, opts))
     except Exception as e:
         print(f"  quant modules failed: {str(e)[:200]}")
+    try:                                                # investor (value) back-test and portfolio fit, same history
+        import refresh as R
+        import value_model
+        import portfolio
+        nset = R.read_nset((root / "docs/nse-terminal.html").read_text(encoding="utf-8"))
+        print(value_model.run(data, nifty, root, nset))
+        try:
+            usq = {s: q.get("price") for s, q in (json.loads(_git_show(root, "us-watch", "state.json") or "{}").get("quotes") or {}).items()}
+        except Exception:
+            usq = {}
+        print(portfolio.run(dhan, data, nifty, root, nset, usq))
+    except Exception as e:
+        print(f"  value / portfolio modules failed: {str(e)[:200]}")
     if changes:
         try:
             import telegram as T

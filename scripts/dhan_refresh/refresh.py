@@ -66,6 +66,13 @@ class Dhan:
             raise RefreshError(f"{path} returned {r.status_code}: {r.text[:200]}")
         return r.json()
 
+    def get(self, path: str) -> dict:
+        time.sleep(0.25)
+        r = self.s.get(API + path, timeout=30)
+        if r.status_code != 200:
+            raise RefreshError(f"{path} returned {r.status_code}: {r.text[:200]}")
+        return r.json()
+
     def daily(self, security_id: str, segment: str, instrument: str, start: dt.date, end: dt.date) -> dict:
         return self.post("/charts/historical", {
             "securityId": str(security_id), "exchangeSegment": segment, "instrument": instrument,
