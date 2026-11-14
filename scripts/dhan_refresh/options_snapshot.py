@@ -150,11 +150,15 @@ def snapshot(client, underlyings: dict, today: dt.date) -> dict:
 def save_snapshot(dhan, scrip_csv: str, root: Path = Path(".")) -> str:
     """Use an already logged-in client: Dhan allows one new token per 2 minutes."""
     nset = R.read_nset((root / "docs/ra-desk.html").read_text(encoding="utf-8"))
-    day = dt.datetime.now(R.IST).date().isoformat()   # the day the chain was captured
+    now = dt.datetime.now(R.IST)
+    d0 = now.date()
+    if d0.weekday() >= 5:                              # a weekend capture holds Friday's closing chain
+        d0 -= dt.timedelta(days=d0.weekday() - 4)
+    day = d0.isoformat()                               # the trading day the chain belongs to
     outdir = root / "data/options"
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / f"{day}.json"
-    if target.exists():
+    if target.exists() and "net_gex" in json.dumps(json.loads(target.read_text(encoding="utf-8")).get("rows", {}).get("NIFTY", {})):
         return f"options snapshot for {day} already saved"
     eq, _ = R.build_maps(scrip_csv, list(nset["stocks"]), [])
     unders = dict(INDEXES)
