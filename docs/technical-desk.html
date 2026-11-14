@@ -384,14 +384,15 @@ function news(c){
 const VM=D.vm||{},PF=D.pf||{},USD=(D.usd||{}).stocks||{},NV=D.nval||{};
 const usRow=s=>(D.us.rows||[]).find(x=>x.s===s);
 const vside=D.regimeUp===false?"weak":"up";
+const VSHORT={dd30:"30%+ below high",fallen_leader:"Fallen leader",near_lo52:"Near 52-week low",lt_loser:"2-year loser",lowvol:"Calmest 20%",mom12:"12-month momentum",recovered:"Back above 200-day",lt_winner:"2-year winner"};
 const vTested=Object.keys(VM.rules||{}).filter(k=>VM.rules[k]["tested_"+vside]);
 function valueCall(c){ // tested rules first, then the passed fundamental factors; P/E vs its median is context (failed its test)
   const on=((VM.today||{})[c.sym]||{}).on||[],hits=on.filter(k=>vTested.includes(k)),q=((VM.fundamental||{}).quintiles||{})[c.sym]||{};
   const qv=Object.values(q),qhi=qv.filter(x=>x>=4).length,qlo=qv.filter(x=>x<=2).length;
   let score=hits.length+0.5*qhi-0.5*qlo,why=[];
-  hits.forEach(k=>{const r=VM.rules[k][`12m_${vside}`];why.push(`${esc(VM.names[k])}: beat the average stock by ${pc(r.lift)} over 12 months (t ${r.t})`)});
+  hits.forEach(k=>{const h=VM.rules[k]["h_"+vside]||"12m",r=VM.rules[k][`${h}_${vside}`];why.push(`${esc(VM.names[k])}: beat the average stock by ${pc(r.lift)} over ${h==="6m"?"6":"12"} months (t ${r.t})`)});
   Object.entries(q).forEach(([f,x])=>why.push(`${esc(f)}: ${x>=4?"cheap":x<=2?"expensive":"middle"} vs the Nifty 50 (quintile ${x}/5, a tested factor)`));
-  if(c.us){const u=c.usr||{};if(u.pe_now&&u.pe_hist_median){const r=u.pe_now/u.pe_hist_median;score+=r<0.85?0.5:r>1.2?-0.5:0;why.push(`P/E ${num(u.pe_now,0)} vs its usual ${num(u.pe_hist_median,0)} (context; untested for US)`)}}
+  if(c.us){const u=c.usr||{};if(u.pe_now&&u.pe_hist_median){why.push(`P/E ${num(u.pe_now,0)} vs its usual ${num(u.pe_hist_median,0)} (context; untested for US)`)}}
   const cl=score>=1?["Attractive","good"]:score>=0.5?["Supportive","good"]:score<=-0.5?["Unattractive","bad"]:["Neutral","warn"];
   if(!why.length)why.push(c.us?"No US valuation history to test against.":vTested.length?"No tested investor rule is active today.":"No investor rule passed the back-test for this market.");
   return{call:cl[0],cl:cl[1],score,why,hits};
@@ -443,10 +444,10 @@ function valuation(c){
 function vbt(c){
   const R=VM.rules||{},ks=Object.keys(R);if(!ks.length){$("vbt").innerHTML=`<p class="note">Appears after the next back-test run.</p>`;return}
   const on=((VM.today||{})[c.sym]||{}).on||[];
-  const rows=ks.filter(k=>k!=="lt_winner").map(k=>{const x=R[k][`12m_${vside}`]||{};return[k,x.lift,R[k]["tested_"+vside],x]}).sort((a,b)=>(b[1]||0)-(a[1]||0));
-  const mx=Math.max(...rows.map(r=>Math.abs(r[1]||0)))||1,W=320,rh=16,L=150,C=L+(W-L)/2,H=rows.length*rh+6;
-  const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="12-month lift by rule"><line x1="${C}" x2="${C}" y1="0" y2="${H}" stroke="var(--line)"/>${rows.map(([k,l,ok],i)=>{const y=i*rh+3,w=Math.abs(l||0)/mx*((W-L)/2-4);return `<text x="${L-4}" y="${y+10}" text-anchor="end" style="${on.includes(k)?"fill:var(--ink);font-weight:600":""}">${on.includes(k)?"● ":""}${esc((VM.names[k]||k).slice(0,26))}</text><rect x="${(l||0)>=0?C:C-w}" y="${y}" width="${w.toFixed(1)}" height="${rh-5}" rx="2" fill="${ok?"var(--up)":(l||0)<0?"var(--down)":"var(--bar)"}"/>`}).join("")}</svg>`;
-  $("vbt").innerHTML=`${svg}<p class="note">Extra 12-month return vs the average stock in ${vside==="up"?"rising":"weak"} markets (today's condition). Green bars passed: positive in both halves of ${esc(VM.from||"")}–${esc(VM.asof||"")} and t ≥ 2. ● = active for ${esc(c.sym)} today.</p><details><summary>All rules, both market conditions</summary><div class="tw"><table><tr><th>Rule</th><th class="n">Rising 12m</th><th class="n">t</th><th class="n">Weak 12m</th><th class="n">t</th></tr>${ks.map(k=>{const u=R[k]["12m_up"]||{},w=R[k]["12m_weak"]||{};return `<tr><td>${esc(VM.names[k])}</td><td class="n ${R[k].tested_up?"ok":""}">${pc(u.lift)}</td><td class="n">${u.t??"–"}</td><td class="n ${R[k].tested_weak?"ok":""}">${pc(w.lift)}</td><td class="n">${w.t??"–"}</td></tr>`}).join("")}</table></div><p class="note">${esc(VM.method||"")}</p></details>`;
+  const rows=ks.filter(k=>k!=="lt_winner").map(k=>{const x=R[k][`6m_${vside}`]||{};return[k,x.lift,R[k]["tested_"+vside],x]}).sort((a,b)=>(b[1]||0)-(a[1]||0));
+  const mx=Math.max(...rows.map(r=>Math.abs(r[1]||0)))||1,W=320,rh=16,L=132,C=L+(W-L)/2,H=rows.length*rh+6;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="6-month lift by rule"><line x1="${C}" x2="${C}" y1="0" y2="${H}" stroke="var(--line)"/>${rows.map(([k,l,ok],i)=>{const y=i*rh+3,w=Math.abs(l||0)/mx*((W-L)/2-4);return `<text x="${L-4}" y="${y+10}" text-anchor="end" style="${on.includes(k)?"fill:var(--ink);font-weight:600":""}">${on.includes(k)?"● ":""}${esc(VSHORT[k]||k)}</text><rect x="${(l||0)>=0?C:C-w}" y="${y}" width="${w.toFixed(1)}" height="${rh-5}" rx="2" fill="${ok?"var(--up)":(l||0)<0?"var(--down)":"var(--bar)"}"/>`}).join("")}</svg>`;
+  $("vbt").innerHTML=`${svg}<p class="note">Extra 6-month return vs the average stock in ${vside==="up"?"rising":"weak"} markets (today's condition). Green bars passed (at 6 or 12 months): positive in both halves of ${esc(VM.from||"")}–${esc(VM.asof||"")} and t ≥ 2. ● = active for ${esc(c.sym)} today. Buying cheapness (near lows, big falls, long-term losers, calm stocks) lost money; trend recovery and momentum did not — as your Damodaran notes say about momentum.</p><details><summary>All rules, both market conditions</summary><div class="tw"><table><tr><th>Rule</th><th class="n">Rising 6m</th><th class="n">12m</th><th class="n">Weak 6m</th><th class="n">12m</th></tr>${ks.map(k=>{const c_=(h,g)=>{const x=R[k][h+"_"+g]||{};return `<td class="n ${R[k]["tested_"+g]&&R[k]["h_"+g]===h?"ok":""}">${pc(x.lift)}<div class="note">t ${x.t??"–"}</div></td>`};return `<tr><td>${esc(VM.names[k])}</td>${c_("6m","up")}${c_("12m","up")}${c_("6m","weak")}${c_("12m","weak")}</tr>`}).join("")}</table></div><p class="note">${esc(VM.method||"")}</p></details>`;
 }
 function fbt(){
   const F=VM.fundamental||{},t=F.tests||[];
@@ -460,7 +461,7 @@ function investPicks(){
 }
 function fitCard(c){
   const f=fitOf(c),src=PF.check_src||{};
-  if(!f){$("fit").innerHTML=`<p class="note">${IDXKEY[c.sym]?"Fit applies to stocks, not indices.":c.us?"No US data yet.":!PF.fit?"Appears after the next nightly run reads your Dhan holdings.":"Needs a year of Dhan history for this stock."}</p>`;return}
+  if(!f){$("fit").innerHTML=`<p class="note">${call(c).none?"Unknown symbol.":IDXKEY[c.sym]?"Fit applies to stocks, not indices.":c.us?"No US data yet.":!PF.fit?"Appears after the next nightly run reads your Dhan holdings.":"Needs a year of Dhan history for this stock."}</p>`;return}
   const L=FITL[f.v];
   let h=`<p><span class="tag ${L[1]}">${L[0]}</span> ${f.w!=null&&f.v!=="no"?`Suggested start: <b>${Math.round(f.w*100)}%</b> of the portfolio.`:""}</p>`;
   if(f.c&&f.c.length)h+=`<div class="tw"><table><tr><th>Check</th><th>Value</th><th>Needs</th><th></th></tr>${f.c.map(([k,ok,v,need])=>`<tr><td title="${esc(src[k]||"")}">${esc(k)}</td><td>${esc(v)}</td><td class="note">${esc(need)}</td><td class="${ok?"ok":"no"}">${ok?"✓":"✗"}</td></tr>`).join("")}</table></div>`;
@@ -470,7 +471,7 @@ function fitCard(c){
 }
 function mypf(){
   const s=PF.summary||{};if(!PF.summary){$("mypf").innerHTML=`<p class="note">Appears after the next nightly run reads your Dhan holdings.</p>`;return}
-  if(s.proxy){$("mypf").innerHTML=`<p>No holdings found in your Dhan account${(PF.notes||[]).length?` (${esc(PF.notes[0]).slice(0,90)})`:""}. Fit is measured against the Nifty 50 instead.</p><p class="note">Holdings outside Dhan (mutual funds, other brokers) can be listed in config/portfolio.json under "extra".</p>`;return}
+  if(s.proxy){$("mypf").innerHTML=`<p>Dhan reports no holdings on your account${(PF.notes||[]).some(n=>/User not found/.test(n))?" (and no Dhan US account)":""}, so fit is measured against the Nifty 50 instead.</p><p class="note">Holdings outside Dhan (mutual funds, other brokers) can be listed in config/portfolio.json under "extra".</p>`;return}
   const sec=Object.entries(s.sectors||{}).slice(0,8);
   $("mypf").innerHTML=`<div class="tiles"><div class="tile"><div class="k">Holdings</div><div class="v">${s.count}</div><div class="d">notes: ~30 for most of the benefit</div></div><div class="tile"><div class="k">Value</div><div class="v">₹${cmp(s.value_inr)}</div></div><div class="tile"><div class="k">Beta</div><div class="v">${s.beta??"–"}</div></div><div class="tile"><div class="k">Volatility / yr</div><div class="v">${pc(s.vol,0)}</div><div class="d">worst day 95%: ${pc(-s.var95_1d,1)}</div></div></div>${hbars(sec.map(([k,v])=>[k.slice(0,10),v*100,v>0.25?"var(--down)":"var(--accent)"]))}<p class="note">Sector weights; red is over the 25% cap (assumed). US share ${pc(s.us_share,0)}.</p>`;
 }

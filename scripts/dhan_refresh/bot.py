@@ -582,8 +582,10 @@ def tested_value_line(d: Data, sym: str) -> str:
     hits = [k for k in on if (vm.get("rules") or {}).get(k, {}).get(f"tested_{side}")]
     if not hits:
         return ""
-    r = vm["rules"][hits[0]][f"12m_{side}"]
-    return f"Tested investor rule active: {esc(vm['names'][hits[0]])} (beat the average stock by {r['lift'] * 100:+.1f}% over 12 months, t {r['t']})."
+    h = vm["rules"][hits[0]].get(f"h_{side}") or "12m"
+    r = vm["rules"][hits[0]][f"{h}_{side}"]
+    return (f"Tested investor rule active: {esc(vm['names'][hits[0]])} (beat the average stock by {r['lift'] * 100:+.1f}% "
+            f"over {h[:-1]} months, t {r['t']}).")
 
 
 def value(d: Data, sym: str, ltp: float | None = None) -> str:

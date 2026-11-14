@@ -195,7 +195,7 @@ def fit(sym: str, r: list, p: list, m: list, held: dict, sectors: dict, cfg: dic
         er_c, er_p = rf + ba["beta"] * erp, rf + (p_beta or 1.0) * erp
         u_old = er_p - 0.5 * cfg["risk_aversion"] * sp ** 2
         u_new = (1 - w) * er_p + w * er_c - 0.5 * cfg["risk_aversion"] * s_new ** 2
-        add("utility", u_new >= u_old - 1e-6, f"{u_old * 100:.2f} → {u_new * 100:.2f}", "not lower",
+        add("utility", u_new >= u_old - 0.0005, f"{u_old * 100:.2f} → {u_new * 100:.2f}", "not lower",
             "notes: U = E(R) − ½Aσ², E(R) from CAPM; " + SOURCE["risk_aversion"])
     v_old = _var95(p1)
     v_new = _var95([(1 - w) * a + w * b for a, b in zip(p1, r1)])

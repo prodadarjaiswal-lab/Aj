@@ -1,0 +1,14 @@
+{
+ "_note": "Portfolio-fit settings. Dhan holdings are read automatically every night. Add holdings kept elsewhere (other brokers, not mutual funds) under extra, e.g. {\"sym\": \"TCS\", \"mkt\": \"NSE\", \"qty\": 10, \"avg\": 3000} or {\"sym\": \"NVDA\", \"mkt\": \"US\", \"qty\": 2, \"avg\": 150}. Caps and bands below are assumptions (your notes give none); change them to your own rules.",
+ "start_weight": 0.05,
+ "stock_cap": 0.10,
+ "sector_cap": 0.25,
+ "corr_good": 0.5,
+ "corr_poor": 0.75,
+ "beta_band": [0.9, 1.1],
+ "risk_aversion": 3.0,
+ "min_traded_cr": 1.0,
+ "var_worse": 0.20,
+ "target_count": 30,
+ "extra": []
+}

@@ -83,6 +83,21 @@ Rules:
 - ✅ **Pairs** (Engle-Granger, z-score rules). Walk-forward: 346 trades, −0.55% per trade, t −2.28. Failed, so no pair trades are suggested.
 - Everything reruns nightly inside the technical back-test, and the verdicts update themselves when results change.
 
+## Owner's requests of 14 Nov, part 2: US, value, portfolio fit, Telegram pin
+- ✅ **Desk: two tabs only.** Screener, and Analyze in three parts: 1 Technical, 2 Value (investor view), 3 Combined verdict and your portfolio. A combined-verdict strip at the top joins all three.
+- ✅ **Value back-test by market condition** (`value_model.py`, nightly): 8 investor rules, 6 years of Dhan prices, Nifty 500, rising vs weak markets, 6- and 12-month horizons.
+  - First run: buying cheapness (near lows, 30% falls, 2-year losers, calmest stocks) lost money.
+  - "Back above the 200-day after a 30% fall" passed in rising markets (+5.2% vs the average stock over 6 months, t 2.02).
+  - Weak markets have too few samples to test.
+  - The terminal's fundamental test passed book/price and residual-income value (12 months); P/E vs its own median failed, so it is context only.
+- ✅ **Portfolio fit** (`portfolio.py`, nightly): rules from the owner's Drive notes (`docs/portfolio-model.md`): correlation with the portfolio, two-asset volatility, beta and portfolio beta, Jensen's alpha and information ratio, ~30 holdings, utility, VaR.
+  - Caps the notes do not give are ASSUMED and editable in `config/portfolio.json`.
+  - Dhan holdings: India returns "No holdings available"; US returns "User not found" (no Dhan US account). Fit is measured against the Nifty 50 until holdings exist or are added under `extra`.
+- 🟡 **US stocks on the desk:** prices from Dhan's US feed (30 stocks now tracked quietly) and FMP fundamentals.
+  - ⛔ Dhan has no US history API, and Alpha Vantage's US options are premium only, so no US option data.
+  - US trend, Monte Carlo and VaR need history: add an `FMP_API_KEY` GitHub secret (picked up nightly), or wait as Dhan's daily closes accumulate (recorded from 16 Nov).
+- ✅ **Telegram:** the desk and terminal links are pinned in the chat; new `desk` command; trade and value replies now end with the portfolio-fit line and any tested investor rule.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

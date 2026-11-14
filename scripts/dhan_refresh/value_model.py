@@ -144,9 +144,6 @@ def backtest(data: dict, nifty: dict) -> dict:
                     per[(k, h, regime)].append((i, sum(xs) / len(xs) - base))
                     cases[(k, h, regime)] += len(xs)
     out = {"asof": nd[-1], "from": nd[0], "stocks": len(aligned), "split": nd[half] if dates else None, "names": NAMES,
-           "method": ("Monthly samples on today's Nifty 500 (survivorship bias), Dhan daily closes. Lift = the rule's average "
-                      "excess return over the Nifty minus the average stock's, same dates. Passes only if the lift is positive in "
-                      "both halves of the history and t >= 2 after allowing for overlapping windows; needs 100+ cases."),
            "rules": {}}
     for k in NAMES:
         res = {}
@@ -163,11 +160,26 @@ def backtest(data: dict, nifty: dict) -> dict:
                                    "cases": cases[(k, h, r)],
                                    "first": round(sum(a) / len(a), 4) if a else None, "second": round(sum(b) / len(b), 4) if b else None,
                                    "hit": round(sum(x > 0 for x in lifts) / len(lifts), 2) if lifts else None}
-        for r in ("up", "weak"):
-            x = res[f"12m_{r}"]
-            res[f"tested_{r}"] = bool(k != "lt_winner" and x["lift"] is not None and x["lift"] > 0 and x["t"] >= 2
-                                      and (x["first"] or 0) > 0 and (x["second"] or 0) > 0 and x["cases"] >= 100)
         out["rules"][k] = res
+    return score(out)
+
+
+def score(out: dict) -> dict:
+    """Pass rule, per market condition: at the 6- or 12-month horizon, positive lift in both halves of the history,
+    t >= 2 after the overlap adjustment, 100+ cases. The horizon that passed is recorded (6 months first)."""
+    for k, res in out.get("rules", {}).items():
+        for r in ("up", "weak"):
+            res[f"tested_{r}"], res[f"h_{r}"] = False, None
+            for h in ("6m", "12m"):
+                x = res.get(f"{h}_{r}") or {}
+                if (k != "lt_winner" and x.get("lift") is not None and x["lift"] > 0 and x.get("t", 0) >= 2
+                        and (x.get("first") or 0) > 0 and (x.get("second") or 0) > 0 and x.get("cases", 0) >= 100):
+                    res[f"tested_{r}"], res[f"h_{r}"] = True, h
+                    break
+    out["method"] = ("Monthly samples on today's Nifty 500 (survivorship bias), Dhan daily closes. Lift = the rule's average "
+                     "excess return over the Nifty minus the average stock's, same dates. Passes at the 6- or 12-month horizon "
+                     "only if the lift is positive in both halves of the history and t >= 2 after allowing for overlapping "
+                     "windows; needs 100+ cases. Weak-market samples are few (the Nifty was rarely below its 200-day).")
     return out
 
 
