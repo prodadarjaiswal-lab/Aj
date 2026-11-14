@@ -37,6 +37,7 @@ DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
                "dips  (proven stocks after a sharp fall)\n"
                "bargains  (blue chips now cheap, India and US)\n"
                "record  (how the bot's picks have done)\n"
+               "journal  (your last questions)\n"
                "alert TCS above 3450  (alert alone lists; alert remove 1)")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
@@ -561,6 +562,12 @@ class Bot:
         w = low.split(" ")
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
+        if low in ("journal", "my journal", "history"):
+            j = self.state.get("journal", [])[-15:]
+            if not j:
+                return "Journal is empty."
+            return "<b>Your last questions</b>\n" + "\n".join(
+                f"{esc(x['t'])} · {esc(x['sym'])} ({esc(x['cmd'])}): {esc(x['said'][:90])}" for x in reversed(j))
         if low in ("record", "track", "scorecard", "track record"):
             return record()
         if low in ("dips", "dip", "discount", "discounts"):
@@ -663,11 +670,22 @@ class Bot:
 
 
 # -- state on the 'bot' branch ---------------------------------------------
+def _secret():
+    import os
+    return os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
+
 def load_state() -> dict:
+    """Bot state (alerts, journal, read position) from the 'bot' branch, encrypted with the bot token."""
+    import token_cache as TC
     try:
         subprocess.run(["git", "-C", str(ROOT), "fetch", "-q", "origin", "bot"], check=True, capture_output=True, timeout=60)
-        return json.loads(subprocess.run(["git", "-C", str(ROOT), "show", "FETCH_HEAD:bot.json"],
-                                         check=True, capture_output=True, text=True).stdout)
+        raw = json.loads(subprocess.run(["git", "-C", str(ROOT), "show", "FETCH_HEAD:bot.json"],
+                                        check=True, capture_output=True, text=True).stdout)
+        if "ct" in raw:
+            txt = TC.unseal(raw, "bot-state", _secret())
+            return json.loads(txt) if txt else {}
+        return raw                                   # older plain-text state: read once, re-saved encrypted
     except Exception:
         return {}
 
@@ -687,7 +705,11 @@ def save_state(st: dict) -> None:
             run("config", "user.name", "dhan-live-bot")
             run("config", "user.email", "dhan-live-bot@users.noreply.github.com")
             run("checkout", "-q", "--orphan", "bot")
-        (OUT / "bot.json").write_text(json.dumps(st), encoding="utf-8")
+        import token_cache as TC
+        if not _secret():
+            print("bot: no TELEGRAM_BOT_TOKEN, state not saved")
+            return
+        (OUT / "bot.json").write_text(json.dumps(TC.seal(json.dumps(st), "bot-state", _secret())), encoding="utf-8")
         run("add", "bot.json")
         run("commit", "-q", "--allow-empty", "-m", "Bot state")
         run("push", "-q", "-f", "origin", "HEAD:refs/heads/bot")

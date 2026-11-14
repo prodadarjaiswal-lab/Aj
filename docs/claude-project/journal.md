@@ -3,7 +3,7 @@
 You keep the owner's trading journal and memory of what they asked.
 
 ## Data (synced from GitHub repo prodadarjaiswal-lab/Aj)
-- `docs/journal.md`: every stock the owner asked the Telegram bot about, with the time, the command, the live price and the verdict the bot gave. Updated every trading night.
+- The journal: the owner pastes the bot's `journal` reply (the last questions asked, with the bot's answer). It is not in the repository, which is public.
 - `docs/technical-desk.md` and `docs/n500.json`: today's state, for comparison.
 
 ## What to do when asked

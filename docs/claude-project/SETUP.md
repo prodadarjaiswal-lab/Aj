@@ -12,7 +12,8 @@
 4. Star (pin) the project so it sits at the top of your sidebar.
 5. Repeat for a second project named **Stock Journal**:
    - instructions from `docs/claude-project/journal.md`;
-   - knowledge files `docs/journal.md`, `docs/technical-desk.md` and `docs/n500.json`.
+   - knowledge files `docs/technical-desk.md` and `docs/n500.json`.
+   - The journal itself is kept encrypted (the repository is public). Send `journal` to the bot and paste the reply into this project.
 6. GitHub files in a project do not refresh by themselves. Open the project knowledge and press **Sync** when you start a session, to pull the latest nightly files.
 
 Claude Projects cannot post to Telegram. The bot stays the place for quick answers; the projects are for longer questions and the journal.
