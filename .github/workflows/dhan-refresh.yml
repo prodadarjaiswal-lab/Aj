@@ -33,9 +33,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html --with-options --with-n500 --with-markets --with-auction --with-tech
-      - name: US desk data (Dhan US closes; FMP history if the FMP_API_KEY secret exists)
-        env:
-          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+      - name: US desk data (Alpha Vantage weekly history + Dhan US closes)
         run: cd scripts/dhan_refresh && python us_model.py || true
       - name: Commit if changed
         run: |

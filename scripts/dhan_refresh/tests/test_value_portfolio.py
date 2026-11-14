@@ -178,3 +178,20 @@ def test_pin_links_once(monkeypatch):
     monkeypatch.setattr(B.T, "chat_id", lambda: "1")
     assert B.pin_links() == "links pinned" and calls == ["getChat", "sendMessage", "pinChatMessage"]
     assert B.pin_links() == "links already pinned"
+
+
+def test_us_weekly_model():
+    import us_model as U
+    import us_av_import as AV
+    csv = "timestamp,open,high,low,close,adjusted close,volume,dividend amount\n" + "\n".join(
+        f"2026-{1 + k // 4:02d}-{1 + (k % 4) * 7:02d},10,{11 + k * 0.1:.2f},9,{10 + k * 0.1:.2f},{(10 + k * 0.1) / 2:.4f},100,0" for k in range(44))
+    w = AV.parse(csv)
+    assert w["c"][-1] == round((10 + 43 * 0.1) / 2, 4) and w["d"] == sorted(w["d"])       # split-adjusted, oldest first
+    ext = U.extend_weekly({"d": ["2026-11-06"], "c": [100.0]}, {"2026-11-10": [0, 0, 101.0], "2026-11-13": [0, 0, 103.0], "2026-11-16": [0, 0, 99.0]})
+    assert ext["d"] == ["2026-11-06", "2026-11-13", "2026-11-16"] and ext["c"] == [100.0, 103.0, 99.0]
+    c = [100 * (1.003 ** k) for k in range(300)]
+    t = U.weekly_readout(c, c)
+    assert t["vs50"] > 0 and t["vs200"] > 0 and t["rs3"] == 0
+    m = U.weekly_mc(c)
+    assert m["p_up"] > 0.99 and len(m["fan"]) == 5
+    assert U.weekly_var(c)["99"]["hist_1w"] <= 0
