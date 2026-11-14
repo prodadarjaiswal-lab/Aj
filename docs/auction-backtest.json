@@ -138,6 +138,168 @@
   "hit": 0.4698,
   "t": -4.11
  },
+ "swing": {
+  "cutoff": "2026-05-20",
+  "names": {
+   "sw_va_up": "Closed above yesterday's value area (auction accepted higher)",
+   "sw_poc_up": "Today's point of control moved above yesterday's value area",
+   "sw_vwap_buy": "Closed above VWAP all afternoon with buyers at 55%+ of volume (delta estimate)",
+   "sw_ib_up": "Extended above the first hour's range and closed above it",
+   "sw_absorb": "Closed in the top third after trading below yesterday's value (sellers absorbed)",
+   "sw_cvd_div": "Price fell on the day but estimated delta was positive (bullish divergence)",
+   "sw_va_dn": "Closed below yesterday's value area (warning)"
+  },
+  "signals": {
+   "sw_va_up": {
+    "name": "Closed above yesterday's value area (auction accepted higher)",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 3876,
+     "n_out": 1873,
+     "lift_in": 0.00042,
+     "lift_out": -0.00128,
+     "t": -0.77,
+     "hit_out": 0.444
+    },
+    "10": {
+     "n": 3715,
+     "n_out": 1712,
+     "lift_in": 0.00113,
+     "lift_out": -0.00144,
+     "t": -0.43,
+     "hit_out": 0.453
+    }
+   },
+   "sw_poc_up": {
+    "name": "Today's point of control moved above yesterday's value area",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 3918,
+     "n_out": 1872,
+     "lift_in": 0.00023,
+     "lift_out": -0.00067,
+     "t": -0.4,
+     "hit_out": 0.448
+    },
+    "10": {
+     "n": 3770,
+     "n_out": 1724,
+     "lift_in": 0.00103,
+     "lift_out": -0.0001,
+     "t": -0.03,
+     "hit_out": 0.463
+    }
+   },
+   "sw_vwap_buy": {
+    "name": "Closed above VWAP all afternoon with buyers at 55%+ of volume (delta estimate)",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 1079,
+     "n_out": 516,
+     "lift_in": -0.00039,
+     "lift_out": 0.00013,
+     "t": 0.04,
+     "hit_out": 0.463
+    },
+    "10": {
+     "n": 1026,
+     "n_out": 463,
+     "lift_in": -0.00238,
+     "lift_out": 0.00178,
+     "t": 0.3,
+     "hit_out": 0.471
+    }
+   },
+   "sw_ib_up": {
+    "name": "Extended above the first hour's range and closed above it",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 2780,
+     "n_out": 1324,
+     "lift_in": -0.00036,
+     "lift_out": -0.00069,
+     "t": -0.35,
+     "hit_out": 0.447
+    },
+    "10": {
+     "n": 2679,
+     "n_out": 1223,
+     "lift_in": 1e-05,
+     "lift_out": -0.0011,
+     "t": -0.29,
+     "hit_out": 0.46
+    }
+   },
+   "sw_absorb": {
+    "name": "Closed in the top third after trading below yesterday's value (sellers absorbed)",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 1814,
+     "n_out": 883,
+     "lift_in": 0.00041,
+     "lift_out": -0.00056,
+     "t": -0.25,
+     "hit_out": 0.446
+    },
+    "10": {
+     "n": 1759,
+     "n_out": 828,
+     "lift_in": -0.00031,
+     "lift_out": 6e-05,
+     "t": 0.01,
+     "hit_out": 0.449
+    }
+   },
+   "sw_cvd_div": {
+    "name": "Price fell on the day but estimated delta was positive (bullish divergence)",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 2385,
+     "n_out": 1172,
+     "lift_in": -0.00199,
+     "lift_out": -0.00052,
+     "t": -0.27,
+     "hit_out": 0.464
+    },
+    "10": {
+     "n": 2347,
+     "n_out": 1134,
+     "lift_in": -0.00242,
+     "lift_out": -0.00041,
+     "t": -0.1,
+     "hit_out": 0.448
+    }
+   },
+   "sw_va_dn": {
+    "name": "Closed below yesterday's value area (warning)",
+    "tested": false,
+    "h": null,
+    "5": {
+     "n": 4365,
+     "n_out": 2146,
+     "lift_in": -0.0006,
+     "lift_out": 0.00124,
+     "t": 0.84,
+     "hit_out": 0.481
+    },
+    "10": {
+     "n": 4332,
+     "n_out": 2113,
+     "lift_in": -0.00085,
+     "lift_out": 0.00135,
+     "t": 0.45,
+     "hit_out": 0.459
+    }
+   }
+  },
+  "note": "End-of-day states from 5-minute Dhan bars, bought at the close and held 5 or 10 sessions; excess over the Nifty 50 minus the average stock-day. Nifty 50 members today, 12 months."
+ },
  "asof": "2026-11-13",
  "from": "2025-11-19",
  "stocks": 50,
