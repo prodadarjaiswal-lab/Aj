@@ -48,7 +48,36 @@ Each line is something the owner asked for in chat, with its status.
 - ✅ NSE alerts, morning brief and close summary.
 - ✅ Hourly and nightly terminal republish (scheduled tasks).
 
+## Owner's requests of 14 Nov (plan)
+Rules:
+- All prices come from Dhan. If Dhan fails, report it; never substitute another source.
+- Every advanced check runs before the bot answers.
+- Replies work even when the market is closed, using the last close.
+
+1. ⬜ **Always-on bot.** The repo goes public, so Actions minutes are free. `bot-listener.yml` runs 24/7 as back-to-back runs, queued by a 30-minute schedule.
+   - It long-polls Telegram and answers from the latest data, with live Dhan prices taken from the `live` and `us-watch` branches.
+   - The price jobs stop polling Telegram, so updates are not consumed twice, and reload alerts every minute.
+2. ⬜ **The 8 order-flow modules on live Dhan data.** The live job also polls Dhan `/marketfeed/quote` for the Nifty 50 and the stocks being watched. That reply carries last quantity, total buy and sell quantity, and 5-level depth. From it:
+   - **Time and sales:** a tape built from changes between snapshots, with large prints flagged.
+   - **Aggressor side:** the trade price against bid and ask.
+   - **Delta and cumulative delta:** volume signed by aggressor side.
+   - **Footprint:** signed volume at each price, with imbalances and stacked imbalances.
+   - **Depth and liquidity imbalance:** buying and selling pressure.
+   - **Absorption and exhaustion:** large volume with little price movement.
+   - The results go to `live/flow.json`, labelled "snapshot-derived".
+   - VWAP, Market Profile, Volume Profile and gamma are already built.
+3. ⬜ **Every market Dhan has:**
+   - MCX commodities (gold, silver, crude, natural gas futures), USDINR, indices, F&O open interest, and US stocks through Dhan's global feed.
+   - Dhan news headlines, linked to the day's biggest movers to explain why they rose or fell.
+4. ⬜ **Technical Desk in two parts:**
+   - **Screener:** rising, dips, bargains, the tested signals and the original terminal's screens.
+   - **Analyzer:** for one stock, the technical verdict, auction and order flow, options, news, value and hedge.
+   - Better charts throughout.
+5. ⬜ **Refresh cadence:** the terminal and the desk republish at the open (09:25), hourly during the session and after the close.
+6. ⬜ **Self-check:** the live track record of the bot's picks (built), plus weekly re-tests. Signals that stop working are dropped automatically (built).
+
 ## Order of work now
-1. C: live WebSocket order flow (tick tape, aggressor side, depth imbalance, large prints) with Telegram alerts. Back-test it before it influences any verdict.
-2. C: replay of past sessions on the desk page.
-3. B: candidates file, so new measures are added without code changes.
+1. Always-on bot (1)
+2. Live order flow from Dhan quotes (2)
+3. MCX, currency, US and news from Dhan (3)
+4. Desk: screener and analyzer, charts (4), and refresh cadence (5)
