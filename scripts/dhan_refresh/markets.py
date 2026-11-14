@@ -97,6 +97,7 @@ def run(dhan, scrip_csv: str, root, now: dt.datetime) -> str:
         seen = [(r.get("SEM_EXM_EXCH_ID"), r.get("SEM_INSTRUMENT_NAME"), r.get("SEM_TRADING_SYMBOL"), r.get("SEM_EXPIRY_DATE"))
                 for r in csv.DictReader(io.StringIO(scrip_csv)) if "USDINR" in (r.get("SEM_TRADING_SYMBOL") or "").upper()][:5]
         print(f"  USDINR rows in Dhan's list: {seen}")
+        out["missing"] = [m for m in out["missing"] if m != "USDINR"] + ["USDINR (no live contract in Dhan's instrument list)"]
     if body:
         try:
             q = dhan.post("/marketfeed/quote", body).get("data") or {}
