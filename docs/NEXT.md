@@ -108,6 +108,18 @@ Rules:
   - Stale, found by the audit: the NSE terminal's news and filings (10 Nov), FII/DII flows (9 Nov), global markets (23 Oct, old Yahoo series) and macro. The nightly job refreshes prices, technicals and Dhan fundamentals only.
 - All scheduled republish tasks now publish the page together with its detail files.
 
+## 14 Nov, part 4: research screener
+- ✅ **Research screener (first section, all Nifty 500):**
+  - 10 screens: Best evidence, Tested setups, Investor rules, Value with quality, Institutions buying, Accepted higher, Down: company-specific, Down with the market, Oversold quality, Leaders.
+  - Filters: industry, value, trend, and a ₹10 Cr turnover floor (from the skills).
+  - Columns: evidence chips (green = passed a back-test, dashed = context), 3-month strength, last-session order flow (VWAP, buyers, value acceptance), P/E against the sector, ROCE, FII change, and **why it moved** (3 months split into market, sector and company-specific, plus ownership and earnings or P/E changes).
+- ✅ **Dhan company data for all 488 stocks nightly** (`research.py`, `docs/fund500.json`): P/E, P/E against the sector, P/B, ROCE, debt, dividend yield, promoter/FII/DII holdings and changes. A weekly history builds up, to show improving ratios.
+- ✅ **Setups from the owner's skills added to the 6-year back-test:**
+  - Passed: bull flag (rising markets, +0.96% extra over 10 days out of sample) and oversold RSI(14) < 30 (weak markets).
+  - Failed: 20-day breakout, reclaim the 20-day average, oversold bounce.
+- ✅ **Research factors tested on 6 years:** 6-month relative strength, accumulation and the trend stack were positive in both halves but t 1.7–1.8 (just short of 2), so they are context. "Near the 52-week high" showed nothing.
+- **Score counts only tested evidence;** everything else is a filter.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

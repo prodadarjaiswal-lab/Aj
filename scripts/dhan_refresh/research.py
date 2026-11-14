@@ -158,7 +158,7 @@ def run(data: dict, nifty: dict, root: Path, dhan=None) -> str:
         peers = [r63[x] for x in by_ind.get(ind, []) if x != s and r63.get(x) is not None]
         b = beta(c, nc)
         turnover = (sum(x * y for x, y in zip(c[-20:], (o.get("v") or [0] * 20)[-20:])) / 20) / 1e7 if o.get("v") else None
-        on = set(t.get("on", [])) | set(t.get("new", []))
+        on = set(t.get("new", []))          # fired in the last 3 sessions: the back-test measured signals on the day they appear
         vin = set(((vm.get("today") or {}).get(s) or {}).get("on", []))
         score, ev = 0.0, []
         for k in sorted(on & t_ok):
@@ -213,3 +213,39 @@ def run(data: dict, nifty: dict, root: Path, dhan=None) -> str:
     (root / "docs/research.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")
     top = sorted(out.items(), key=lambda x: -x[1]["score"])[:5]
     return f"research: {len(out)} stocks; fundamentals for {len(fund.get('now', {}))}; top {[(k, v['score']) for k, v in top]}"
+
+
+def rescore(root: Path) -> str:
+    """Recompute setups, evidence and score in docs/research.json from the latest model files (no Dhan calls)."""
+    j = lambda name: json.loads((root / name).read_text(encoding="utf-8"))
+    res, tech, model, vm, quant = j("docs/research.json"), j("docs/tech-today.json")["stocks"], j("docs/tech-model.json"), j("docs/value-model.json"), j("docs/quant.json")
+    side, sig, warn = res["side"], model.get("signals", {}), {"extended", "downtrend"}
+    t_ok = {k for k, v in sig.items() if v.get("tested" if side == "up" else "tested_weak") and k not in warn}
+    t_warn = {k for k, v in sig.items() if k in warn and v.get("tested" if side == "up" else "tested_weak")}
+    v_ok = {k for k, v in (vm.get("rules") or {}).items() if v.get(f"tested_{side}")}
+    fq = ((vm.get("fundamental") or {}).get("quintiles")) or {}
+    for s, x in res["stocks"].items():
+        on = set((tech.get(s) or {}).get("new", []))
+        vin = set(((vm.get("today") or {}).get(s) or {}).get("on", []))
+        score, ev = 0.0, []
+        for k in sorted(on & t_ok):
+            score, ev = score + 2, ev + [["tech", k]]
+        for k in sorted(on & t_warn):
+            score, ev = score - 2, ev + [["warn", k]]
+        for k in sorted(vin & v_ok):
+            score, ev = score + 2, ev + [["inv", k]]
+        for k, q in (fq.get(s) or {}).items():
+            if q >= 4:
+                score, ev = score + 1, ev + [["fund", k]]
+        mc = (quant.get("mc") or {}).get(s)
+        if mc and mc.get("p_up") is not None and mc["p_up"] >= 0.55:
+            score, ev = score + 0.5, ev + [["mc", round(mc["p_up"], 2)]]
+        x.update({"setups": sorted(on - warn), "warn": sorted(on & warn), "inv": sorted(vin), "score": round(score, 1), "ev": ev})
+    res["tested"] = {"tech": sorted(t_ok), "warn": sorted(t_warn), "inv": sorted(v_ok)}
+    (root / "docs/research.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")
+    return f"rescored {len(res['stocks'])}"
+
+
+if __name__ == "__main__":
+    import sys
+    print(rescore(Path(__file__).resolve().parents[2]) if sys.argv[1:2] == ["rescore"] else "usage: research.py rescore")

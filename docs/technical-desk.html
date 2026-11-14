@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Technical Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -50,7 +51,12 @@ section.wrap{min-width:0;width:100%}
 .cnt{font:500 12px var(--mono);color:var(--mute);white-space:nowrap}
 .cnt.has{color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 8px}
 .basisline{border-left:3px solid var(--accent2);padding-left:8px;margin:0}
-.fr-ok{color:var(--up);font-weight:600}.fr-old{color:var(--warn);font-weight:600}
+.fr-ok{color:var(--up);font-weight:600}
+.filt label{display:flex;gap:6px;align-items:center}.filt select{font:inherit;padding:4px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.ev{display:inline-block;font-size:11px;border-radius:5px;padding:0 5px;margin:1px 2px 1px 0;border:1px solid}
+.ev.t{color:var(--up)}.ev.u{color:var(--mute);border-style:dashed}.ev.w{color:var(--down)}
+td .sm{font-size:11.5px;color:var(--mute);line-height:1.3}.fr-old{color:var(--warn);font-weight:600}
 .part{font-size:18px;margin-top:10px;padding-top:10px;border-top:2px solid var(--line);scroll-margin-top:120px}
 .jump a{text-decoration:none}
 .combo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
@@ -84,7 +90,19 @@ details>summary{cursor:pointer;font-weight:600}
 
 <section id="screener" class="wrap" style="gap:10px">
   <div class="row" style="justify-content:space-between"><p class="note" style="margin:0">Tap a section to open it. Tap any stock for its chart and full analysis.</p><button class="chip" id="ddall">Open all</button></div>
-  <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
+  <details class="dd" id="dd-research" open><summary><span class="ddt">Research screener (all Nifty 500)</span><span class="cnt" id="n-research"></span></summary><div class="ddb">
+    <p class="note basisline" id="b-research"></p>
+    <div class="row" id="presets" role="group" aria-label="Screens"></div>
+    <div class="row filt">
+      <label class="sub">Industry <select id="fInd"><option value="">All</option></select></label>
+      <label class="sub">Value <select id="fVal"><option value="">Any</option><option>cheap</option><option>fair</option><option>expensive</option><option>cheap, weak quality</option><option>loss-making</option></select></label>
+      <label class="sub">Trend <select id="fTr"><option value="">Any</option><option value="up">Above 200-day</option><option value="dn">Below 200-day</option></select></label>
+      <label class="sub"><input type="checkbox" id="fTo" checked style="width:auto"> Turnover ≥ ₹10 Cr</label>
+    </div>
+    <div class="tw"><table id="rsT"></table></div>
+    <div class="row"><button class="chip" id="rsMore" hidden>Show more</button><span class="note" id="rsNote"></span></div>
+  </div></details>
+  <details class="dd" id="dd-mkts"><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
   <details class="dd" id="dd-rising" open><summary><span class="ddt">Turning bullish (tested signals)</span><span class="cnt" id="n-rising"></span></summary><div class="ddb"><p class="note basisline" id="b-rising"></p><div class="tw"><table id="rising"></table></div></div></details>
   <details class="dd" id="dd-swing"><summary><span class="ddt">Order-flow and auction setups</span><span class="cnt" id="n-swing"></span></summary><div class="ddb"><p class="note basisline" id="b-swing"></p><div class="tw"><table id="swingT"></table></div></div></details>
   <details class="dd" id="dd-dips"><summary><span class="ddt">Dips in proven stocks</span><span class="cnt" id="n-dips"></span></summary><div class="ddb"><p class="note basisline" id="b-dips"></p><div class="tw"><table id="dips"></table></div></div></details>
@@ -164,6 +182,7 @@ const cls=x=>x==null?"":x>0?"good":x<0?"bad":"";
 const NAMES=D.model.names||{};
 const SHORT={hi52v:"52-week high on volume",volbreak:"Volume breakout",nr7:"Tight inside day",don55:"55-day breakout",macd0:"MACD cross above 0",rsnew:"Relative-strength high",
  qdrop10:"Fell 10% in 10 days",qdrop:"Fell 15% in 10 days",qdrop25:"Fell 25% in 20 days",qdd:"25% below high",qdd_hold:"Back above 20-day after a 25% fall"};
+Object.assign(SHORT,{brk20:"20-day breakout",flag:"Bull flag",reclaim20:"Back above 20-day",os14:"Oversold RSI<30",os_bounce:"Oversold bounce",st_up:"Supertrend up",trend:"Trend template",vcp:"Tight base near high",adx:"ADX trend start",rsi2:"RSI(2) dip",accum:"Accumulation",gap:"Gap that holds",bbsq:"Squeeze breakout",dip3:"3 down days",ibs:"Weak close in uptrend",reclaim200:"Back above 200-day",pullback:"Pullback",extended:"Overextended",downtrend:"Downtrend"});
 const sn=k=>SHORT[k]||NAMES[k]||k;
 const WARN=["extended","downtrend"],DIPS=["qdrop10","qdrop","qdrop25","qdd","qdd_hold"];
 const flag=D.regimeUp===false?"tested_weak":"tested",side=D.regimeUp===false?"weak":"up";
@@ -224,11 +243,11 @@ function screener(){
   cnt("dips",dp.length);$("b-dips").textContent=dipsOk.length?`Basis: ${dipsOk.map(k=>sn(k)).join("; ")} passed the 21-day recovery test (beat the average stock in both periods, t ≥ 2).`:"Basis: no dip rule passed the back-test for the current market, so none is listed.";
   const FQ=((D.vm||{}).fundamental||{}).quintiles||{},FP=((D.vm||{}).fundamental||{}).passed||[];
   const bi=Object.entries(FQ).map(([s,q])=>[s,q,Object.values(q).reduce((a,b)=>a+b,0)/Math.max(1,Object.values(q).length)]).filter(([s,q,a])=>a>=4&&((bySym[s]||{}).hi52||0)<=-0.10).sort((a,b)=>b[2]-a[2]||((bySym[a[0]]||{}).hi52||0)-((bySym[b[0]]||{}).hi52||0));
-  $("bargIN").innerHTML=!FP.length?`<tr><td class="note">No fundamental factor passed its test, so nothing is listed.</td></tr>`:bi.length?`<tr><th>Stock</th>${FP.map(f=>`<th class="n">${esc(f.replace("Residual-income V/P","Resid. income").replace("B/P","Book/price"))}</th>`).join("")}<th class="n">From high</th></tr>`+bi.slice(0,10).map(([s,q])=>`<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button></td>${FP.map(f=>`<td class="n">${q[f]??"–"}/5</td>`).join("")}<td class="n bad">${pc((bySym[s]||{}).hi52,0)}</td></tr>`).join(""):`<tr><td class="note">None passes today.</td></tr>`;
+  $("bargIN").innerHTML=!FP.length?`<tr><td class="note">No fundamental factor passed its test, so nothing is listed.</td></tr>`:bi.length?`<tr><th>Stock</th>${FP.map(f=>`<th class="n">${esc(f.replace("Residual-income V/P","Resid. income").replace("B/P","Book/price"))}</th>`).join("")}<th class="n">P/E (× sector)</th><th class="n">ROCE</th><th class="n">From high</th></tr>`+bi.slice(0,10).map(([s,q])=>{const x=((D.rs||{}).stocks||{})[s]||{};return `<tr><td><button class="link" data-s="${esc(s)}">${esc(s)}</button>${x.value?` <span class="basis">${esc(x.value)}</span>`:""}</td>${FP.map(f=>`<td class="n">${q[f]??"–"}/5</td>`).join("")}<td class="n">${x.pe!=null?num(x.pe,0):"–"}${x.pe_sec?` <span class="note">(${num(x.pe_sec,2)}×)</span>`:""}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td class="n bad">${pc((bySym[s]||{}).hi52,0)}</td></tr>`}).join(""):`<tr><td class="note">None passes today.</td></tr>`;
   const gr=x=>{for(const y of [5,4]){const g=[x["eps_cagr"+y],x["rev_cagr"+y]].filter(v=>v!=null);if(g.length)return[Math.max(...g),y]}return[null,null]};
   const bu=(D.us.rows||[]).map(x=>[x,...gr(x)]).filter(([x,g])=>g>0.05&&(x.roe_avg||0)>0.15&&(x.off_high||0)<=-0.10&&x.pe_now>0&&x.pe_hist_median&&x.pe_now<x.pe_hist_median).sort((a,b)=>a[0].pe_now/a[0].pe_hist_median-b[0].pe_now/b[0].pe_hist_median);
   $("bargUS").innerHTML=bu.length?`<tr><th>Stock</th><th class="n">From high</th><th class="n">P/E vs usual</th><th class="n">Growth</th></tr>`+bu.slice(0,6).map(([x,g,y])=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n bad">${pc(x.off_high,0)}</td><td class="n">${num(x.pe_now,0)} / ${num(x.pe_hist_median,0)}</td><td class="n">${pc(g,0)} (${y}y)</td></tr>`).join("")+`<tr><td colspan="4" class="note">Fundamentals ${esc(D.us.asof||"")} (FMP). US prices on the desk come from Dhan.</td></tr>`:`<tr><td class="note">None passes today.</td></tr>`;
-  cnt("barg",bi.length+bu.length);$("b-barg").textContent=`Basis, India: top two-fifths of the Nifty 50 on the fundamental factors that passed a 12-month test (${FP.join(", ")||"none"}), and at least 10% below the 52-week high. "P/E below its own median" failed that test and is no longer used. Basis, US: P/E below its usual level with growth and ROE filters; not back-tested (no US fundamentals history), so treat as a starting list.`;
+  cnt("barg",bi.length+bu.length);$("b-barg").textContent=`Basis, India: top two-fifths of the Nifty 50 on the fundamental factors that passed a 12-month test (${FP.join(", ")||"none"}), and at least 10% below the 52-week high. P/E, P/E against the sector and ROCE (Dhan) are shown beside each name so "cheap" is never just a price fall; "P/E below its own median" failed its test and does not select stocks. Basis, US: P/E below its usual level with growth and ROE filters; not back-tested (no US fundamentals history), so treat as a starting list.`;
   const mv=(m.movers||[]);
   $("movers").innerHTML=mv.length?`<tr><th>Stock</th><th class="n">Day</th><th>Possible reason</th></tr>`+mv.map(x=>{const h=((x.headlines||[])[0]||{}).title||(((D.n50[x.s]||{}).news||[])[0]||{}).title;return `<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button></td><td class="n ${cls(x.r1)}">${pc(x.r1)}</td><td>${h?esc(h.slice(0,120)):'<span class="note">no headline found</span>'}</td></tr>`}).join(""):`<tr><td class="note">Movers appear after the nightly refresh.</td></tr>`;
   $("newsnote").textContent="A headline next to a move is a possible reason, not a proven cause."+((m.missing||[]).some(x=>String(x).includes("newsheadline"))?" Dhan's news service is not enabled on this account, so headlines come from NSE filings and the terminal's news feed.":"");
@@ -236,6 +255,53 @@ function screener(){
   $("track").innerHTML=Object.keys(tr).length?["rising","dips"].map(k=>{const r=tr[k]||{};if(!r.picks)return"";return `<p><b>${k==="rising"?"Turning bullish":"Dips"}</b>: ${r.picks} picks, ${r.open} open.${r.n10?` After 10 days (${r.n10}): beat the Nifty ${Math.round(r.beat10*100)}%, average ${pc(r.avg10)}.`:""}${r.n21?` After 21 days: ${Math.round(r.beat21*100)}%, ${pc(r.avg21)}.`:""}</p>`}).join("")+`<p class="note">Logged before the outcome existed, then scored nightly.</p>`:`<p class="note">Starts with the next nightly refresh.</p>`;
   $("kept").innerHTML=`<p>${tested.length} trade signals and ${dipsOk.length} dip signals passed for the current market. No order-flow or auction signal has passed yet, so those stay context only.</p>`+hbars(tested.map(k=>[sn(k).slice(0,11),(sig[k].lift_out_x10||0)*100,"var(--accent)"]),{})+`<p class="note">Bars: extra 10-day return vs a typical stock, last 2 years, %.</p>`;
   cnt("movers",mv.length);swingTable();freshTable();board();
+}
+
+/* ---------- research screener ---------- */
+const RS=(D.rs||{}).stocks||{},RT=(D.rs||{}).tested||{tech:[],inv:[],warn:[]};
+const NM=k=>SHORT[k]||VSHORT[k]||NAMES[k]||((D.vm||{}).names||{})[k]||k;
+const PRESETS=[
+ ["best","Best evidence","Highest score: only back-tested evidence counts",x=>x.score>0,(a,b)=>b.score-a.score],
+ ["setup","Tested setups today","A technical signal that passed the back-test fired",x=>x.setups.some(k=>RT.tech.includes(k)),(a,b)=>b.score-a.score],
+ ["invest","Investor rules","A 6–12 month rule that passed is active",x=>x.inv.some(k=>RT.inv.includes(k)),(a,b)=>b.score-a.score],
+ ["vq","Value with quality","Cheap against its sector (P/E ≤ 0.8× sector), ROCE ≥ 12%, debt/equity ≤ 1.5",x=>x.value==="cheap",(a,b)=>(a.pe_sec||9)-(b.pe_sec||9)],
+ ["inst","Institutions buying","FII or DII holding up 0.5 pp+ last quarter",x=>(x.d_fii||0)>=0.5||(x.d_dii||0)>=0.5,(a,b)=>((b.d_fii||0)+(b.d_dii||0))-((a.d_fii||0)+(a.d_dii||0))],
+ ["flow","Accepted higher","Last session closed above VWAP, accepted above yesterday's value, buyers 55%+ (untested)",x=>x.vwap==="above"&&/acceptance above|breakout/.test(x.auction||"")&&(x.buy||0)>=0.55,(a,b)=>(b.buy||0)-(a.buy||0)],
+ ["downco","Down: company-specific","Down 10%+ in 3 months, mostly not the market or sector",x=>(x.r3m||0)<=-0.10&&(x.why||{}).driver==="stock",(a,b)=>(a.r3m||0)-(b.r3m||0)],
+ ["downmkt","Down with the market","Down 10%+ in 3 months, mostly the market or its sector (often the better dip to study)",x=>(x.r3m||0)<=-0.10&&["market","sector"].includes((x.why||{}).driver),(a,b)=>(a.r3m||0)-(b.r3m||0)],
+ ["osq","Oversold quality","RSI(14) under 30 with ROCE ≥ 15% and not loss-making",x=>(x.rsi||50)<30&&(x.roce||0)>=15&&x.value!=="loss-making",(a,b)=>(a.rsi||0)-(b.rsi||0)],
+ ["lead","Leaders","Top relative strength over 3 months, above the 200-day",x=>(x.rs3||0)>0.10&&(x.vs200||0)>0,(a,b)=>(b.rs3||0)-(a.rs3||0)],
+];
+let PRE="best",LIM=25;
+function evChips(x){
+  const t=x.setups.map(k=>`<span class="ev ${RT.tech.includes(k)?"t":"u"}" title="${RT.tech.includes(k)?"passed the back-test":"did not pass: context only"}">${esc(NM(k))}</span>`);
+  const i=x.inv.map(k=>`<span class="ev ${RT.inv.includes(k)?"t":"u"}">${esc(NM(k))}</span>`);
+  const w=x.warn.map(k=>`<span class="ev w">${esc(NM(k))}</span>`);
+  const f=Object.entries(x.fq||{}).filter(([,q])=>q>=4).map(([k])=>`<span class="ev t">${esc(k)} top 40%</span>`);
+  const tested=[...t,...i,...f].filter(c=>c.includes('ev t')),ctx_=[...t,...i].filter(c=>c.includes('ev u'));
+  const all=[...tested,...w,...ctx_.slice(0,2)];if(ctx_.length>2)all.push(`<span class="sm">+${ctx_.length-2} more</span>`);
+  return all.join("")||'<span class="sm">none</span>';
+}
+function flowCell(x){if(!x.vwap&&x.buy==null)return'<span class="sm">–</span>';const up=x.vwap==="above";return `<span class="${up?"good":"bad"}">${up?"above":"below"} VWAP</span><div class="sm">${x.buy!=null?"buyers "+Math.round(x.buy*100)+"%":""}${x.auction?" · "+esc(String(x.auction).replace("yesterday's value","value").slice(0,34)):""}</div>`}
+function valCell(x){if(x.pe==null)return'<span class="sm">–</span>';const c=x.value==="cheap"?"good":x.value==="expensive"||x.value==="loss-making"?"bad":"";return `<span class="${c}">${x.pe>0?num(x.pe,0):"loss"}</span>${x.pe_sec?`<div class="sm">${num(x.pe_sec,2)}× sector</div>`:""}`}
+function whyCell(x){const w=x.why||{};if(w.total==null)return"";const p=k=>pc(w[k],0);return `<span class="${w.total<0?"bad":"good"}">${pc(w.total,0)}</span><div class="sm">${esc(w.label||"")}: mkt ${p("market")}, sector ${p("sector")}, own ${p("stock")}${(w.notes||[]).length?"<br>"+esc(w.notes.slice(0,2).join("; ")):""}</div>`}
+function research(){
+  const list=Object.entries(RS);if(!list.length){$("rsT").innerHTML=`<tr><td class="note">Research profiles appear after the next nightly run.</td></tr>`;$("b-research").textContent="";return}
+  const P=PRESETS.find(p=>p[0]===PRE)||PRESETS[0],ind=$("fInd").value,val=$("fVal").value,tr=$("fTr").value,to=$("fTo").checked;
+  let rows=list.map(([s,x])=>Object.assign({s},x)).filter(x=>P[3](x)&&(!ind||x.ind===ind)&&(!val||x.value===val)&&(!tr||(tr==="up"?(x.vs200||0)>0:(x.vs200||0)<0))&&(!to||(x.turnover_cr||0)>=10));
+  rows.sort(P[4]);
+  cnt("research",rows.length);
+  $("b-research").innerHTML=`<b>${esc(P[1])}</b>: ${esc(P[2])}. <span class="ev t">green</span> passed a back-test · <span class="ev u">dashed</span> context only · <span class="ev w">red</span> tested warning. <details style="display:inline"><summary class="note" style="display:inline;font-weight:400">How the score works</summary><span class="note">${esc((D.rs||{}).method||"")}</span></details>`;
+  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button><div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
+  $("rsMore").hidden=rows.length<=LIM;$("rsNote").textContent=rows.length?`showing ${Math.min(LIM,rows.length)} of ${rows.length}; data ${esc((D.rs||{}).asof||"")}, Dhan fundamentals ${esc((D.rs||{}).fund_asof||"")}`:"";
+}
+function researchInit(){
+  $("presets").innerHTML=PRESETS.map(p=>`<button class="chip${p[0]===PRE?" on":""}" data-pre="${p[0]}" title="${esc(p[2])}">${esc(p[1])}</button>`).join("");
+  const inds=[...new Set(Object.values(RS).map(x=>x.ind).filter(Boolean))].sort();$("fInd").innerHTML='<option value="">All</option>'+inds.map(i=>`<option>${esc(i)}</option>`).join("");
+  $("presets").addEventListener("click",e=>{const b=e.target.closest("[data-pre]");if(!b)return;PRE=b.dataset.pre;LIM=25;document.querySelectorAll("#presets .chip").forEach(c=>c.classList.toggle("on",c.dataset.pre===PRE));research()});
+  ["fInd","fVal","fTr","fTo"].forEach(id=>$(id).addEventListener("change",()=>{LIM=25;research()}));
+  $("rsMore").addEventListener("click",()=>{LIM+=25;research()});
+  research();
 }
 function cnt(k,n){const e=$("n-"+k);if(e){e.textContent=n?n+(n===1?" stock":" stocks"):"none today";e.classList.toggle("has",!!n)}}
 function swingTable(){
@@ -593,5 +659,5 @@ function quantTab(){
 }
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
-screener();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+screener();researchInit();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 </script>

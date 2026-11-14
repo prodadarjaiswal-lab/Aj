@@ -117,6 +117,7 @@ def build(out: Path) -> dict:
             "quant": _j(ROOT / "docs/quant.json", {}),
             "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
             "usd": _j(ROOT / "docs/us-desk.json", {}),
+            "rs": _j(ROOT / "docs/research.json", {}),
             "chart": _chart(_index_charts(_j(ROOT / "docs/chart-data.json", {}), nset)),
             "usw": {k: {"d": v["d"][-104:], "c": v["c"][-104:]} for k, v in _j(ROOT / "data/us-weekly.json", {}).items()},
             "nval": {s: {"sector": v.get("sector"), "val": v.get("val"),
@@ -145,6 +146,7 @@ def build(out: Path) -> dict:
         ["FII / DII flows (NSE terminal)", _last_fii(nset.get("fiidii")), "not refreshed by the nightly job", "daily"],
         ["Global markets (NSE terminal)", str((nset.get("glob") or {}).get("made") or "")[:10], "old Yahoo series; not refreshed", "weekly"],
         ["Macro (NSE terminal)", ((nset.get("macro") or {}).get("usdinr") or [[None]])[-1][0], "monthly series", "monthly"],
+        ["Research profiles and Dhan fundamentals (Nifty 500)", data["rs"].get("fund_asof"), f"{len(data['rs'].get('stocks', {}))} stocks", "daily"],
         ["Live order flow", flow.get("t") if flow.get("d") == today_ist else "market closed", "market hours only", "live"]]}
     html = (ROOT / "docs/technical-desk.html").read_text(encoding="utf-8")
     blob = json.dumps(data, separators=(",", ":"), default=str).replace("</", "<\\/")
