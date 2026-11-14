@@ -45,7 +45,7 @@ details>summary{cursor:pointer;font-weight:600}
 <header>
   <div class="row" style="justify-content:space-between;align-items:end">
     <div><h1>Technical Desk</h1><p class="sub" id="asof"></p></div>
-    <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screener</button><button class="tab" role="tab" data-t="analyzer" aria-selected="false">Analyzer</button></div>
+    <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screener</button><button class="tab" role="tab" data-t="analyzer" aria-selected="false">Analyzer</button><button class="tab" role="tab" data-t="quant" aria-selected="false">Quant</button></div>
   </div>
 </header>
 
@@ -74,10 +74,36 @@ details>summary{cursor:pointer;font-weight:600}
   <h2 style="margin-top:4px">Order flow and auction</h2>
   <p class="note" id="flownote"></p>
   <div class="cards" id="flowcards"></div>
+  <h2 style="margin-top:4px">Risk and scenarios</h2>
+  <div class="cards">
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Monte Carlo · 21 days</h2><span class="basis">10,000 bootstrapped paths</span></div><div id="mc"></div></div>
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Value at Risk</h2><span class="basis">per ₹1,00,000</span></div><div id="var"></div></div>
+  </div>
   <div class="cards">
     <div class="pnl"><h2>Options</h2><div id="opts"></div></div>
     <div class="pnl"><h2>News and filings</h2><div id="news"></div></div>
   </div>
+</section>
+
+<section id="quant" class="wrap" style="gap:14px" hidden>
+  <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Black-Scholes calculator</h2><span class="basis">IV from the Dhan option chain</span></div>
+    <div class="row">
+      <label class="sub">Underlying <select id="bsU"></select></label>
+      <label class="sub">Strike <input id="bsK" type="number" step="any" style="width:110px"></label>
+      <label class="sub">Type <select id="bsT"><option value="call">CE</option><option value="put">PE</option></select></label>
+      <label class="sub">Days <input id="bsD" type="number" step="any" style="width:70px"></label>
+      <label class="sub">IV % <input id="bsV" type="number" step="any" style="width:70px"></label>
+      <label class="sub">Spot <input id="bsS" type="number" step="any" style="width:110px"></label>
+    </div>
+    <div class="tiles" id="bsOut"></div>
+    <div class="cards"><div><h3>Price across spot and volatility</h3><div class="tw" id="bsSurf"></div></div><div><h3>Delta and gamma across spot</h3><div id="bsGreeks"></div></div></div>
+    <p class="note" id="bsNote"></p>
+  </div>
+  <div class="cards">
+    <div class="pnl"><h2>Markowitz: Nifty 50</h2><div id="front"></div><div id="wts"></div></div>
+    <div class="pnl"><h2>Walk-forward test and portfolio VaR</h2><div id="wf"></div></div>
+  </div>
+  <div class="pnl"><h2>Pairs and mean reversion</h2><div id="pairsS"></div><div class="cards"><div class="tw"><table id="pairsT"></table></div><div id="pairChart"></div></div></div>
 </section>
 </div>
 <script>
@@ -225,12 +251,62 @@ function news(sym){
   const x=D.n50[sym]||{},mv=((D.markets||{}).movers||[]).find(m=>m.s===sym),items=[...((mv||{}).headlines||[]),...(x.filings||[]),...(x.news||[])].slice(0,6);
   $("news").innerHTML=items.length?items.map(i=>`<p><span class="note">${esc(String(i.time||"").slice(0,10))}</span> ${esc(String(i.title||"").slice(0,140))}</p>`).join("")+`<p class="note">Possible reasons for a move, not proven causes.</p>`:`<p class="note">No headline or filing found (news covers the Nifty 50 and the day's biggest movers).</p>`;
 }
-function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;$("q").value=sym;verdict(sym);readout(sym);valhedge(sym);flowcards(sym);opts(sym);news(sym);try{localStorage.setItem("td-last",sym)}catch(e){}}
-function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));$("screener").hidden=t!=="screener";$("analyzer").hidden=t!=="analyzer";if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
+function mcvar(sym){
+  const Qd=D.quant||{},m=(Qd.mc||{})[sym],cal=Qd.mc_calibration||{};
+  if(m){const fan=m.fan;let ch="";
+    if(fan){const W=320,H=150,lo=Math.min(...fan.map(f=>f[0]),m.last),hi=Math.max(...fan.map(f=>f[4]),m.last),X=i=>6+i/(fan.length-1||1)*(W-12),Y=v=>H-14-(v-lo)/(hi-lo||1)*(H-26);
+      const band=(a,b,c)=>`<path d="${fan.map((f,i)=>(i?"L":"M")+X(i)+" "+Y(f[a])).join("")}${fan.map((f,i)=>"L"+X(fan.length-1-i)+" "+Y(fan[fan.length-1-i][b])).join("")}Z" fill="${c}" opacity=".35"/>`;
+      ch=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monte Carlo fan">${band(0,4,"var(--bar)")}${band(1,3,"var(--accent)")}<path d="${fan.map((f,i)=>(i?"L":"M")+X(i)+" "+Y(f[2])).join("")}" fill="none" stroke="var(--accent)" stroke-width="1.5"/><line x1="6" x2="${W-6}" y1="${Y(m.last)}" y2="${Y(m.last)}" stroke="var(--ink)" stroke-dasharray="3 3"/><text x="6" y="${H-2}">${num(lo,0)}</text><text x="${W-6}" y="10" text-anchor="end">${num(hi,0)}</text></svg>`}
+    $("mc").innerHTML=`<p>From ₹${num(m.last,2)}: median ₹${num(m.p50,0)}; middle 50% ₹${num(m.p25,0)}–${num(m.p75,0)}; 90% range ₹${num(m.p5,0)}–${num(m.p95,0)}.</p><p>Chance higher in 21 days <b>${Math.round(m.p_up*100)}%</b>${m.p_target_first!=null?` · target before stop <b>${Math.round(m.p_target_first*100)}%</b>, stop first ${Math.round(m.p_stop_first*100)}%`:""}.</p>${ch}<p class="note">${cal.inside_90!=null?`Check: on Nifty 50 history the 90% range held ${Math.round(cal.inside_90*100)}% of the time (${cal.cases} cases). `:""}Resamples the stock's own last 2 years of daily moves in 5-day blocks.</p>`}
+  else $("mc").innerHTML=`<p class="note">Monte Carlo appears after the nightly back-test.</p>`;
+  const v=(Qd.var||{})[sym],bt=Qd.var_backtest||{};
+  if(v){const r=(k,lab)=>`<tr><td>${lab}</td><td class="n">₹${num(v["95"][k],0)}</td><td class="n">₹${num(v["99"][k],0)}</td></tr>`;
+    $("var").innerHTML=`<div class="tw"><table><tr><th>Method</th><th class="n">95%</th><th class="n">99%</th></tr>${r("hist_1d","Historical, 1 day")}${r("param_1d","Normal, 1 day")}${r("mc_1d","Simulated, 1 day")}${r("es_1d","Expected shortfall, 1 day")}${r("mc_10d","Simulated, 10 days")}${r("mc_es_10d","Expected shortfall, 10 days")}</table></div>${hist(v.loss_hist_10d)}<p class="note">${bt.stocks?`Check: 99% historical VaR passed the exceedance test on ${bt.passed} of ${bt.stocks} Nifty 50 stocks over 2 years.`:""}</p>`}
+  else $("var").innerHTML=`<p class="note">VaR covers the Nifty 50 (nightly).</p>`;
+}
+function hist(h){if(!h)return"";const c=h.counts,e=h.edges,mx=Math.max(...c)||1,W=320,H=90,bw=(W-12)/c.length;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="10-day return distribution">${c.map((n,i)=>`<rect x="${6+i*bw}" y="${H-14-n/mx*(H-24)}" width="${bw-1}" height="${n/mx*(H-24)}" fill="${e[i+1]<0?"var(--down)":"var(--up)"}"/>`).join("")}<text x="6" y="${H-2}">${pc(e[0],0)}</text><text x="${W-6}" y="${H-2}" text-anchor="end">${pc(e[e.length-1],0)}</text></svg>`}
+function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;$("q").value=sym;verdict(sym);readout(sym);valhedge(sym);flowcards(sym);mcvar(sym);opts(sym);news(sym);try{localStorage.setItem("td-last",sym)}catch(e){}}
+function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));["screener","analyzer","quant"].forEach(x=>$(x).hidden=t!==x);if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
 document.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b){tab("analyzer");show(b.dataset.s);window.scrollTo(0,0)}});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter")show(e.target.value)});
 $("quick").innerHTML=["NIFTY","BANKNIFTY","TCS","RELIANCE","HDFCBANK"].map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join("");
-window.addEventListener("hashchange",()=>tab(location.hash==="#analyzer"?"analyzer":"screener"));
-screener();let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(location.hash==="#analyzer"?"analyzer":"screener");
+/* ---------- quant tab ---------- */
+const erf=x=>{const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y};
+const N=x=>0.5*(1+erf(x/Math.SQRT2)),n=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+function bs(S,K,T,r,v,k){if(T<=0||v<=0){const p=k==="call"?Math.max(S-K,0):Math.max(K-S,0);return{price:p,delta:0,gamma:0,theta:0,vega:0,rho:0}}
+  const sq=v*Math.sqrt(T),d1=(Math.log(S/K)+(r+v*v/2)*T)/sq,d2=d1-sq,df=Math.exp(-r*T);
+  if(k==="call")return{price:S*N(d1)-K*df*N(d2),delta:N(d1),gamma:n(d1)/(S*sq),theta:(-S*n(d1)*v/(2*Math.sqrt(T))-r*K*df*N(d2))/365,vega:S*n(d1)*Math.sqrt(T)/100,rho:K*T*df*N(d2)/100};
+  return{price:K*df*N(-d2)-S*N(-d1),delta:N(d1)-1,gamma:n(d1)/(S*sq),theta:(-S*n(d1)*v/(2*Math.sqrt(T))+r*K*df*N(-d2))/365,vega:S*n(d1)*Math.sqrt(T)/100,rho:-K*T*df*N(-d2)/100}}
+const RF=(D.quant||{}).rf||0.07;
+function bsInit(){const U=Object.keys(D.opts.rows||{});$("bsU").innerHTML=U.map(u=>`<option>${esc(u)}</option>`).join("");$("bsU").value=U.includes("NIFTY")?"NIFTY":U[0]||"";bsLoad()}
+function bsLoad(){const o=(D.opts.rows||{})[$("bsU").value];if(!o)return;$("bsS").value=o.spot;$("bsK").value=o.atm;$("bsD").value=Math.max(o.days||1,0.5);$("bsV").value=(((o.iv_call||0)+(o.iv_put||o.iv_call||0))/2).toFixed(2);bsCalc()}
+function bsCalc(){const S=+$("bsS").value,K=+$("bsK").value,T=+$("bsD").value/365,v=+$("bsV").value/100,k=$("bsT").value;if(!(S>0&&K>0&&T>=0&&v>0)){$("bsOut").innerHTML="";return}
+  const g=bs(S,K,T,RF,v,k),o=(D.opts.rows||{})[$("bsU").value]||{};
+  $("bsOut").innerHTML=[["Price","₹"+num(g.price,2)],["Delta",g.delta.toFixed(3)],["Gamma",g.gamma.toFixed(5)],["Theta / day","₹"+num(g.theta,2)],["Vega / 1% vol","₹"+num(g.vega,2)],["Rho / 1% rate","₹"+num(g.rho,2)]].map(([a,b])=>`<div class="tile"><div class="k">${a}</div><div class="v">${b}</div></div>`).join("");
+  const spots=[...Array(9)].map((_,i)=>S*(0.9+0.025*i)),vols=[0.6,0.8,1,1.2,1.4].map(m=>v*m),grid=vols.map(vv=>spots.map(ss=>bs(ss,K,T,RF,vv,k).price)),mx=Math.max(...grid.flat())||1;
+  $("bsSurf").innerHTML=`<table><tr><th>IV \\ spot</th>${spots.map(x=>`<th class="n">${num(x,0)}</th>`).join("")}</tr>${grid.map((row,i)=>`<tr><th>${(vols[i]*100).toFixed(1)}%</th>${row.map(p=>`<td class="n" style="background:color-mix(in srgb,var(--accent) ${Math.round(p/mx*60)}%,transparent)">${num(p,0)}</td>`).join("")}</tr>`).join("")}</table>`;
+  const xs=[...Array(41)].map((_,i)=>S*(0.9+0.005*i));
+  $("bsGreeks").innerHTML=`<p class="note">Delta</p>`+line(xs.map(x=>[x,bs(x,K,T,RF,v,k).delta]))+`<p class="note">Gamma</p>`+line(xs.map(x=>[x,bs(x,K,T,RF,v,k).gamma]));
+  $("bsNote").textContent=`Rate ${(RF*100).toFixed(1)}% (10-year G-sec). ${o.straddle?`Market at-the-money straddle ₹${num(o.straddle,2)} vs model ₹${num(bs(o.spot,o.atm,Math.max(o.days,0.5)/365,RF,v,"call").price+bs(o.spot,o.atm,Math.max(o.days,0.5)/365,RF,v,"put").price,2)}. `:""}One volatility for every strike, so far strikes ignore the skew.`}
+["bsK","bsT","bsD","bsV","bsS"].forEach(id=>$(id).addEventListener("input",bsCalc));$("bsU").addEventListener("change",bsLoad);
+function quantTab(){
+  const p=(D.quant||{}).portfolio;
+  if(p){const W=320,H=200,pts=p.frontier||[],as=p.assets||[],xs=[...pts.map(q=>q[0]),...as.map(a=>a[0])],ys=[...pts.map(q=>q[1]),...as.map(a=>a[1])],x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),X=x=>30+(x-x0)/(x1-x0||1)*(W-40),Y=y=>H-18-(y-y0)/(y1-y0||1)*(H-28);
+    const dot=(o,c,r,l)=>`<circle cx="${X(o.vol)}" cy="${Y(o.ret)}" r="${r}" fill="${c}"/><text x="${X(o.vol)+5}" y="${Y(o.ret)-4}">${l}</text>`;
+    $("front").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Efficient frontier">${as.map(a=>`<circle cx="${X(a[0])}" cy="${Y(a[1])}" r="2" fill="var(--bar)"><title>${esc(a[2])}</title></circle>`).join("")}<path d="${pts.map((q,i)=>(i?"L":"M")+X(q[0])+" "+Y(q[1])).join("")}" fill="none" stroke="var(--accent)" stroke-width="1.8"/>${dot(p.min_variance,"var(--accent2)",4,"min var")}${dot(p.max_sharpe,"var(--up)",4,"max Sharpe")}<text x="30" y="${H-4}">vol ${pc(x0,0)}</text><text x="${W-6}" y="${H-4}" text-anchor="end">${pc(x1,0)}</text><text x="2" y="12">ret ${pc(y1,0)}</text></svg><p class="note">Dots: Nifty 50 stocks. Line: efficient frontier (long-only, max ${Math.round(p.cap*100)}% each).</p>`;
+    $("wts").innerHTML=["min_variance","max_sharpe"].map(k=>{const x=p[k];return `<h3>${k==="min_variance"?"Minimum variance":"Maximum Sharpe"}: return ${pc(x.ret)}, volatility ${pc(x.vol)}, Sharpe ${x.sharpe}</h3>`+hbars(Object.entries(x.weights).slice(0,10).map(([s,w])=>[s,w*100,"var(--accent)"]))}).join("");
+    const wf=p.walk_forward||{};$("wf").innerHTML=`<div class="tw"><table><tr><th>Portfolio</th><th class="n">Return / yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Max fall</th></tr>${[["min_variance","Minimum variance"],["max_sharpe","Maximum Sharpe"],["equal","Equal weight"]].filter(([k])=>wf[k]).map(([k,l])=>`<tr><td>${l}</td><td class="n">${pc(wf[k].ann_ret)}</td><td class="n">${pc(wf[k].ann_vol)}</td><td class="n">${wf[k].sharpe}</td><td class="n bad">${pc(wf[k].max_dd)}</td></tr>`).join("")}</table></div><p class="note">Refit every 3 months on the previous year, measured on the next 3 months only.</p>${(()=>{const e=(wf.equal||{}).sharpe,b=Math.max(...["min_variance","max_sharpe"].filter(k=>wf[k]).map(k=>wf[k].sharpe));return e==null||!isFinite(b)?"":b<=e?`<p><span class="tag warn">Did not beat equal weight</span> Treat the optimised weights as risk information, not a recommendation.</p>`:`<p><span class="tag good">Beat equal weight</span> on risk-adjusted return out of sample.</p>`})()}${p.var?`<h3>Minimum-variance portfolio VaR (₹1,00,000)</h3><p>1 day 99%: historical ₹${num(p.var["99"].hist_1d,0)}, simulated ₹${num(p.var["99"].mc_1d,0)}; 10 days 99%: ₹${num(p.var["99"].mc_10d,0)}, shortfall ₹${num(p.var["99"].mc_es_10d,0)}.</p>`:""}`}
+  else{$("front").innerHTML=`<p class="note">Built by the nightly back-test.</p>`;$("wf").innerHTML=""}
+  const pr=(D.quant||{}).pairs;
+  if(pr){const s=pr.strategy_oos||{};$("pairsS").innerHTML=`<p>${esc(pr.rule)}. Walk-forward: ${s.trades||0} trades${s.avg!=null?`, average ${pc(s.avg,2)} per trade, hit ${Math.round(s.hit*100)}%, t ${s.t}, max fall ${pc(s.max_dd,0)}`:""}. <span class="tag ${s.tested?"good":"warn"}">${s.tested?"passed":"did not pass: no trades suggested"}</span></p>`;
+    const cur=pr.current||[];$("pairsT").innerHTML=cur.length?`<tr><th>Pair</th><th class="n">z</th><th class="n">Half-life</th><th class="n">Hedge</th></tr>`+cur.map((q,i)=>`<tr><td><button class="link" data-pair="${i}">${esc(q.y)}/${esc(q.x)}</button><div class="note">${esc(q.industry)}</div></td><td class="n ${Math.abs(q.z)>2?"warn":""}">${q.z.toFixed(2)}</td><td class="n">${q.half_life} d</td><td class="n">${q.beta}</td></tr>`).join(""):`<tr><td class="note">No cointegrated pair today.</td></tr>`;
+    const draw=i=>{const q=cur[i];if(!q)return;const z=q.spread_z,W=320,H=140,mx=Math.max(3,...z.map(Math.abs)),X=j=>6+j/(z.length-1)*(W-12),Y=v=>H/2-v/mx*(H/2-10);
+      $("pairChart").innerHTML=`<h3>${esc(q.y)} vs ${esc(q.x)}: spread z-score, last ${z.length} days</h3><svg viewBox="0 0 ${W} ${H}" role="img">${[2,-2,0].map(l=>`<line x1="6" x2="${W-6}" y1="${Y(l)}" y2="${Y(l)}" stroke="${l?"var(--warn)":"var(--line)"}" stroke-dasharray="${l?"4 3":""}"/>`).join("")}<path d="${z.map((v,j)=>(j?"L":"M")+X(j)+" "+Y(v)).join("")}" fill="none" stroke="var(--accent)" stroke-width="1.4"/><text x="${W-6}" y="${Y(2)-3}" text-anchor="end">+2</text><text x="${W-6}" y="${Y(-2)+10}" text-anchor="end">-2</text></svg><p class="note">Engle-Granger ADF t ${q.adf_t} (5% threshold -3.34), half-life ${q.half_life} days.</p>`};
+    draw(0);$("pairsT").onclick=e=>{const b=e.target.closest("[data-pair]");if(b)draw(+b.dataset.pair)}}
+}
+const pick=h=>["analyzer","quant"].includes(h)?h:"screener";
+window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
+screener();bsInit();quantTab();let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 </script>

@@ -76,6 +76,14 @@ Rules:
 5. ✅ **Refresh cadence:** hourly 09:25-15:25 IST (terminal and desk), 18:27 terminal, 22:37 desk. the terminal and the desk republish at the open (09:25), hourly during the session and after the close.
 6. ⬜ **Self-check:** the live track record of the bot's picks (built), plus weekly re-tests. Signals that stop working are dropped automatically (built).
 
+## Quant modules (14 Nov), built and checked on real Dhan data
+- ✅ **Monte Carlo** (block bootstrap, 10,000 paths, 21 days) for 473 stocks. The 90% range held 88.5% of real outcomes over 2 years, so it is well calibrated.
+- ✅ **VaR** (historical, normal, simulated; 95/99%; Expected Shortfall) for the Nifty 50. The 99% Kupiec test passed on 48 of 50 stocks.
+- ✅ **Black-Scholes** price, Greeks, implied volatility and surface. Tested against textbook values; it uses the Dhan chain's IV.
+- ✅ **Markowitz** (min-variance, max-Sharpe, frontier). Walk-forward over 2 years: both optimised portfolios lost to equal weight (−6.4% and −6.3% a year vs +5.9%). Weights are shown as risk information only.
+- ✅ **Pairs** (Engle-Granger, z-score rules). Walk-forward: 346 trades, −0.55% per trade, t −2.28. Failed, so no pair trades are suggested.
+- Everything reruns nightly inside the technical back-test, and the verdicts update themselves when results change.
+
 ## Order of work now
 1. The owner switches the repo to public (only they can).
 2. Monday 16 Nov: check the first live order-flow session, the listener, and the nightly run with markets, auction and track record.

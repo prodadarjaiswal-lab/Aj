@@ -67,7 +67,8 @@ def build(out: Path) -> dict:
             "markets": _j(ROOT / "docs/markets.json", {}),
             "flow": flow if flow.get("d") == today_ist else {}, "flowState": {"s": fs},
             "track": {"summary": track.get("summary", {})}, "us": _j(ROOT / "docs/us-value.json", {"rows": []}),
-            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx}
+            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx,
+            "quant": _j(ROOT / "docs/quant.json", {})}
     html = (ROOT / "docs/technical-desk.html").read_text(encoding="utf-8")
     blob = json.dumps(data, separators=(",", ":"), default=str).replace("</", "<\\/")
     html = re.sub(r"/\*DATA\*/.*?/\*DATA\*/", lambda m: "/*DATA*/" + blob + "/*DATA*/", html, count=1, flags=re.S)

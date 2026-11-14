@@ -423,6 +423,12 @@ def portfolio_reply() -> str:
         L.append("Check (refit every 3 months, measured on the next 3): " + "; ".join(
             f"{n} Sharpe {wf[k]['sharpe']}, max fall {wf[k]['max_dd'] * 100:.0f}%" for k, n in
             (("min_variance", "min variance"), ("max_sharpe", "max Sharpe"), ("equal", "equal weight")) if k in wf))
+        eq = (wf.get("equal") or {}).get("sharpe")
+        best = max((wf[k]["sharpe"] for k in ("min_variance", "max_sharpe") if k in wf and wf[k].get("sharpe") is not None), default=None)
+        if eq is not None and best is not None and best <= eq:
+            L.append("<b>Verdict:</b> out of sample, neither optimised portfolio beat equal weight. Treat these weights as risk information, not a recommendation.")
+        elif eq is not None and best is not None:
+            L.append("<b>Verdict:</b> out of sample, the optimised portfolio beat equal weight on risk-adjusted return.")
     return "\n".join(L)
 
 
