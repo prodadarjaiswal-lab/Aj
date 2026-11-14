@@ -42,8 +42,8 @@ def pick_futures(scrip_csv: str, today: dt.date) -> dict:
         base = sym.split("-")[0]
         if exch == "MCX" and inst == "FUTCOM" and base in COMMODITIES:
             seg, name = "MCX_COMM", base
-        elif exch == "NSE" and inst == "FUTCUR" and base == "USDINR":
-            seg, name = "NSE_CURRENCY", "USDINR"
+        elif base == "USDINR" and inst.startswith("FUT") and exch in ("NSE", "BSE"):
+            seg, name = ("NSE_CURRENCY" if exch == "NSE" else "BSE_CURRENCY"), "USDINR"
         else:
             continue
         exp = _expiry(r)
@@ -93,6 +93,10 @@ def run(dhan, scrip_csv: str, root, now: dt.datetime) -> str:
     for name, (seg, sid, sym, exp) in fut.items():
         body.setdefault(seg, []).append(int(sid))
     out["missing"] += [n for n in list(COMMODITIES) + ["USDINR"] if n not in fut]
+    if "USDINR" not in fut:                                   # show what Dhan's list calls it, to fix the match
+        seen = [(r.get("SEM_EXM_EXCH_ID"), r.get("SEM_INSTRUMENT_NAME"), r.get("SEM_TRADING_SYMBOL"), r.get("SEM_EXPIRY_DATE"))
+                for r in csv.DictReader(io.StringIO(scrip_csv)) if "USDINR" in (r.get("SEM_TRADING_SYMBOL") or "").upper()][:5]
+        print(f"  USDINR rows in Dhan's list: {seen}")
     if body:
         try:
             q = dhan.post("/marketfeed/quote", body).get("data") or {}
