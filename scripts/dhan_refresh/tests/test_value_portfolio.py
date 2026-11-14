@@ -274,3 +274,12 @@ def test_journal_review_finds_followups_and_blind_spots():
     import telegram as T
     txt = DD.digest_text(rv, rs, "https://x")
     assert "Follow up" in txt and "CCC" in txt and T.esc("<") == "&lt;"
+
+
+def test_merge_journal_keeps_both_writers():
+    import bot as B
+    a = {"alerts": [1], "journal": [{"t": "2026-11-14 10:00", "cmd": "trade", "sym": "TCS"}]}
+    b = {"alerts": [], "journal": [{"t": "2026-11-13 09:00", "cmd": "value", "sym": "INFY"}, {"t": "2026-11-14 10:00", "cmd": "trade", "sym": "TCS"}]}
+    m = B.merge_journal(a, b)
+    assert [x["sym"] for x in m["journal"]] == ["INFY", "TCS"] and m["alerts"] == [1]
+    assert B.merge_journal(a, {}) is a

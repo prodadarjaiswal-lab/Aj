@@ -110,10 +110,16 @@ def main() -> int:
           + (f", {j[0].get('t')} to {j[-1].get('t')}" if j else ""))
     rs, board = _j("docs/research.json", {}), _j("docs/n500.json", {"rows": []})
     rv = review(st.get("journal", []), rs, board)
-    (ROOT / "docs/journal-review.json").write_text(json.dumps(rv, separators=(",", ":")), encoding="utf-8")
+    prev = _j("docs/journal-review.json", {})
+    rv["sent"] = prev.get("sent")
+    send = "--send" in sys.argv and T.enabled() and rs.get("stocks") and prev.get("sent") != rs.get("asof")
     print(f"journal review: {rv['lookups']} lookups, {rv['stocks']} stocks, {len(rv['follow'])} follow-ups, {len(rv['blind'])} blind spots")
-    if "--send" in sys.argv and T.enabled() and rs.get("stocks"):
-        print("digest sent" if T.send(digest_text(rv, rs, B.DESK_URL)) else "digest not sent")
+    if send and T.send(digest_text(rv, rs, B.DESK_URL)):
+        rv["sent"] = rs.get("asof")                    # once per trading day (the nightly job has a backup run)
+        print("digest sent")
+    elif "--send" in sys.argv:
+        print("digest not sent" + (" (already sent for this date)" if prev.get("sent") == rs.get("asof") else ""))
+    (ROOT / "docs/journal-review.json").write_text(json.dumps(rv, separators=(",", ":")), encoding="utf-8")
     return 0
 
 

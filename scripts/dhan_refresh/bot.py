@@ -950,6 +950,20 @@ def load_state() -> dict:
         return {}
 
 
+def merge_journal(mine: dict, theirs: dict | None) -> dict:
+    """Union of both journals (same time, command and stock = same entry), oldest first, last 500 kept."""
+    a, b = (mine or {}).get("journal") or [], (theirs or {}).get("journal") or []
+    if not b:
+        return mine
+    seen, out = set(), []
+    for x in sorted(a + b, key=lambda x: str(x.get("t", ""))):
+        k = (x.get("t"), x.get("cmd"), x.get("sym"))
+        if k not in seen:
+            seen.add(k)
+            out.append(x)
+    return {**mine, "journal": out[-500:]}
+
+
 def save_state(st: dict) -> None:
     try:
         run = lambda *a: subprocess.run(["git", "-C", str(OUT), *a], check=True, capture_output=True, timeout=60)
@@ -969,6 +983,7 @@ def save_state(st: dict) -> None:
         if not _secret():
             print("bot: no TELEGRAM_BOT_TOKEN, state not saved")
             return
+        st = merge_journal(st, load_state())          # other jobs save this state too: never drop their journal entries
         (OUT / "bot.json").write_text(json.dumps(TC.seal(json.dumps(st), "bot-state", _secret())), encoding="utf-8")
         run("add", "bot.json")
         run("commit", "-q", "--allow-empty", "-m", "Bot state")
