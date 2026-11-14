@@ -25,7 +25,7 @@ STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fad
 
 MENU = [("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
-        ("bargains", "Blue chips now cheap, India and US"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
+        ("bargains", "Blue chips now cheap, India and US"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
                "price TCS\n"
                "TCS  (trade verdict)\n"
@@ -36,6 +36,7 @@ DESCRIPTION = ("Your NSE terminal in chat. Commands:\n"
                "rising  (turning bullish, with value)\n"
                "dips  (proven stocks after a sharp fall)\n"
                "bargains  (blue chips now cheap, India and US)\n"
+               "record  (how the bot's picks have done)\n"
                "alert TCS above 3450  (alert alone lists; alert remove 1)")
 SIGNAL = {"hi52v": "a new 52-week closing high on 1.5x average volume",
           "volbreak": "a breakout above its 20-day high on 1.5x average volume",
@@ -302,6 +303,28 @@ def options(d: Data, sym: str) -> str:
     return "\n".join(L)
 
 
+def record() -> str:
+    """The bot's own live track record (picks logged before the outcome existed)."""
+    log = _load(ROOT / "docs/track-record.json", {})
+    s = log.get("summary") or {}
+    if not s:
+        return "Track record: no picks logged yet. It starts with the next nightly refresh."
+    L = [f"<b>Live track record</b> · since {esc((log.get('picks') or [{}])[0].get('d', '?'))}"]
+    for kind, name in (("rising", "Turning bullish"), ("dips", "Dips")):
+        r = s.get(kind) or {}
+        if not r.get("picks"):
+            continue
+        line = f"{name}: {r['picks']} picks, {r['open']} still open."
+        if r.get("n10"):
+            line += f" After 10 days ({r['n10']}): beat the Nifty {r['beat10'] * 100:.0f}%, average {pct(r['avg10'])}."
+        if r.get("n21"):
+            line += f" After 21 days ({r['n21']}): {r['beat21'] * 100:.0f}%, {pct(r['avg21'])}."
+        if r.get("target_first") is not None:
+            line += f" Target before stop: {r['target_first'] * 100:.0f}%."
+        L.append(line)
+    return "\n".join(L)
+
+
 def options_line(d: Data, sym: str) -> str:
     o = d.opts.get(sym)
     if not o:
@@ -538,6 +561,8 @@ class Bot:
         w = low.split(" ")
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
+        if low in ("record", "track", "scorecard", "track record"):
+            return record()
         if low in ("dips", "dip", "discount", "discounts"):
             return dips(self.d)
         if low in ("bargains", "bargain", "value", "cheap"):

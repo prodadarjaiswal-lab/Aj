@@ -499,6 +499,8 @@ def main(argv=None) -> int:
             try:
                 import tech_model
                 tech_model.run_full(client, Path(a.page).resolve().parents[1])
+                import track
+                print(track.run(Path(a.page).resolve().parents[1]))
             except Exception as e:
                 print(f"  warning: technical signals failed: {e}")
         return 0
