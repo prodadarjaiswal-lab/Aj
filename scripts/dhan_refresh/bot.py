@@ -25,7 +25,7 @@ STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fad
 
 MENU = [("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
-        ("bargains", "Blue chips now cheap, India and US"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
+        ("bargains", "Blue chips now cheap, India and US"), ("portfolio", "Markowitz portfolios (Nifty 50)"), ("pairs", "Pairs trading scan"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
                "price TCS\n"
                "TCS (trade verdict)\n"
@@ -38,6 +38,9 @@ DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
                "dips (proven stocks after a fall)\n"
                "bargains (cheap blue chips, India+US)\n"
                "markets (MCX, USD/INR, movers)\n"
+               "mc TCS (Monte Carlo) · var TCS\n"
+               "portfolio · pairs\n"
+               "bs NIFTY 25500 CE (Black-Scholes)\n"
                "record (how picks did)\n"
                "journal\n"
                "alert TCS above 3450")
@@ -369,6 +372,106 @@ def why(d: Data, sym: str) -> str:
     return "\n".join(L)
 
 
+def _quant():
+    return _load(ROOT / "docs/quant.json", {})
+
+
+def mc_reply(d: Data, sym: str) -> str:
+    q = _quant()
+    m = (q.get("mc") or {}).get(sym)
+    if not m:
+        return f"{esc(sym)}: no Monte Carlo yet (Nifty 500 stocks, built nightly from Dhan history)."
+    cal = q.get("mc_calibration") or {}
+    L = [f"<b>{esc(sym)}</b> Monte Carlo · {m['paths']:,} paths, {m['days']} trading days, from ₹{m['last']:,.2f}",
+         f"Middle 50%: ₹{m['p25']:,.0f} to ₹{m['p75']:,.0f}. 90% range: ₹{m['p5']:,.0f} to ₹{m['p95']:,.0f}. Median ₹{m['p50']:,.0f}.",
+         f"Chance of ending higher: {m['p_up'] * 100:.0f}%."]
+    if m.get("p_target_first") is not None:
+        L.append(f"Target (3x daily range) before stop (2x): {m['p_target_first'] * 100:.0f}%; stop first: {m['p_stop_first'] * 100:.0f}%.")
+    if cal.get("inside_90") is not None:
+        L.append(f"Check: on Nifty 50 history the 90% range held {cal['inside_90'] * 100:.0f}% of the time ({cal['cases']} cases).")
+    L.append("Built by resampling the stock's own last 2 years of daily moves; not a forecast of one outcome.")
+    return "\n".join(L)
+
+
+def var_reply(d: Data, sym: str) -> str:
+    q = _quant()
+    v = (q.get("var") or {}).get(sym) if sym != "PORTFOLIO" else (q.get("portfolio") or {}).get("var")
+    if not v:
+        return f"{esc(sym)}: VaR covers the Nifty 50 and the minimum-variance portfolio (send: var portfolio)."
+    a, b = v["95"], v["99"]
+    bt = q.get("var_backtest") or {}
+    L = [f"<b>{esc(sym)}</b> Value at Risk on ₹1,00,000",
+         f"1 day, 95%: historical ₹{a['hist_1d']:,}, normal ₹{a['param_1d']:,}, simulated ₹{a['mc_1d']:,}. Expected shortfall ₹{a['es_1d']:,}.",
+         f"1 day, 99%: historical ₹{b['hist_1d']:,}, normal ₹{b['param_1d']:,}, simulated ₹{b['mc_1d']:,}. Expected shortfall ₹{b['es_1d']:,}.",
+         f"10 days, 99%: simulated ₹{b['mc_10d']:,}, normal ₹{b['param_10d']:,}; expected shortfall ₹{b['mc_es_10d']:,}."]
+    if bt.get("stocks"):
+        L.append(f"Check: 99% historical VaR passed the exceedance test on {bt['passed']} of {bt['stocks']} Nifty 50 stocks over 2 years.")
+    return "\n".join(L)
+
+
+def portfolio_reply() -> str:
+    p = (_quant().get("portfolio") or {})
+    if not p:
+        return "Portfolio optimisation not built yet (nightly, Nifty 50)."
+    L = [f"<b>Nifty 50 portfolios</b> (1 year of Dhan data, long-only, max {p['cap'] * 100:.0f}% per stock, risk-free {p['rf'] * 100:.1f}%)"]
+    for k, name in (("min_variance", "Minimum variance"), ("max_sharpe", "Maximum Sharpe")):
+        x = p[k]
+        top = ", ".join(f"{s} {w * 100:.0f}%" for s, w in list(x["weights"].items())[:6])
+        L.append(f"<b>{name}</b>: return {x['ret'] * 100:.1f}%, volatility {x['vol'] * 100:.1f}%, Sharpe {x['sharpe']}. {top}")
+    wf = p.get("walk_forward") or {}
+    if wf:
+        L.append("Check (refit every 3 months, measured on the next 3): " + "; ".join(
+            f"{n} Sharpe {wf[k]['sharpe']}, max fall {wf[k]['max_dd'] * 100:.0f}%" for k, n in
+            (("min_variance", "min variance"), ("max_sharpe", "max Sharpe"), ("equal", "equal weight")) if k in wf))
+    return "\n".join(L)
+
+
+def pairs_reply() -> str:
+    pr = (_quant().get("pairs") or {})
+    st_ = pr.get("strategy_oos") or {}
+    if not pr:
+        return "Pairs scan not built yet (nightly)."
+    L = [f"<b>Pairs (mean reversion)</b> · {pr.get('rule', '')}"]
+    if st_.get("trades"):
+        L.append(f"Walk-forward test: {st_['trades']} trades, average {st_.get('avg', 0) * 100:+.2f}% per trade, hit {st_.get('hit', 0) * 100:.0f}%, "
+                 f"t {st_.get('t')}, max fall {st_.get('max_dd', 0) * 100:.0f}%.")
+    if not st_.get("tested"):
+        L.append("The strategy did not pass the walk-forward test, so no trade is suggested. Cointegrated pairs right now (context):")
+    live = pr.get("current") or []
+    for p in live[:6]:
+        L.append(f"• {esc(p['y'])}/{esc(p['x'])} ({esc(p['industry'])}): z {p['z']:+.2f}, half-life {p['half_life']} days"
+                 + (f" → {esc(p['signal'])}" if st_.get("tested") and p["signal"] != "no trade" else ""))
+    if not live:
+        L.append("No cointegrated pair today.")
+    return "\n".join(L)
+
+
+def bs_reply(d: Data, args: list, live_index: dict) -> str:
+    """bs NIFTY 25500 CE [days]  - Black-Scholes with the Dhan option chain's implied volatility."""
+    import datetime as _dt
+    import quant as Qm
+    if len(args) < 3:
+        return "Format: bs NIFTY 25500 CE (optional days to expiry)"
+    u, kind = args[0].upper(), ("call" if args[2].upper() in ("CE", "CALL", "C") else "put")
+    try:
+        K = float(args[1].replace(",", ""))
+    except ValueError:
+        return "Strike must be a number: bs NIFTY 25500 CE"
+    o = d.opts.get(u)
+    if not o:
+        return f"{esc(u)}: no option chain in the nightly Dhan snapshot."
+    S = live_index.get(u) or o["spot"]
+    days = float(args[3]) if len(args) > 3 else max(o.get("days") or 1, 0.5)
+    iv = ((o.get("iv_call") or 0) + (o.get("iv_put") or o.get("iv_call") or 0)) / 200
+    rf = _quant().get("rf") or 0.07
+    g = Qm.black_scholes(S, K, days / 365, rf, iv, kind)
+    return "\n".join([f"<b>{esc(u)} {K:,.0f} {'CE' if kind == 'call' else 'PE'}</b> · Black-Scholes",
+                       f"Spot {S:,.2f} ({'live' if live_index.get(u) else 'last close'}, Dhan), {days:g} days, IV {iv * 100:.1f}% (Dhan chain, at-the-money), rate {rf * 100:.1f}%",
+                       f"Price ₹{g['price']:,.2f}",
+                       f"Delta {g['delta']:+.3f} · Gamma {g['gamma']:.5f} · Theta ₹{g['theta']:,.2f}/day · Vega ₹{g['vega']:,.2f} per 1% vol · Rho ₹{g['rho']:,.2f} per 1% rate",
+                       "Uses the at-the-money IV for every strike, so far strikes ignore the skew."])
+
+
 def record() -> str:
     """The bot's own live track record (picks logged before the outcome existed)."""
     log = _load(ROOT / "docs/track-record.json", {})
@@ -568,6 +671,7 @@ class Bot:
         self.status_line = ""
         self.feed_note = ""
         self.live_flow = {}
+        self.live_index = {}                      # {"NIFTY": spot} from the live feed
         self.state.setdefault("journal", [])
 
     # -- Telegram ---------------------------------------------------------
@@ -636,6 +740,18 @@ class Bot:
         w = low.split(" ")
         if low in ("rising", "top", "top 5", "top5", "picks", "bullish"):
             return rising(self.d)
+        if w[0] in ("mc", "montecarlo", "simulate") and len(w) == 2:
+            out = mc_reply(self.d, w[1].upper())
+            self.log("mc", w[1].upper(), out)
+            return out
+        if w[0] == "var" and len(w) == 2:
+            return var_reply(self.d, w[1].upper())
+        if low in ("portfolio", "markowitz", "optimise", "optimize"):
+            return portfolio_reply()
+        if low in ("pairs", "pair", "mean reversion"):
+            return pairs_reply()
+        if w[0] in ("bs", "blackscholes", "price-option"):
+            return bs_reply(self.d, t.split()[1:] if (t := text.strip()) else [], self.live_index)
         if low in ("markets", "market", "commodities", "mcx"):
             return markets_reply()
         if w[0] in ("why", "news") and len(w) == 2:

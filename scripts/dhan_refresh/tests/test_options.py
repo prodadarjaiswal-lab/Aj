@@ -52,7 +52,7 @@ def test_junk_iv_filtered():
     assert O.clean_leg(leg(0, 0, 0))["iv"] is None
 
 
-def test_save_snapshot_uses_given_client(tmp_path):
+def test_save_snapshot_uses_given_client(tmp_path, monkeypatch):
     import shutil
     (tmp_path / "docs").mkdir()
     shutil.copy(ROOT / "docs" / "ra-desk.html", tmp_path / "docs" / "ra-desk.html")
@@ -64,11 +64,47 @@ def test_save_snapshot_uses_given_client(tmp_path):
         def __init__(self):
             pass
     O.OptionsClient = lambda d: d          # no 3-second spacing in tests
-    d0 = O.dt.datetime.now(O.R.IST).date()
-    if d0.weekday() >= 5:                              # weekend captures are dated the last trading day
-        d0 -= O.dt.timedelta(days=d0.weekday() - 4)
-    nset_day = d0.isoformat()
+    real_dt = O.dt.datetime
+
+    class Monday(real_dt):                             # a weekday, so the run is not skipped
+        @classmethod
+        def now(cls, tz=None):
+            return real_dt(2026, 11, 16, 18, 0, tzinfo=tz)
+    monkeypatch.setattr(O.dt, "datetime", Monday)
+    nset_day = "2026-11-16"
     O.TODAY_OVERRIDE = None
     msg = O.save_snapshot(Client(), "\n".join(rows), tmp_path)
     assert "options snapshot" in msg or "already saved" in msg
     assert (tmp_path / "data" / "options" / f"{nset_day}.json").exists()
+
+
+def test_chain_with_a_wrong_spot_is_dropped(tmp_path, monkeypatch):
+    import shutil
+    (tmp_path / "docs").mkdir()
+    shutil.copy(ROOT / "docs" / "ra-desk.html", tmp_path / "docs" / "ra-desk.html")
+    real_dt = O.dt.datetime
+
+    class Monday(real_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return real_dt(2026, 11, 16, 18, 0, tzinfo=tz)
+    monkeypatch.setattr(O.dt, "datetime", Monday)
+    nset = O.R.read_nset((tmp_path / "docs" / "ra-desk.html").read_text())
+    close = nset["idx"]["Nifty 50"]["c"][-1]
+    monkeypatch.setattr(O, "snapshot", lambda c, u, d: {"date": d.isoformat(), "errors": {},
+                        "rows": {"NIFTY": {"spot": close * 1.03}, "BANKNIFTY": {"spot": nset["idx"]["Nifty Bank"]["c"][-1]}}})
+    monkeypatch.setattr(O.R, "build_maps", lambda *a: ({}, {}))
+    O.save_snapshot(object(), "", tmp_path)
+    saved = O.json.loads((tmp_path / "data/options/2026-11-16.json").read_text())
+    assert "NIFTY" not in saved["rows"] and "disagrees" in saved["errors"]["NIFTY"] and "BANKNIFTY" in saved["rows"]
+
+
+def test_weekend_is_skipped(monkeypatch):
+    real_dt = O.dt.datetime
+
+    class Saturday(real_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return real_dt(2026, 11, 14, 12, 0, tzinfo=tz)
+    monkeypatch.setattr(O.dt, "datetime", Saturday)
+    assert "skipped" in O.save_snapshot(object(), "", ROOT)

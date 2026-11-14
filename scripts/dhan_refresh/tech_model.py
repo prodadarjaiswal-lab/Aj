@@ -510,6 +510,18 @@ def run_full(dhan, root: Path) -> dict:
     (root / "docs/tech-model.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
     (root / "docs/tech-today.json").write_text(json.dumps({"asof": res["asof"], "stocks": td}, separators=(",", ":")), encoding="utf-8")
     (root / "docs/technical-desk.md").write_text(desk(res, td), encoding="utf-8")
+    try:                                                # quant modules on the same Dhan history
+        import glob as _g
+        import quant
+        import refresh as R
+        nset = R.read_nset((root / "docs/nse-terminal.html").read_text(encoding="utf-8"))
+        rf = float(nset.get("gsec") or 7.0) / 100
+        board_rows = json.loads((root / "docs/n500.json").read_text(encoding="utf-8")).get("rows", [])
+        of = sorted(_g.glob(str(root / "data/options/*.json")))
+        opts = json.loads(Path(of[-1]).read_text(encoding="utf-8")).get("rows", {}) if of else {}
+        print(quant.run(data, nifty, root, rf, list(nset.get("stocks", {})), board_rows, opts))
+    except Exception as e:
+        print(f"  quant modules failed: {str(e)[:200]}")
     if changes:
         try:
             import telegram as T

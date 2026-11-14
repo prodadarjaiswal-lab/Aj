@@ -151,10 +151,11 @@ def save_snapshot(dhan, scrip_csv: str, root: Path = Path(".")) -> str:
     """Use an already logged-in client: Dhan allows one new token per 2 minutes."""
     nset = R.read_nset((root / "docs/ra-desk.html").read_text(encoding="utf-8"))
     now = dt.datetime.now(R.IST)
-    d0 = now.date()
-    if d0.weekday() >= 5:                              # a weekend capture holds Friday's closing chain
-        d0 -= dt.timedelta(days=d0.weekday() - 4)
-    day = d0.isoformat()                               # the trading day the chain belongs to
+    if now.weekday() >= 5:
+        # Dhan's option chain on weekends returned spots and IVs that did not match Friday's close
+        # (Nifty 25,877 vs 25,144 on 14 Nov 2026), so no snapshot is taken on Saturday or Sunday.
+        return "options snapshot skipped: weekend chains from Dhan are not reliable"
+    day = now.date().isoformat()                       # the trading day the chain belongs to
     outdir = root / "data/options"
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / f"{day}.json"
@@ -164,6 +165,15 @@ def save_snapshot(dhan, scrip_csv: str, root: Path = Path(".")) -> str:
     unders = dict(INDEXES)
     unders.update({s: (sid, "NSE_FNO") for s, sid in eq.items()})
     snap = snapshot(OptionsClient(dhan), unders, dt.date.fromisoformat(day))
+    # sanity check: each chain's spot must agree with Dhan's own price for the underlying (within 3%)
+    ref = {s: (v.get("ohlc", {}).get("c") or [None])[-1] for s, v in nset.get("stocks", {}).items()}
+    for k, nm in (("NIFTY", "Nifty 50"), ("BANKNIFTY", "Nifty Bank")):
+        ref[k] = (nset.get("idx", {}).get(nm, {}).get("c") or [None])[-1]
+    for u in list(snap["rows"]):
+        sp, rc = snap["rows"][u].get("spot"), ref.get(u)
+        if sp and rc and abs(sp / rc - 1) > 0.03:
+            snap["errors"][u] = f"chain spot {sp:,.2f} disagrees with Dhan close {rc:,.2f}; dropped"
+            del snap["rows"][u]
     target.write_text(json.dumps(snap, separators=(",", ":")), encoding="utf-8")
     msg = f"options snapshot {target.name}: {len(snap['rows'])} underlyings, {len(snap['errors'])} skipped"
     if snap["errors"]:
