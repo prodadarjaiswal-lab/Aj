@@ -1,5 +1,5 @@
 {
- "asof": "2026-11-14 13:05",
+ "asof": "2026-11-14 13:07",
  "source": "Dhan",
  "futures": {
   "GOLD": {
@@ -134,7 +134,7 @@
   }
  ],
  "missing": [
-  "USDINR",
+  "USDINR (no live contract in Dhan's instrument list)",
   "news EQUITY_MARKETS: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news COMMODITIES: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news CURRENCY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
