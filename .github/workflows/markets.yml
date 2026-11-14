@@ -1,4 +1,4 @@
-name: Dhan extras (manual): options, auction, markets
+name: "Dhan extras (manual): options, auction, markets"
 
 on:
   workflow_dispatch: {}
