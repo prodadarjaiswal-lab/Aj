@@ -58,6 +58,10 @@ def live_quotes(b: B.Bot, now: dt.datetime) -> None:
                 if sid in bysid and v[0] > 0:
                     b.quotes[bysid[sid]] = (v[0], v[4] if now.time() < dt.time(15, 29) else (b.d.bysym[bysid[sid]].get("last") or 0))
             b.feed_note = ""
+            fl = _show("live", "flow.json")
+            b.live_flow = fl if fl and fl.get("d") == now.date().isoformat() else {}
+    else:
+        b.live_flow = {}
     us = _show("us-watch", "state.json") or {}
     b.us_quotes = {}
     for s, q in (us.get("quotes") or {}).items():

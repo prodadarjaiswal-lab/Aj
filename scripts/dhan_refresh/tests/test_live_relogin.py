@@ -23,6 +23,8 @@ def run_day(monkeypatch, newer):
     calls = {"n": 0}
 
     def post(self, path, body):
+        if path == "/marketfeed/quote":
+            return {"data": {}}
         calls["n"] += 1
         if calls["n"] == 2:
             raise R.RefreshError("Dhan error 807: token expired")
@@ -31,7 +33,7 @@ def run_day(monkeypatch, newer):
     monkeypatch.setattr(LP, "universe", lambda: ([1], {"13": "Nifty 50"}))
     monkeypatch.setattr(LP, "setup_branch", lambda: None)
     pushes = []
-    monkeypatch.setattr(LP, "push", lambda p, s=None: pushes.append(p))
+    monkeypatch.setattr(LP, "push", lambda p, s=None, e=None: pushes.append(p))
     monkeypatch.setattr(LP, "prior_state", lambda d: {"d": d, "sent": []})
     monkeypatch.setattr(LP.time, "sleep", lambda s: None)
     monkeypatch.setattr(LP.G, "newer_run", lambda wf: newer)

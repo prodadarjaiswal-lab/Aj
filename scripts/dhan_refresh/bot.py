@@ -262,7 +262,29 @@ def bargains(d: Data, us: dict | None = None) -> str:
     return "\n".join(lines)
 
 
-def flow(d: Data, sym: str) -> str:
+def live_flow_lines(f: dict, t: str) -> list:
+    L = [f"<b>Live order flow</b> ({esc(t)} IST; snapshot-derived from Dhan quotes every 5 s, not a full trade tape)"]
+    L.append(f"Delta {f['delta']:,} (buy {f['buy_vol']:,} / sell {f['sell_vol']:,}, buyers {f['buy_share'] * 100:.0f}%), {f['prints']} prints.")
+    if f.get("book_ratio5") or f.get("pending_ratio"):
+        L.append(f"Book: top-5 bids/asks {f.get('book_ratio5', '–')}x, pending buy/sell {f.get('pending_ratio', '–')}x.")
+    if f.get("stacked"):
+        L.append("Stacked imbalances: " + "; ".join(f"{s_[2]} {s_[0]:,} to {s_[1]:,}" for s_ in f["stacked"]))
+    big = f.get("large_prints") or []
+    if big:
+        L.append("Large prints: " + ", ".join(f"{x[0][:5]} {x[2]:,.0f} at {x[1]:,} ({'buy' if x[3] > 0 else 'sell'})" for x in big[-4:]))
+    ev = [e for e in (f.get("events") or []) if "absorption" in e[1]]
+    if ev:
+        L.append("Absorption: " + ", ".join(f"{e[0][:5]} {e[1].split(': ')[1]} at {e[2]:,}" for e in ev[-3:]))
+    for k in ("divergence", "exhaustion", "trapped"):
+        if f.get(k):
+            L.append(f"{k.capitalize()}: {esc(f[k])}.")
+    return L
+
+
+def flow(d: Data, sym: str, live: dict | None = None) -> str:
+    lf = (live or {}).get("s", {}).get(sym)
+    if lf:
+        return "\n".join([f"<b>{esc(sym)}</b> order flow · context only (not back-tested yet)"] + live_flow_lines(lf, live.get("t", "")))
     a = d.auction.get("Nifty 50" if sym in ("NIFTY", "NIFTY50") else "Nifty Bank" if sym == "BANKNIFTY" else sym)
     if not a:
         return f"{esc(sym)}: no 1-minute auction data. Covered: Nifty 50 stocks, the indices and stocks you ask about (from the next nightly refresh)."
@@ -502,6 +524,7 @@ class Bot:
         self.us_quotes = {}                       # {sym: {price, prev, t, live}} from the US tracker
         self.status_line = ""
         self.feed_note = ""
+        self.live_flow = {}
         self.state.setdefault("journal", [])
 
     # -- Telegram ---------------------------------------------------------
@@ -587,7 +610,7 @@ class Bot:
             self.log("price", w[1].upper(), out)
             return out
         if w[0] in ("flow", "orderflow", "auction") and len(w) == 2:
-            out = flow(self.d, w[1].upper())
+            out = flow(self.d, w[1].upper(), self.live_flow)
             self.log("flow", w[1].upper(), out)
             return out
         if w[0] in ("options", "option", "oi", "gamma") and len(w) == 2:

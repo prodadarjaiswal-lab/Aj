@@ -20,6 +20,7 @@ from pathlib import Path
 
 import alerts as AL
 import bot as B
+import flow as FL
 import dhan_guard as G
 import refresh as R
 import telegram as T
@@ -64,12 +65,15 @@ def parse(resp: dict) -> dict:
     return out
 
 
-def push(payload: dict, state: dict | None = None) -> None:
+def push(payload: dict, state: dict | None = None, extra: dict | None = None) -> None:
     (OUT / "live.json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
     if state is not None:
         (OUT / "alerts.json").write_text(json.dumps(state), encoding="utf-8")
+    for name, obj in (extra or {}).items():
+        (OUT / name).write_text(json.dumps(obj, separators=(",", ":")), encoding="utf-8")
     run = lambda *a: subprocess.run(["git", "-C", str(OUT), *a], check=True, capture_output=True)
-    run("add", "live.json", *(["alerts.json"] if (OUT / "alerts.json").exists() else []))
+    files = [f for f in ("live.json", "alerts.json", "flow.json", "flow-state.json") if (OUT / f).exists()]
+    run("add", *files)
     run("commit", "-q", "--amend", "--no-edit", "--allow-empty")
     run("push", "-q", "-f", "origin", "HEAD:refs/heads/live")
 
@@ -85,6 +89,30 @@ def prior_state(day: str) -> dict:
     except Exception:
         pass
     return {"d": day, "sent": []}
+
+
+def prior_file(name: str, day: str) -> dict:
+    try:
+        subprocess.run(["git", "-C", str(ROOT), "fetch", "-q", "origin", "live"], check=True, capture_output=True, timeout=60)
+        raw = subprocess.run(["git", "-C", str(ROOT), "show", f"FETCH_HEAD:{name}"], check=True, capture_output=True, text=True).stdout
+        d = json.loads(raw)
+        return d if d.get("d") == day else {}
+    except Exception:
+        return {}
+
+
+def flow_ids(bot_state: dict, bysym: dict) -> list:
+    """Nifty 50 (from the page) plus the stocks the owner watches, alerts on or asked about today."""
+    html = (ROOT / "docs/nse-terminal.html").read_text(encoding="utf-8")
+    m = re.search(r"const LIVE_EQ=(\{[^}]*\})", html)
+    ids = [str(v) for v in json.loads(m.group(1)).values()] if m else []
+    extra = [x["sym"] for x in bot_state.get("alerts", []) + bot_state.get("watch", []) if x.get("mkt") == "NSE"]
+    extra += [x["sym"] for x in bot_state.get("journal", [])[-40:]]
+    for sym in dict.fromkeys(extra):
+        r = bysym.get(sym)
+        if r and r.get("sid") and str(r["sid"]) not in ids:
+            ids.append(str(r["sid"]))
+    return ids[:90]
 
 
 def setup_branch() -> None:
@@ -120,6 +148,12 @@ def main() -> int:
     print(f"telegram: {'on' if T.enabled() else 'off'}; {len(al.sent)} alerts already sent today")
     state = lambda: {"d": day, "sent": sorted(al.sent)}
     bot = B.Bot("NSE")
+    fids = flow_ids(bot.state, al.bysym)
+    fstate = prior_file("flow-state.json", day).get("s", {})
+    flows = {sid: FL.Flow(fstate.get(sid)) for sid in fids}
+    sym_of = {str(r["sid"]): r["s"] for r in al.bysid.values()} if hasattr(al, "bysid") else {}
+    print(f"order flow: {len(fids)} stocks via /marketfeed/quote")
+    flow_out = {}
     n = fails = relogins = 0
     first = last_q = None
     reached_end = False
@@ -157,7 +191,25 @@ def main() -> int:
                 msgs = al.check(q, hhmm)
                 if msgs:
                     T.send("\n".join(msgs))
-            push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q}, state())
+            extra = {}
+            if traded and dt.time(9, 15) <= now.time() <= dt.time(15, 31) and fids:
+                try:
+                    time.sleep(1.1)                                    # Dhan: one quote request per second
+                    rq = dhan._post("/marketfeed/quote", {"NSE_EQ": [int(x) for x in fids]})
+                    for sid, qq in ((rq.get("data") or {}).get("NSE_EQ") or {}).items():
+                        if str(sid) in flows:
+                            flows[str(sid)].update(now.strftime("%H:%M:%S"), qq)
+                except Exception as e:
+                    if any(c in str(e) for c in ("401", "807", "808", "809", "DH-901")):
+                        raise
+                    print(f"  quote (order flow) failed: {str(e)[:80]}")
+                if n % 12 == 0:
+                    flow_out = {"d": day, "t": now.strftime("%H:%M:%S"), "basis": "snapshot-derived from Dhan quotes every 5 s",
+                                "s": {sym_of.get(sid, sid): f.summary() for sid, f in flows.items() if f.tape}}
+                    extra["flow.json"] = flow_out
+                if n % 60 == 0:
+                    extra["flow-state.json"] = {"d": day, "s": {sid: f.state() for sid, f in flows.items()}}
+            push({"t": now.strftime("%Y-%m-%d %H:%M:%S"), "d": now.date().isoformat(), "q": q}, state(), extra)
             n += 1
             fails = 0
             if n % 60 == 0 and G.newer_run("live-feed.yml"):      # the planned hand-over: stop so alerts are not doubled
