@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+QR: dict = {}
 
 
 def _j(name, default):
@@ -25,6 +26,8 @@ def _j(name, default):
 
 
 def review(journal: list, rs: dict, board: dict, days: int = 60) -> dict:
+    global QR
+    QR = _j("docs/results.json", {}).get("stocks", {})
     stocks = rs.get("stocks", {})
     bysym = {r["s"]: r for r in board.get("rows", [])}
     tested = set((rs.get("tested") or {}).get("tech", [])) | set((rs.get("tested") or {}).get("inv", []))
@@ -52,6 +55,10 @@ def review(journal: list, rs: dict, board: dict, days: int = 60) -> dict:
             why.append("tested warning: " + ", ".join(r["warn"]))
         if x["chg"] is not None and abs(x["chg"]) >= 0.08:
             why.append(f"{x['chg'] * 100:+.0f}% since you looked on {x['first']}")
+        q = QR.get(x["s"]) or {}
+        recent_q = q.get("q") and (dt.date.today() - dt.date.fromisoformat(q["q"])).days <= 100
+        if recent_q and q.get("flags") and q.get("pat_yoy") is not None:
+            why.append(f"latest results ({q['q']}): profit {q['pat_yoy'] * 100:+.0f}% on a year ago, {', '.join(q['flags'])}")
         if (r.get("d_fii") or 0) <= -1 or (r.get("d_fii") or 0) >= 1:
             why.append(f"FII holding {r['d_fii']:+.1f} pp")
         if why:

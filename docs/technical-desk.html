@@ -261,6 +261,9 @@ function screener(){
 }
 
 /* ---------- research screener ---------- */
+const QR=(D.qr||{}).stocks||{};
+const qtr=d=>{if(!d)return"";const m=+d.slice(5,7);return ({3:"Mar",6:"Jun",9:"Sep",12:"Dec"})[m]+" "+d.slice(2,4)};
+function resCell(s){const q=QR[s];if(!q)return'<span class="sm">–</span>';const c=(q.flags||[]).includes("improving")?"good":(q.flags||[]).includes("deteriorating")?"bad":"";return `<span class="${c}">${q.pat_yoy!=null?"profit "+pc(q.pat_yoy,0):q.turnaround?"turnaround":"–"}</span><div class="sm">${qtr(q.q)} · sales ${pc(q.rev_yoy,0)}${q.margin_chg!=null?` · margin ${q.margin_chg>0?"+":""}${(q.margin_chg*100).toFixed(1)} pt`:""}</div>`}
 const RS=(D.rs||{}).stocks||{},RT=(D.rs||{}).tested||{tech:[],inv:[],warn:[]};
 const NM=k=>SHORT[k]||VSHORT[k]||NAMES[k]||((D.vm||{}).names||{})[k]||k;
 const PRESETS=[
@@ -273,6 +276,8 @@ const PRESETS=[
  ["downco","Down: company-specific","Down 10%+ in 3 months, mostly not the market or sector",x=>(x.r3m||0)<=-0.10&&(x.why||{}).driver==="stock",(a,b)=>(a.r3m||0)-(b.r3m||0)],
  ["downmkt","Down with the market","Down 10%+ in 3 months, mostly the market or its sector (often the better dip to study)",x=>(x.r3m||0)<=-0.10&&["market","sector"].includes((x.why||{}).driver),(a,b)=>(a.r3m||0)-(b.r3m||0)],
  ["osq","Oversold quality","RSI(14) under 30 with ROCE ≥ 15% and not loss-making",x=>(x.rsi||50)<30&&(x.roce||0)>=15&&x.value!=="loss-making",(a,b)=>(a.rsi||0)-(b.rsi||0)],
+ ["resup","Results improving","Last quarter: revenue +10% and profit +15% on a year ago, margin not lower (NSE filings; untested)",x=>((QR[x.s]||{}).flags||[]).includes("improving"),(a,b)=>((QR[b.s]||{}).pat_yoy||0)-((QR[a.s]||{}).pat_yoy||0)],
+ ["resdn","Results deteriorating","Last quarter: profit down 15%+ on a year ago, or margin down 3 points+ (NSE filings)",x=>((QR[x.s]||{}).flags||[]).includes("deteriorating"),(a,b)=>((QR[a.s]||{}).pat_yoy||0)-((QR[b.s]||{}).pat_yoy||0)],
  ["lead","Leaders","Top relative strength over 3 months, above the 200-day",x=>(x.rs3||0)>0.10&&(x.vs200||0)>0,(a,b)=>(b.rs3||0)-(a.rs3||0)],
 ];
 let PRE="best",LIM=25;
@@ -295,7 +300,7 @@ function research(){
   rows.sort(P[4]);
   cnt("research",rows.length);
   $("b-research").innerHTML=`<b>${esc(P[1])}</b>: ${esc(P[2])}. <span class="ev t">green</span> passed a back-test · <span class="ev u">dashed</span> context only · <span class="ev w">red</span> tested warning. <details style="display:inline"><summary class="note" style="display:inline;font-weight:400">How the score works</summary><span class="note">${esc((D.rs||{}).method||"")}</span></details>`;
-  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button>${((D.nf||{}).events||{})[x.s]?` <span class="ev w" title="${esc(D.nf.events[x.s].map(e=>e.d+" "+e.p).join("; "))}">event ${esc(D.nf.events[x.s][0].d.slice(5))}</span>`:""}<div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
+  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th>Last results</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button>${((D.nf||{}).events||{})[x.s]?` <span class="ev w" title="${esc(D.nf.events[x.s].map(e=>e.d+" "+e.p).join("; "))}">event ${esc(D.nf.events[x.s][0].d.slice(5))}</span>`:""}<div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td style="min-width:110px">${resCell(x.s)}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
   $("rsMore").hidden=rows.length<=LIM;$("rsNote").textContent=rows.length?`showing ${Math.min(LIM,rows.length)} of ${rows.length}; data ${esc((D.rs||{}).asof||"")}, Dhan fundamentals ${esc((D.rs||{}).fund_asof||"")}`:"";
 }
 function researchInit(){
@@ -547,6 +552,7 @@ function vscore(c,vv){
   const v=c.val||{};
   if(v.pe&&v.pe_med)T("P/E vs its median",num(v.pe,0)+" / "+num(v.pe_med,0),"context: this failed its back-test",v.pe<v.pe_med*0.9?"good":v.pe>v.pe_med*1.1?"bad":"warn","exact");
   if(v.g_impl!=null&&v.g3!=null)T("Growth priced in",pc(v.g_impl,0)+"/yr",`delivered ${pc(v.g3,0)}/yr over 3 years`,v.g3>=v.g_impl?"good":"bad","derived");
+  const q_=QR[c.sym];if(q_){const im=(q_.flags||[]).includes("improving"),de=(q_.flags||[]).includes("deteriorating");T("Last quarter ("+qtr(q_.q)+")",q_.pat_yoy!=null?"Profit "+pc(q_.pat_yoy,0):q_.turnaround?"Turnaround":"–",`sales ${pc(q_.rev_yoy,0)} YoY, ${pc(q_.rev_qoq,0)} QoQ${q_.margin!=null?` · margin ${(q_.margin*100).toFixed(1)}%${q_.margin_chg!=null?` (${q_.margin_chg>0?"+":""}${(q_.margin_chg*100).toFixed(1)} pt)`:""}`:""}`,im?"good":de?"bad":"warn","NSE filing")}
   const dd=(VM.dd||{})[c.sym];if(dd!=null)T("From 52-week high",pc(dd,0),"Dhan closes",dd<=-0.3?"warn":"","exact");
   const fd=(NV[c.sym]||{}).fund||{};if(fd.roe!=null)T("Return on equity",pc(fd.roe,0),`normal ${pc(fd.roe_n,0)} · cost of equity ${pc(fd.ke,1)}`,fd.roe>(fd.ke||0.12)?"good":"bad","derived");
   if(c.us){const u=c.usr||{};if(u.pe_now)T("P/E vs usual",num(u.pe_now,0)+" / "+num(u.pe_hist_median,0),"FMP fundamentals",u.pe_now<u.pe_hist_median?"good":"bad","exact");
