@@ -6,20 +6,20 @@
    "nr7",
    "volbreak",
    "don55",
-   "macd0",
    "rsnew",
    "qdrop10",
    "qdrop",
-   "qdd_hold",
    "flag"
   ],
   "weak": [
+   "gap",
    "qdrop",
    "os14"
   ],
   "changes": [
-   "new, passes in rising markets: Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner)",
-   "new, passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)"
+   "now passes in weak markets: Gap up of 3% or more that holds into the close on 2x volume",
+   "no longer passes in rising markets: MACD crosses above its signal line while above zero",
+   "no longer passes in rising markets: Proven stock 25% below its 52-week high, first close back above its 20-day average"
   ]
  }
 ]

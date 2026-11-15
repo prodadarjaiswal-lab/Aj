@@ -1,23 +1,22 @@
 # Technical desk · data to 2026-11-13
 
-Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 2024-11-13 out-of-sample. A signal is used only if it beat the average stock in both periods (t >= 2, 100+ cases, better ATR-trade result). Excess = return minus Nifty 50 over 10 trading days after the signal first appears. Re-tested daily.
+Back-test: 497 Nifty 500 stocks from 2015-10-19; first years in-sample, from 2024-11-13 out-of-sample. A signal is used only if it beat the average stock in both periods (t >= 2, 100+ cases, better ATR-trade result). Excess = return minus Nifty 50 over 10 trading days after the signal first appears. Re-tested daily.
 
 ## Signals that passed
 
 | Signal | Market | Cases (last 2y) | Beat Nifty | Avg excess 10d | Typical stock |
 |---|---|---|---|---|---|
-| New 52-week closing high on 1.5x average volume | rising | 1,045 | 55% | +1.57% | +0.20% |
-| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,251 | 52% | +0.74% | +0.20% |
-| Volume breakout above the 20-day high (existing setup) | rising | 2,507 | 49% | +0.56% | +0.20% |
-| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,540 | 51% | +0.81% | +0.20% |
-| MACD crosses above its signal line while above zero | rising | 1,750 | 48% | +0.51% | +0.20% |
-| Relative strength line at a 1-year high before the price is | rising | 277 | 56% | +1.75% | +0.20% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | rising | 797 | 57% | +1.34% | +0.20% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 175 | 57% | +1.55% | +0.20% |
-| Proven stock 25% below its 52-week high, first close back above its 20-day average | rising | 884 | 55% | +1.57% | +0.20% |
-| Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner) | rising | 2,074 | 52% | +1.15% | +0.20% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | weak | 623 | 53% | +0.73% | +0.42% |
-| Oversold: RSI(14) under 30 (trader-scanner) | weak | 2,078 | 53% | +0.78% | +0.42% |
+| New 52-week closing high on 1.5x average volume | rising | 1,045 | 55% | +1.57% | +0.22% |
+| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,251 | 52% | +0.74% | +0.22% |
+| Volume breakout above the 20-day high (existing setup) | rising | 2,507 | 49% | +0.56% | +0.22% |
+| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,540 | 51% | +0.81% | +0.22% |
+| Relative strength line at a 1-year high before the price is | rising | 277 | 56% | +1.75% | +0.22% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | rising | 797 | 57% | +1.34% | +0.22% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 175 | 57% | +1.55% | +0.22% |
+| Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner) | rising | 2,074 | 52% | +1.15% | +0.22% |
+| Gap up of 3% or more that holds into the close on 2x volume | weak | 273 | 53% | +1.56% | +0.40% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | weak | 623 | 53% | +0.73% | +0.40% |
+| Oversold: RSI(14) under 30 (trader-scanner) | weak | 2,078 | 53% | +0.78% | +0.40% |
 
 ## Signals that failed (do not use for a verdict)
 
@@ -27,14 +26,15 @@ Back-test: 497 Nifty 500 stocks from 2020-10-16; first years in-sample, from 202
 - Short dip in an uptrend: RSI(2) under 10 while above the 200-day average
 - Supertrend(10, 3) turns up
 - Accumulation: up-day volume 1.5x down-day volume over 50 days, above the 50-day average
-- Gap up of 3% or more that holds into the close on 2x volume
 - Pullback in an uptrend (existing setup)
+- MACD crosses above its signal line while above zero
 - Bollinger squeeze breakout: band width in its lowest 20% of 6 months, close above the upper band
 - Three down closes in a row while above the 200-day average
 - Closes in the bottom 20% of its day's range while above the 200-day average
 - Closes back above the 200-day average after 20+ days below
 - Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days
 - Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high
+- Proven stock 25% below its 52-week high, first close back above its 20-day average
 - 20-day closing-high breakout with turnover of Rs 10 crore or more (nse-day-trader / trader-scanner)
 - Closes back above the 20-day average after 5+ days below, in an uptrend (trader-scanner)
 - Oversold bounce: RSI(14) under 30 yesterday, closes up today (trader-scanner)
