@@ -1,0 +1,26 @@
+name: NSE feeds (calendar, filings, FII/DII)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  feeds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: cd scripts/dhan_refresh && python nse_feeds.py
+      - name: Commit
+        run: |
+          git add docs/nse-feeds.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "NSE feeds $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin main
+          git push

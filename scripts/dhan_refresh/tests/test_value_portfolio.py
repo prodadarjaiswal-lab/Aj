@@ -283,3 +283,37 @@ def test_merge_journal_keeps_both_writers():
     m = B.merge_journal(a, b)
     assert [x["sym"] for x in m["journal"]] == ["INFY", "TCS"] and m["alerts"] == [1]
     assert B.merge_journal(a, {}) is a
+
+
+def test_score_band_tracking():
+    import track as TR
+    rs = {"asof": "2026-11-16", "stocks": {"A": {"score": 6.5, "turnover_cr": 50}, "B": {"score": 4, "turnover_cr": 50},
+                                           "C": {"score": 2, "turnover_cr": 50}, "D": {"score": 0, "turnover_cr": 50},
+                                           "E": {"score": 8, "turnover_cr": 1}}}
+    log = {"picks": []}
+    picks = TR.score_picks(rs, log)
+    kinds = {(p["kind"], p["sym"]) for p in picks}
+    assert kinds == {("score6", "A"), ("score4", "B"), ("score2", "C"), ("score0", "D")}          # E is too illiquid
+    log = TR.update(log, "2026-11-16", picks, {"A": 100, "B": 100, "C": 100, "D": 100}, {}, 1000)
+    assert TR.score_picks(rs, log) == []                                                            # still open: not logged twice
+    for k in range(21):
+        log = TR.update(log, f"d{k}", [], {"A": 100 + k, "B": 100, "C": 100, "D": 100 - k}, {}, 1000)
+    sm = TR.summary(log)
+    assert sm["score6"]["avg21"] > 0 > sm["score0"]["avg21"] and sm["score6"]["beat10"] == 1.0
+    assert len(TR.score_picks(rs, log)) == 4                                                        # closed: eligible again
+
+
+def test_nse_feed_parsers():
+    import datetime as _dt
+    import nse_feeds as NF
+    today = _dt.date(2026, 11, 16)
+    ev = NF.parse_events([{"symbol": "TCS", "date": "20-Nov-2026", "purpose": "Financial Results"},
+                          {"symbol": "TCS", "date": "20-Jan-2027", "purpose": "far"}, {"symbol": "ZZ", "date": "18-Nov-2026", "purpose": "x"},
+                          {"symbol": "TCS", "date": "bad"}], {"TCS"}, today)
+    assert ev == {"TCS": [{"d": "2026-11-20", "p": "Financial Results"}]}
+    fl = NF.parse_filings([{"symbol": "TCS", "an_dt": "14-Nov-2026 17:12:00", "desc": "Updates", "attchmntText": "Call schedule"},
+                           {"symbol": "TCS", "an_dt": None, "exchdisstime": None}], {"TCS"})
+    assert fl["TCS"][0]["t"] == "2026-11-14 17:12" and "Call schedule" in fl["TCS"][0]["title"]
+    fi = NF.parse_fii([{"category": "FII/FPI *", "date": "13-Nov-2026", "buyValue": "100.5", "sellValue": "90", "netValue": "10.5"},
+                       {"category": "DII **", "date": "13-Nov-2026", "buyValue": "50", "sellValue": "60", "netValue": "-10"}])
+    assert fi["2026-11-13"]["FII"]["net"] == 10.5 and fi["2026-11-13"]["DII"]["net"] == -10

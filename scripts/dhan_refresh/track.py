@@ -35,6 +35,30 @@ def todays_picks(tech: dict, board: dict, model: dict, regime_up: bool | None) -
     return out
 
 
+BANDS = (("score6", 6, 99), ("score4", 4, 5.9), ("score2", 2, 3.9))
+
+
+def score_picks(research: dict, log: dict, control: int = 20) -> list:
+    """The research screener's picks by score band, plus a control sample of zero-score stocks, so the live record
+    shows whether a higher score earns more. A stock is logged again in a band only after its last pick there has run 21 days."""
+    open_ = {(p["kind"], p["sym"]) for p in log.get("picks", []) if len(p.get("path", [])) < 21}
+    out, zero = [], []
+    for sym, x in sorted((research.get("stocks") or {}).items()):
+        sc = x.get("score", 0)
+        if (x.get("turnover_cr") or 0) < 10:
+            continue
+        for kind, lo, hi in BANDS:
+            if lo <= sc <= hi and (kind, sym) not in open_:
+                out.append({"kind": kind, "sym": sym, "sig": f"score {sc:g}"})
+        if sc == 0 and ("score0", sym) not in open_:
+            zero.append(sym)
+    import hashlib
+    day = research.get("asof", "")
+    zero.sort(key=lambda s_: hashlib.sha256((day + s_).encode()).hexdigest())     # a fixed pseudo-random sample for the day
+    out += [{"kind": "score0", "sym": s_, "sig": "control: score 0"} for s_ in zero[:control]]
+    return out
+
+
 def update(log: dict, day: str, picks: list, closes: dict, atr: dict, nifty: float) -> dict:
     """log: {"picks": [...]}. closes: {sym: close today}. Returns the updated log."""
     have = {(p["d"], p["sym"], p["kind"]) for p in log.get("picks", [])}
@@ -60,7 +84,7 @@ def update(log: dict, day: str, picks: list, closes: dict, atr: dict, nifty: flo
 
 def summary(log: dict) -> dict:
     out = {}
-    for kind in ("rising", "dips"):
+    for kind in ["rising", "dips"] + sorted({p["kind"] for p in log.get("picks", [])} - {"rising", "dips"}):
         ps = [p for p in log.get("picks", []) if p["kind"] == kind]
         row = {"picks": len(ps), "open": sum(1 for p in ps if "x21" not in p)}
         for h in (10, 21):
@@ -92,11 +116,18 @@ def run(root: Path | None = None) -> str:
         return "track record: already updated for " + str(day)
     closes = {s: t["c"] for s, t in tech.get("stocks", {}).items() if t.get("c")}
     atr = {s: t.get("atr") for s, t in tech.get("stocks", {}).items()}
-    log = update(log, day, todays_picks(tech, board, model, up), closes, atr, nc[-1] if nc else 0)
+    picks = todays_picks(tech, board, model, up)
+    try:
+        rs = json.loads((root / "docs/research.json").read_text(encoding="utf-8"))
+        if rs.get("asof") == day:
+            picks += score_picks(rs, log)
+    except Exception as e:
+        print(f"  score picks skipped: {str(e)[:80]}")
+    log = update(log, day, picks, closes, atr, nc[-1] if nc else 0)
     log["last_day"] = day
     log["summary"] = summary(log)
     p.write_text(json.dumps(log, separators=(",", ":")), encoding="utf-8")
-    return f"track record: {len(log['picks'])} picks, summary {log['summary']}"
+    return f"track record: {len(log['picks'])} picks, summary { {k: v.get('picks') for k, v in log['summary'].items()} }"
 
 
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ NAMES = {
     "extended": "Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)",
     "downtrend": "Downtrend: below a falling 200-day average and 50-day below 200-day (warning)",
 }
+YEARS = 11          # Dhan daily history used by every back-test (was 6; longer history gives the 6-12 month rules more samples)
 WARN = ("extended", "downtrend")
 DIPS = ("qdrop10", "qdrop", "qdrop25", "qdd", "qdd_hold")          # judged over 21 days, not 10: recoveries take longer
 
@@ -505,8 +506,8 @@ def _git_show(root: Path, branch: str, path: str) -> str | None:
 
 
 def run_full(dhan, root: Path) -> dict:
-    """Daily: re-run the 6-year back-test, promote or drop signals, write today's signals and the desk file."""
-    data, nifty, end = fetch(dhan, root, 6)
+    """Daily: re-run the back-test on YEARS of Dhan history, promote or drop signals, write today's signals and the desk file."""
+    data, nifty, end = fetch(dhan, root, YEARS)
     res = backtest(data, nifty)
     res.update({"asof": nifty["d"][-1], "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
                 "note": "Excess return vs Nifty 50 from the close of the first day a signal appears. ATR trade: stop 2 ATR, "
