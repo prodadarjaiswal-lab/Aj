@@ -317,3 +317,27 @@ def test_nse_feed_parsers():
     fi = NF.parse_fii([{"category": "FII/FPI *", "date": "13-Nov-2026", "buyValue": "100.5", "sellValue": "90", "netValue": "10.5"},
                        {"category": "DII **", "date": "13-Nov-2026", "buyValue": "50", "sellValue": "60", "netValue": "-10"}])
     assert fi["2026-11-13"]["FII"]["net"] == 10.5 and fi["2026-11-13"]["DII"]["net"] == -10
+
+
+def test_results_parse_and_summary():
+    import results as RZ
+    co = ('<in-bse-fin:RevenueFromOperations contextRef="OneD" unitRef="INR">1200</in-bse-fin:RevenueFromOperations>'
+          '<in-bse-fin:Expenses contextRef="OneD">900</in-bse-fin:Expenses><in-bse-fin:FinanceCosts contextRef="OneD">20</in-bse-fin:FinanceCosts>'
+          '<in-bse-fin:DepreciationDepletionAndAmortisationExpense contextRef="OneD">30</in-bse-fin:DepreciationDepletionAndAmortisationExpense>'
+          '<in-bse-fin:ProfitLossForPeriod contextRef="OneD">230</in-bse-fin:ProfitLossForPeriod>'
+          '<in-bse-fin:BasicEarningsLossPerShareFromContinuingOperations contextRef="OneD">11.5</in-bse-fin:BasicEarningsLossPerShareFromContinuingOperations>')
+    v = RZ.parse_xbrl(co)
+    assert v["rev"] == 1200 and v["ebitda"] == 350 and v["pat"] == 230 and not v["bank"]
+    bank = '<x:InterestEarned contextRef="OneD">500</x:InterestEarned><x:InterestExpended contextRef="OneD">300</x:InterestExpended>'
+    assert RZ.parse_xbrl(bank)["nii"] == 200
+    q = [{"end": "2026-09-30", "rev": 1200, "ebitda": 350, "pat": 230, "eps": 11.5},
+         {"end": "2026-06-30", "rev": 1100, "ebitda": 300, "pat": 200, "eps": 10},
+         {"end": "2025-09-30", "rev": 1000, "ebitda": 270, "pat": 150, "eps": 7.5}]
+    sm = RZ.summarise(q)
+    assert sm["rev_yoy"] == 0.2 and round(sm["pat_yoy"], 3) == 0.533 and sm["rev_qoq"] == round(1200 / 1100 - 1, 4)
+    assert sm["margin_chg"] > 0 and sm["flags"] == ["improving"]
+    q[0]["pat"] = 100
+    assert "deteriorating" in RZ.summarise(q)["flags"]
+    q[2]["pat"] = -50
+    assert RZ.summarise(q)["turnaround"] is True
+    assert RZ.summarise([]) is None
