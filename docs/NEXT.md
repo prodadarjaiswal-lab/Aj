@@ -137,6 +137,13 @@ Rules:
 - ✅ **S&P 500 and Nasdaq ETFs** (SPY, QQQ) tracked on Dhan's US feed for the Markets tiles, replacing the old Yahoo series on the desk.
 - ✅ **Quarterly results from NSE XBRL filings** (`results.py`, Wed and Sat, incremental): revenue, EBITDA margin, profit and EPS, with YoY, QoQ and margin change, for about 454 Nifty 500 stocks (Sep 2026 quarter). On the desk: "Results improving" and "Results deteriorating" screens, a results column, and a last-quarter tile in Analyze. The journal review flags new results for stocks you researched. Context only: too little filing history to back-test.
 
+## 15 Nov, part 2: any stock
+- ✅ **Search pop-up** in Analyze: type a name or symbol ("adani ent" → ADANIENT), use the arrow keys or tap. Covers every NSE equity in Dhan's list (2,986), the US list and the two indices.
+- ✅ **Every NSE-listed stock analysable** (`all_stocks.py`, nightly 19:47 IST, own branch `allstocks` so the repo does not grow): 2 years of Dhan bars, the same signals and readout as the tested model, a 1-year chart, swings and Dhan company data (weekly).
+- ✅ **"Last swings and why"** in Analyze: each 10%+ turning point over 2 years, the Nifty's move over the same days, the move beyond it, the industry's move, and quarterly results filed inside the swing.
+- ✅ **Technical and Value are dropdowns** in Analyze.
+- First run: 2,809 of 2,986 stocks profiled. The first run's company-data load hit the time limit; that data refreshes weekly, so nightly runs cover all.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.
