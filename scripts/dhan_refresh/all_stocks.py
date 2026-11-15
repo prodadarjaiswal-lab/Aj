@@ -87,7 +87,7 @@ def explain(sw: list, nmap: dict, peers_ret=None, filings: list | None = None) -
     na, nb = nmap.get(a), nmap.get(b)
     mkt = (nb / na - 1) if na and nb else None
     sec = peers_ret(a, b) if peers_ret else None
-    own = mv - (mkt or 0) - ((sec - (mkt or 0)) if sec is not None and mkt is not None else 0)
+    own = mv - (mkt or 0)                                  # the move beyond the Nifty; the industry is reported separately
     parts = {"mkt": round(mkt, 4) if mkt is not None else None, "sec": round(sec, 4) if sec is not None else None, "own": round(own, 4)}
     why = []
     if mkt is not None and abs(mkt) >= 0.6 * abs(mv) and (mkt > 0) == (mv > 0):
@@ -96,6 +96,8 @@ def explain(sw: list, nmap: dict, peers_ret=None, filings: list | None = None) -
         why.append(f"its industry moved too ({sec * 100:+.0f}%)")
     else:
         why.append("mostly company-specific")
+    if sec is not None and not why[0].startswith("its industry"):
+        why.append(f"industry {sec * 100:+.0f}% over the same days")
     for f in filings or []:
         if a <= f["d"] <= b:
             why.append(f["t"])

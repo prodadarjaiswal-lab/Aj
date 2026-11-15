@@ -167,6 +167,15 @@ def build(out: Path) -> dict:
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["ch"] = x
     for sym, x in ((data["all"] or {}).get("s") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["p"] = x
+    q = data["quant"]
+    for sym, m in (q.get("mc") or {}).items():
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["mc"] = m
+    for sym, v in (q.get("var") or {}).items():
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["var"] = v
+    data["quant"] = {**q, "mc": {k: {"p_up": m.get("p_up")} for k, m in (q.get("mc") or {}).items()}, "var": {}}
+    for sym, fl in ((data["nf"] or {}).get("filings") or {}).items():
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fl"] = fl
+    data["nf"] = {**(data["nf"] or {}), "filings": {}}
     data["ix"] = (data["all"] or {}).get("index") or [[r["s"], r.get("name") or r["s"], 1] for r in board.get("rows", [])]
     data["all"] = {"asof": (data["all"] or {}).get("asof"), "count": (data["all"] or {}).get("count"), "fund_asof": (data["all"] or {}).get("fund_asof")}
     for sym, f in (data["pf"].get("fit") or {}).items():

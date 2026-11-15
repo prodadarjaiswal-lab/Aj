@@ -381,7 +381,7 @@ function ctx(sym){
   const fut=a&&/future/i.test(a.note||"")&&a.path&&a.path.length?a.path[a.path.length-1][1]:null;
   const usr=!t.c&&!r.last?usRow(sym):null,us=!!(usr||(!t.c&&!r.last&&(D.usd||{}).stocks&&D.usd.stocks[sym])),ud=USD[sym]||{},uq=(D.usq||{})[sym]||{};
   if(us)return{sym,key,a:null,lf:null,fs:null,oo:null,o:null,t:{},r:{},us,usr,ud,uq,cur:"$",last:uq.price||(usr||{}).price,mc:ud.mc,v:ud.var_w,val:{}};
-  return{sym,key,a,lf,fs,oo,o,t,r,last,fut,cur:"₹",mc:(Qd.mc||{})[sym],v:(Qd.var||{})[sym],val:((D.n50[sym]||{}).val)||{}};
+  return{sym,key,a,lf,fs,oo,o,t,r,last,fut,cur:"₹",mc:((Qd.mc||{})[sym]||{}).p50!=null?Qd.mc[sym]:null,v:(Qd.var||{})[sym],val:((D.n50[sym]||{}).val)||{}};
 }
 function call(c){
   const {t,r}=c,nw=tested.filter(k=>(t.new||[]).includes(k)),st=r.status;
@@ -659,14 +659,14 @@ function nameOf(sym){const x=IX.find(z=>z.s===sym);return x?x.n:""}
 function swingsCard(c){
   const P=D.prof[c.sym]||{},sw=(P.swings||[]).slice().reverse(),el=$("swings");
   if(!sw.length){el.innerHTML=`<p class="note">${c.us?"Swings cover NSE stocks.":"Swings appear once this stock's 2-year Dhan history is loaded (nightly)."}</p>`;return}
-  el.innerHTML=`<div class="tw"><table><tr><th>From → to</th><th class="n">Move</th><th class="n">Nifty</th><th class="n">Own</th><th>Likely reason</th></tr>${sw.map(([a,b,pa,pb,mv,e],i)=>`<tr><td>${esc(a.slice(2))} → ${esc(b.slice(2))}${i===0?' <span class="basis">in progress</span>':""}<div class="sm">${num(pa,1)} → ${num(pb,1)}</div></td><td class="n ${cls(mv)}">${pc(mv,0)}</td><td class="n ${cls(e.mkt)}">${pc(e.mkt,0)}</td><td class="n ${cls(e.own)}">${pc(e.own,0)}</td><td>${(e.why||[]).map(esc).join("; ")}</td></tr>`).join("")}</table></div><p class="note">Turning points of 10%+ on Dhan daily closes, last 2 years. "Own" = the move beyond the Nifty${sw.some(x=>x[5]&&x[5].sec!=null)?" and its industry":""}. Reasons are the market and industry moves over the same days and any quarterly results filed inside the swing; they are likely drivers, not proof.</p>`;
+  el.innerHTML=`<div class="tw"><table><tr><th>From → to</th><th class="n">Move</th><th class="n">Nifty</th><th class="n">Beyond Nifty</th><th>Likely reason</th></tr>${sw.map(([a,b,pa,pb,mv,e],i)=>`<tr><td>${esc(a.slice(2))} → ${esc(b.slice(2))}${i===0?' <span class="basis">in progress</span>':""}<div class="sm">${num(pa,1)} → ${num(pb,1)}</div></td><td class="n ${cls(mv)}">${pc(mv,0)}</td><td class="n ${cls(e.mkt)}">${pc(e.mkt,0)}</td><td class="n ${cls(mv-(e.mkt||0))}">${pc(mv-(e.mkt||0),0)}</td><td>${(e.why||[]).map(esc).join("; ")}</td></tr>`).join("")}</table></div><p class="note">Turning points of 10%+ on Dhan daily closes, last 2 years. "Beyond Nifty" = the stock's move minus the Nifty's over the same days. Reasons are the market and industry moves over the same days and any quarterly results filed inside the swing; they are likely drivers, not proof.</p>`;
 }
 const CH={};
 function chunkOf(k){const c=[...String(k).toUpperCase()].find(x=>/[A-Z0-9]/.test(x))||"_";return /[A-Z]/.test(c)?c:"0"}
 function loadDetail(sym){
   const keys=[sym,IDXKEY[sym]].filter(Boolean),names=[...new Set(keys.map(chunkOf))].filter(n=>(D.chunks||[]).includes(n)&&!CH[n]);
   return Promise.all(names.map(n=>fetch("d/"+n+".json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{CH[n]=j;
-    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
+    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.mc)(D.quant.mc=D.quant.mc||{})[k]=x.mc;if(x.var)(D.quant.var=D.quant.var||{})[k]=x.var;if(x.fl)((D.nf=D.nf||{}).filings=D.nf.filings||{})[k]=x.fl;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
 }
 let SHOWN="";
 function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym)render(sym);const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}
