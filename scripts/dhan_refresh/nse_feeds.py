@@ -103,7 +103,9 @@ def run(root: Path = ROOT) -> str:
            "filings_asof": old.get("filings_asof"), "fiidii": old.get("fiidii", {}), "errors": []}
     stamp = dt.datetime.now(IST).strftime("%Y-%m-%d %H:%M")
     try:
-        out["events"], out["events_asof"] = parse_events(nse_json("event-calendar?index=equities"), symbols, today), stamp
+        raw = nse_json("event-calendar?index=equities")
+        print(f"  event calendar: {type(raw).__name__}, {len(raw) if hasattr(raw, '__len__') else '?'} rows; sample {json.dumps(raw[:2] if isinstance(raw, list) else raw)[:400]}")
+        out["events"], out["events_asof"] = parse_events(raw, symbols, today), stamp
     except Exception as e:
         out["errors"].append(str(e))
     try:
