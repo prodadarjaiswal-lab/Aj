@@ -135,7 +135,7 @@ Rules:
 - ✅ **Live proof of the score** (`track.py`): each night logs stocks by score band (6+, 4–5.5, 2–3.5) and a control group of 20 zero-score stocks; graded after 10 and 21 sessions against the Nifty. First grades about 1 Dec.
 - ✅ **NSE feeds nightly** (`nse_feeds.py`, the nse-day-trader method; works from GitHub Actions): filings for all Nifty 500 stocks (5 days), results and board-meeting calendar (21 days), FII/DII flows. On the desk: filings and upcoming events in Analyze, an event flag in the screener, FII/DII tiles in Markets.
 - ✅ **S&P 500 and Nasdaq ETFs** (SPY, QQQ) tracked on Dhan's US feed for the Markets tiles, replacing the old Yahoo series on the desk.
-- ⬜ Quarterly results growth from NSE XBRL filings (one call per stock; not built yet).
+- ✅ **Quarterly results from NSE XBRL filings** (`results.py`, Wed and Sat, incremental): revenue, EBITDA margin, profit and EPS, with YoY, QoQ and margin change, for about 454 Nifty 500 stocks (Sep 2026 quarter). On the desk: "Results improving" and "Results deteriorating" screens, a results column, and a last-quarter tile in Analyze. The journal review flags new results for stocks you researched. Context only: too little filing history to back-test.
 
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
