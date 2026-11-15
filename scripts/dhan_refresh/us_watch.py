@@ -50,6 +50,8 @@ def config() -> dict:
                 out[r["s"]] = {"name": r.get("name") or r["s"], "move_pct": 1000, "quiet": True}
     except Exception:
         pass
+    for etf, name in (("SPY", "S&P 500 ETF"), ("QQQ", "Nasdaq 100 ETF")):     # US market tiles on the desk, from Dhan
+        out.setdefault(etf, {"name": name, "move_pct": 1000, "quiet": True})
     return out
 
 

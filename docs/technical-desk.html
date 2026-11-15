@@ -228,8 +228,10 @@ function screener(){
   const nf=D.idx["Nifty 50"];if(nf)tiles.push(["Nifty 50",num(nf.c,0),nf.chg]);const bn=D.idx["Nifty Bank"];if(bn)tiles.push(["Nifty Bank",num(bn.c,0),bn.chg]);
   const vix=D.idx["India VIX"];if(vix)tiles.push(["India VIX",num(vix.c,2),vix.chg]);
   Object.values(m.futures||{}).forEach(f=>tiles.push([f.name,num(f.ltp,1),f.chg]));
-  Object.entries(D.usq||{}).forEach(([s,q])=>tiles.push([s+" (US, Dhan)",num(q.price,2),q.prev?q.price/q.prev-1:null]));
-  $("mkts").innerHTML=tiles.map(([k,v,c])=>`<div class="tile"><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d ${cls(c)}">${pc(c,2)}</div></div>`).join("");
+  Object.entries(D.usq||{}).filter(([s])=>!D.usmain||D.usmain.includes(s)).forEach(([s,q])=>tiles.push([s+" (US, Dhan)",num(q.price,2),q.prev?q.price/q.prev-1:null]));
+  const fd=(D.nf||{}).fiidii||{},fdd=Object.keys(fd).sort().pop();
+  if(fdd){["FII","DII"].forEach(k=>{if(fd[fdd][k])tiles.push([`${k} net, ${fdd.slice(5)} (₹ Cr)`,num(fd[fdd][k].net,0),fd[fdd][k].net>0?1e-9:-1e-9])})}
+  $("mkts").innerHTML=tiles.map(([k,v,c])=>`<div class="tile"><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d ${cls(c)}">${c!=null&&Math.abs(c)<1e-6?(c>0?"net buying":"net selling"):pc(c,2)}</div></div>`).join("");
   const miss=(m.missing||[]).map(x=>String(x)),gaps=[];
   if(miss.some(x=>x.includes("newsheadline")))gaps.push("news (service not enabled on this Dhan account)");
   if(miss.some(x=>x.startsWith("USDINR")))gaps.push("USD/INR (no live contract in Dhan's list)");
@@ -293,7 +295,7 @@ function research(){
   rows.sort(P[4]);
   cnt("research",rows.length);
   $("b-research").innerHTML=`<b>${esc(P[1])}</b>: ${esc(P[2])}. <span class="ev t">green</span> passed a back-test · <span class="ev u">dashed</span> context only · <span class="ev w">red</span> tested warning. <details style="display:inline"><summary class="note" style="display:inline;font-weight:400">How the score works</summary><span class="note">${esc((D.rs||{}).method||"")}</span></details>`;
-  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button><div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
+  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button>${((D.nf||{}).events||{})[x.s]?` <span class="ev w" title="${esc(D.nf.events[x.s].map(e=>e.d+" "+e.p).join("; "))}">event ${esc(D.nf.events[x.s][0].d.slice(5))}</span>`:""}<div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
   $("rsMore").hidden=rows.length<=LIM;$("rsNote").textContent=rows.length?`showing ${Math.min(LIM,rows.length)} of ${rows.length}; data ${esc((D.rs||{}).asof||"")}, Dhan fundamentals ${esc((D.rs||{}).fund_asof||"")}`:"";
 }
 function researchInit(){
@@ -496,8 +498,9 @@ function readout(c){
   $("readout").innerHTML=rows.filter(r=>r[5]!=null).map(([k,v,lo,hi,g,txt])=>`<div class="ind"><span>${k}</span><div class="bar">${bar(v,lo,hi,g)}</div><span class="val">${esc(txt)}</span></div>`).join("")+(t.st||t.macd?`<p class="note">Supertrend ${esc(t.st||"–")} · MACD ${esc(t.macd||"–")}</p>`:"")||`<p class="note">${c.us?"Weekly history for this US stock arrives with the next Alpha Vantage batch.":"Indicators cover the Nifty 500."}</p>`;
 }
 function news(c){
-  const {sym}=c,x=D.n50[sym]||{},mv=((D.markets||{}).movers||[]).find(m=>m.s===sym),items=[...((mv||{}).headlines||[]),...(x.filings||[]),...(x.news||[])].slice(0,6);
-  $("news").innerHTML=items.length?items.map(i=>`<p><span class="note">${esc(String(i.time||"").slice(0,10))}</span> ${esc(String(i.title||"").slice(0,140))}</p>`).join("")+`<p class="note">Possible reasons for a move, not proven causes.</p>`:`<p class="note">No headline or filing found (news covers the Nifty 50 and the day's biggest movers).</p>`;
+  const {sym}=c,x=D.n50[sym]||{},mv=((D.markets||{}).movers||[]).find(m=>m.s===sym),NF_=D.nf||{},ev=(NF_.events||{})[sym]||[],items=[...((NF_.filings||{})[sym]||[]).map(f=>({time:f.t,title:f.title})),...((mv||{}).headlines||[]),...(x.news||[])].slice(0,7);
+  const evh=ev.length?`<p><span class="tag warn">Upcoming</span> ${ev.map(e=>`${esc(e.d)}: ${esc(e.p)}`).join(" · ")}</p>`:"";
+  $("news").innerHTML=evh+(items.length?items.map(i=>`<p><span class="note">${esc(String(i.time||"").slice(0,10))}</span> ${esc(String(i.title||"").slice(0,140))}</p>`).join("")+`<p class="note">NSE filings (last 5 days, as of ${esc(NF_.filings_asof||"–")}) first, then headlines. Possible reasons for a move, not proven causes.</p>`:`<p class="note">No NSE filing in the last 5 days and no headline found.</p>`);
 }
 /* ---------- value, portfolio fit and the combined verdict ---------- */
 const VM=D.vm||{},PF=D.pf||{},USD=(D.usd||{}).stocks||{},NV=D.nval||{};
