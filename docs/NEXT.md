@@ -126,6 +126,17 @@ Rules:
 - ✅ **Bug fixed: the journal was being wiped.** Three jobs save the bot state, and the last writer overwrote the others' journal entries; the state had no journal at all. Saves now merge journals. Questions asked before 14 Nov are lost.
 - ✅ **Telegram chat cleared** (ids 1–26; Telegram only lets bots delete messages under 48 hours old) and the desk links re-pinned. `telegram-clean.yml` does it again on demand.
 
+## 15 Nov: live proof, longer history, NSE feeds
+- ✅ **Back-tests now use 11 years of Dhan history** (2015 on, was 6).
+  - Investor rules passing in rising markets at 6 months: 12-month momentum (t 2.5), 6-month relative strength (2.46), accumulation (2.65), trend stack (2.08), recovery above the 200-day (2.32).
+  - Buying cheapness still fails. Weak markets still have too few samples (17 dates).
+  - Technical signals passing in rising markets: 52-week high on volume, tight inside day, volume breakout, 55-day breakout, relative-strength high, bull flag, two dip rules.
+- ✅ **Score cap:** investor rules overlap, so they add 2, then 1, 1 (at most 4).
+- ✅ **Live proof of the score** (`track.py`): each night logs stocks by score band (6+, 4–5.5, 2–3.5) and a control group of 20 zero-score stocks; graded after 10 and 21 sessions against the Nifty. First grades about 1 Dec.
+- ✅ **NSE feeds nightly** (`nse_feeds.py`, the nse-day-trader method; works from GitHub Actions): filings for all Nifty 500 stocks (5 days), results and board-meeting calendar (21 days), FII/DII flows. On the desk: filings and upcoming events in Analyze, an event flag in the screener, FII/DII tiles in Markets.
+- ✅ **S&P 500 and Nasdaq ETFs** (SPY, QQQ) tracked on Dhan's US feed for the Markets tiles, replacing the old Yahoo series on the desk.
+- ⬜ Quarterly results growth from NSE XBRL filings (one call per stock; not built yet).
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

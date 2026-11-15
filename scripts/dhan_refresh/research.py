@@ -167,8 +167,8 @@ def run(data: dict, nifty: dict, root: Path, dhan=None) -> str:
         for k in sorted(on & t_warn):
             score -= 2
             ev.append(["warn", k])
-        for k in sorted(vin & v_ok):
-            score += 2
+        for n_, k in enumerate(sorted(vin & v_ok)):      # investor rules overlap (most measure strength): 2, then 1, 1; at most 4
+            score += 2 if n_ == 0 else 1 if n_ < 3 else 0
             ev.append(["inv", k])
         for k, q in (fq.get(s) or {}).items():
             if q >= 4:
@@ -206,8 +206,8 @@ def run(data: dict, nifty: dict, root: Path, dhan=None) -> str:
                 out[s][k] = round(out[s][k], 4)
     res = {"asof": today, "side": side, "stocks": out, "tested": {"tech": sorted(t_ok), "warn": sorted(t_warn), "inv": sorted(v_ok)},
            "fund_asof": fund.get("asof"),
-           "method": ("Score = 2 per technical signal that passed the 6-year back-test for today's market, 2 per investor rule that "
-                      "passed, 1 per tested value factor in the top two-fifths, 0.5 if the Monte Carlo chance of a rise is 55%+, minus 2 "
+           "method": ("Score = 2 per technical signal that passed the 6-year back-test for today's market, 2 for the first investor rule that passed and 1 each for "
+                      "the next two (they overlap), 1 per tested value factor in the top two-fifths, 0.5 if the Monte Carlo chance of a rise is 55%+, minus 2 "
                       "per tested warning. Valuation, ownership, order flow and options are filters and context: they have not passed "
                       "a back-test, so they do not add to the score.")}
     (root / "docs/research.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")
@@ -232,8 +232,8 @@ def rescore(root: Path) -> str:
             score, ev = score + 2, ev + [["tech", k]]
         for k in sorted(on & t_warn):
             score, ev = score - 2, ev + [["warn", k]]
-        for k in sorted(vin & v_ok):
-            score, ev = score + 2, ev + [["inv", k]]
+        for n_, k in enumerate(sorted(vin & v_ok)):
+            score, ev = score + (2 if n_ == 0 else 1 if n_ < 3 else 0), ev + [["inv", k]]
         for k, q in (fq.get(s) or {}).items():
             if q >= 4:
                 score, ev = score + 1, ev + [["fund", k]]

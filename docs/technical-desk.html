@@ -158,7 +158,7 @@ details>summary{cursor:pointer;font-weight:600}
   <div class="score" id="vscore"></div>
   <div class="cards">
     <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Valuation</h2><span class="basis" id="valbasis">derived</span></div><div id="valhedge"></div></div>
-    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>What the investor back-test kept</h2><span class="basis">Dhan prices, 6 years</span></div><div id="vbt"></div></div>
+    <div class="pnl"><div class="row" style="justify-content:space-between"><h2>What the investor back-test kept</h2><span class="basis">Dhan prices, 11 years</span></div><div id="vbt"></div></div>
   </div>
   <div class="pnl"><details><summary>Fundamental factor back-test (NSE terminal)</summary><div id="fbt"></div></details></div>
   <div class="pnl"><h2>News and filings</h2><div id="news"></div></div>
@@ -506,7 +506,7 @@ function news(c){
 const VM=D.vm||{},PF=D.pf||{},USD=(D.usd||{}).stocks||{},NV=D.nval||{};
 const usRow=s=>(D.us.rows||[]).find(x=>x.s===s);
 const vside=D.regimeUp===false?"weak":"up";
-const VSHORT={dd30:"30%+ below high",fallen_leader:"Fallen leader",near_lo52:"Near 52-week low",lt_loser:"2-year loser",lowvol:"Calmest 20%",mom12:"12-month momentum",recovered:"Back above 200-day",lt_winner:"2-year winner"};
+const VSHORT={rs6:"6-month strength",accum:"Accumulation",near_hi:"Near 52-week high",stack:"Trend stack",dd30:"30%+ below high",fallen_leader:"Fallen leader",near_lo52:"Near 52-week low",lt_loser:"2-year loser",lowvol:"Calmest 20%",mom12:"12-month momentum",recovered:"Back above 200-day",lt_winner:"2-year winner"};
 const vTested=Object.keys(VM.rules||{}).filter(k=>VM.rules[k]["tested_"+vside]);
 function valueCall(c){ // tested rules first, then the passed fundamental factors; P/E vs its median is context (failed its test)
   const on=((VM.today||{})[c.sym]||{}).on||[],hits=on.filter(k=>vTested.includes(k)),q=((VM.fundamental||{}).quintiles||{})[c.sym]||{};
