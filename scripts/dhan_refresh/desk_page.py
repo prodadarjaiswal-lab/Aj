@@ -121,6 +121,7 @@ def build(out: Path) -> dict:
             "jr": _j(ROOT / "docs/journal-review.json", {}),
             "nf": _j(ROOT / "docs/nse-feeds.json", {}),
             "qr": _j(ROOT / "docs/results.json", {}),
+            "all": _branch("allstocks", "all-stocks.json") or _j(ROOT / "docs/all-stocks.json", {}),
             "usmain": ["SPY", "QQQ"] + [k for k in _j(ROOT / "config/us_watch.json", {}) if not k.startswith("_")],
             "chart": _chart(_index_charts(_j(ROOT / "docs/chart-data.json", {}), nset)),
             "usw": {k: {"d": v["d"][-104:], "c": v["c"][-104:]} for k, v in _j(ROOT / "data/us-weekly.json", {}).items()},
@@ -153,6 +154,7 @@ def build(out: Path) -> dict:
         ["Global markets (NSE terminal)", str((nset.get("glob") or {}).get("made") or "")[:10], "old Yahoo series; not refreshed", "weekly"],
         ["Macro (NSE terminal)", ((nset.get("macro") or {}).get("usdinr") or [[None]])[-1][0], "monthly series", "monthly"],
         ["Research profiles and Dhan fundamentals (Nifty 500)", data["rs"].get("fund_asof"), f"{len(data['rs'].get('stocks', {}))} stocks", "daily"],
+        ["All NSE stocks (search, charts, swings)", (data["all"] or {}).get("asof"), f"{(data['all'] or {}).get('count') or 0} listed equities", "daily"],
         ["Live order flow", flow.get("t") if flow.get("d") == today_ist else "market closed", "market hours only", "live"]]}
     html = (ROOT / "docs/technical-desk.html").read_text(encoding="utf-8")
     blob = json.dumps(data, separators=(",", ":"), default=str).replace("</", "<\\/")
@@ -163,6 +165,10 @@ def build(out: Path) -> dict:
         chunks.setdefault(_chunk(key), {}).setdefault(key, {})["a"] = a
     for sym, x in (data["chart"].get("s") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["ch"] = x
+    for sym, x in ((data["all"] or {}).get("s") or {}).items():
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["p"] = x
+    data["ix"] = (data["all"] or {}).get("index") or [[r["s"], r.get("name") or r["s"], 1] for r in board.get("rows", [])]
+    data["all"] = {"asof": (data["all"] or {}).get("asof"), "count": (data["all"] or {}).get("count"), "fund_asof": (data["all"] or {}).get("fund_asof")}
     for sym, f in (data["pf"].get("fit") or {}).items():
         if f.get("c"):
             chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fc"] = f["c"]
