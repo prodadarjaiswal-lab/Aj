@@ -341,3 +341,27 @@ def test_results_parse_and_summary():
     q[2]["pat"] = -50
     assert RZ.summarise(q)["turnaround"] is True
     assert RZ.summarise([]) is None
+
+
+def test_all_stocks_universe_zigzag_explain():
+    import all_stocks as AS
+    csv_ = ("SEM_EXM_EXCH_ID,SEM_SEGMENT,SEM_SMST_SECURITY_ID,SEM_INSTRUMENT_NAME,SEM_TRADING_SYMBOL,SEM_SERIES,SM_SYMBOL_NAME,SEM_CUSTOM_SYMBOL\n"
+            "NSE,E,25,EQUITY,ADANIENT,EQ,ADANI ENTERPRISES LIMITED,Adani Enterprises\n"
+            "NSE,E,26,EQUITY,ADANIENT,BL,ADANI ENTERPRISES LIMITED,x\n"
+            "NSE,E,27,EQUITY,TINYCO,BE,TINY CO LTD,Tiny\n"
+            "NSE,E,28,EQUITY,BONDX,N1,BOND,b\nBSE,E,29,EQUITY,ADANIENT,A,ADANI,a\n")
+    u = AS.universe(csv_)
+    assert [x["s"] for x in u] == ["ADANIENT", "TINYCO"] and u[0]["sid"] == "25" and "ADANI" in u[0]["name"]
+    c = [100, 105, 112, 120, 110, 104, 100, 108, 116, 125, 123]
+    d = [f"2026-01-{k + 1:02d}" for k in range(len(c))]
+    z = AS.zigzag(d, c)
+    assert [(x[0], x[1]) for x in z] == [("2026-01-01", "2026-01-04"), ("2026-01-04", "2026-01-07"), ("2026-01-07", "2026-01-10"), ("2026-01-10", "2026-01-11")]
+    assert z[0][4] == 0.2 and round(z[1][4], 4) == round(100 / 120 - 1, 4)
+    nmap = {"2026-01-01": 1000, "2026-01-04": 1010, "2026-01-07": 900, "2026-01-10": 1000}
+    e = AS.explain(z[1], nmap, None, [{"d": "2026-01-05", "t": "results for 2025-12: profit -30% on a year ago"}])
+    assert "mostly the market" in e["why"][0] and any("results" in w for w in e["why"])
+    e2 = AS.explain(z[0], nmap, None, [])
+    assert e2["why"][0] == "mostly company-specific"
+    ev = AS.results_events({"2025-09-30": {"end": "2025-09-30", "pat": 100, "filed": "10-Nov-2025 17:00:00"},
+                            "2026-09-30": {"end": "2026-09-30", "pat": 130, "filed": "12-Nov-2026 16:30:00"}})
+    assert ev[-1]["d"] == "2026-11-12" and "+30%" in ev[-1]["t"]

@@ -1,0 +1,45 @@
+name: All NSE stocks (Dhan)
+
+on:
+  schedule:
+    - cron: "17 14 * * 1-5"    # 19:47 IST, after the nightly refresh
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dhan-refresh          # shares the Dhan login queue with the other Dhan jobs
+  cancel-in-progress: false
+
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3
+      - name: Restore last week's company data
+        run: git fetch -q origin allstocks && git show FETCH_HEAD:fund-all.json > docs/fund-all.json || rm -f docs/fund-all.json
+      - name: Profile every NSE equity from Dhan
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python all_stocks.py
+      - name: Publish to the 'allstocks' branch (replaced each night, so the repository does not grow)
+        run: |
+          mkdir -p /tmp/out && cp docs/all-stocks.json /tmp/out/ && cp docs/fund-all.json /tmp/out/ 2>/dev/null || true
+          cd /tmp/out
+          git init -q && git checkout -q --orphan allstocks
+          git config user.name "dhan-refresh-bot" && git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git add . && git commit -qm "All stocks $(TZ=Asia/Kolkata date +%F)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:refs/heads/allstocks
+      - name: Tell the owner if this failed
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python scripts/dhan_refresh/telegram.py test "⚠️ All-stocks job failed; the desk keeps yesterday's data for stocks outside the Nifty 500." || true
