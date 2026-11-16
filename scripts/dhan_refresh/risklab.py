@@ -294,6 +294,11 @@ def run(data: dict, nifty: dict, root, series: dict | None = None, full: bool | 
     root = Path(root)
     if full is None:
         full = "--full" in sys.argv or dt.datetime.now(IST).weekday() == 5
+        if not full:                                   # first run ever, or nothing to carry over: do the full pass now
+            try:
+                full = not (json.loads((root / "docs/risklab.json").read_text(encoding="utf-8")).get("signals"))
+            except Exception:
+                full = True
     notes, tm = [], {}
     out = {"asof": nifty["d"][-1], "vol": {}, "var": {},
            "conformal": {"coverage_target": CONF, "coverage_measured": None, "by_sym": {}},
