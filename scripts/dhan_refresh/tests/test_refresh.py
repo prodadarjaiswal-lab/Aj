@@ -174,3 +174,17 @@ def test_append_today_from_quote():
     assert not R.append_today(o, (104.5, 107.0, 103.0, 106.0, 7.0), after)          # already there
     mid = dt.datetime(2026, 11, 12, 11, 0, tzinfo=R.IST)
     assert not R.append_today(o, (110.0, 111.0, 109.0, 110.5, 1.0), mid)            # session not over
+
+
+def test_session_clock_late_run_is_previous_evening():
+    import datetime as dt
+    from refresh import session_clock, IST
+    tue_0211 = dt.datetime(2026, 11, 17, 2, 11, tzinfo=IST)
+    c = session_clock(tue_0211)
+    assert c.date() == dt.date(2026, 11, 16) and c.hour == 23
+    sat_0130 = dt.datetime(2026, 11, 21, 1, 30, tzinfo=IST)
+    assert session_clock(sat_0130).weekday() == 4          # Friday's work, not skipped
+    mon_0200 = dt.datetime(2026, 11, 16, 2, 0, tzinfo=IST)
+    assert session_clock(mon_0200).weekday() == 6          # Sunday night: nothing to do
+    on_time = dt.datetime(2026, 11, 16, 16, 17, tzinfo=IST)
+    assert session_clock(on_time) == on_time
