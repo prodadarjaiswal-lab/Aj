@@ -90,6 +90,14 @@ def build(out: Path) -> dict:
         if len(cc) >= 2:
             idx[name] = {"c": cc[-1], "chg": cc[-1] / cc[-2] - 1}
     today_ist = dt.datetime.now(R.IST).date().isoformat()
+    live = _branch("live", "live.json") or {}
+    live_t = str(live.get("t") or "")
+    if live_t[:10] == today_ist:                      # during the session: live Dhan index prices, not yesterday's close
+        lix = (live.get("q") or {}).get("IDX_I") or {}
+        for name, sid in (("Nifty 50", "13"), ("Nifty Bank", "25"), ("India VIX", "21")):
+            v = lix.get(sid)
+            if v and v[0] and v[4]:
+                idx[name] = {"c": v[0], "chg": v[0] / v[4] - 1, "live": live_t[11:16]}
     flow = _branch("live", "flow.json") or {}
     fstate = _branch("live", "flow-state.json") or {}
     sym_of = {str(r["sid"]): r["s"] for r in board.get("rows", []) if r.get("sid")}
@@ -113,7 +121,7 @@ def build(out: Path) -> dict:
             "markets": _j(ROOT / "docs/markets.json", {}),
             "flow": flow if flow.get("d") == today_ist else {}, "flowState": {"s": fs},
             "track": {"summary": track.get("summary", {})}, "us": _j(ROOT / "docs/us-value.json", {"rows": []}),
-            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx,
+            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx, "live_t": live_t if live_t[:10] == today_ist else None,
             "quant": _j(ROOT / "docs/quant.json", {}),
             "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
             "usd": _j(ROOT / "docs/us-desk.json", {}),
