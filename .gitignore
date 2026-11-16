@@ -5,3 +5,6 @@ bot-out/
 live-out/
 us-watch-out/
 token-out/
+
+# local desk builds for publishing
+site-build/

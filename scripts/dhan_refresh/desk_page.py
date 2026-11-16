@@ -90,6 +90,14 @@ def build(out: Path) -> dict:
         if len(cc) >= 2:
             idx[name] = {"c": cc[-1], "chg": cc[-1] / cc[-2] - 1}
     today_ist = dt.datetime.now(R.IST).date().isoformat()
+    live = _branch("live", "live.json") or {}
+    live_t = str(live.get("t") or "")
+    if live_t[:10] == today_ist:                      # during the session: live Dhan index prices, not yesterday's close
+        lix = (live.get("q") or {}).get("IDX_I") or {}
+        for name, sid in (("Nifty 50", "13"), ("Nifty Bank", "25"), ("India VIX", "21")):
+            v = lix.get(sid)
+            if v and v[0] and v[4]:
+                idx[name] = {"c": v[0], "chg": v[0] / v[4] - 1, "live": live_t[11:16]}
     flow = _branch("live", "flow.json") or {}
     fstate = _branch("live", "flow-state.json") or {}
     sym_of = {str(r["sid"]): r["s"] for r in board.get("rows", []) if r.get("sid")}
@@ -113,13 +121,14 @@ def build(out: Path) -> dict:
             "markets": _j(ROOT / "docs/markets.json", {}),
             "flow": flow if flow.get("d") == today_ist else {}, "flowState": {"s": fs},
             "track": {"summary": track.get("summary", {})}, "us": _j(ROOT / "docs/us-value.json", {"rows": []}),
-            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx,
+            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx, "live_t": live_t if live_t[:10] == today_ist else None,
             "quant": _j(ROOT / "docs/quant.json", {}),
             "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
             "usd": _j(ROOT / "docs/us-desk.json", {}),
             "rs": _j(ROOT / "docs/research.json", {}),
             "jr": _j(ROOT / "docs/journal-review.json", {}),
             "nf": _j(ROOT / "docs/nse-feeds.json", {}),
+            "tp": _j(ROOT / "docs/tradeplan.json", {}),
             "qr": _j(ROOT / "docs/results.json", {}),
             "all": _branch("allstocks", "all-stocks.json") or _j(ROOT / "docs/all-stocks.json", {}),
             "usmain": ["SPY", "QQQ"] + [k for k in _j(ROOT / "config/us_watch.json", {}) if not k.startswith("_")],
@@ -179,6 +188,9 @@ def build(out: Path) -> dict:
     for sym, fl in ((data["nf"] or {}).get("filings") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fl"] = fl
     data["nf"] = {**(data["nf"] or {}), "filings": {}}
+    for sym, x in ((data["tp"] or {}).get("plans") or {}).items():          # trade plans: loaded per stock
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["tp"] = x
+    data["tp"] = {k: (data["tp"] or {}).get(k) for k in ("asof", "config_assumed", "charges")} | {"syms": sorted((data["tp"] or {}).get("plans") or {})}
     data["ix"] = (data["all"] or {}).get("index") or [[r["s"], r.get("name") or r["s"], 1] for r in board.get("rows", [])]
     data["all"] = {"asof": (data["all"] or {}).get("asof"), "count": (data["all"] or {}).get("count"), "fund_asof": (data["all"] or {}).get("fund_asof")}
     for sym, f in (data["pf"].get("fit") or {}).items():

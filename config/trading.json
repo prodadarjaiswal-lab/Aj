@@ -1,0 +1,43 @@
+{
+ "_note": "Trade-plan settings (scripts/dhan_refresh/tradeplan.py). capital 1,00,000 and max_loss_per_trade 1,000 confirmed by the owner on 17 Nov 2026. daily_loss_limit 2,000 is still an example value. Research software, not advice: the desk prints a plan to place by hand and never sends orders.",
+ "_assumed": false,
+ "capital": 100000,
+ "max_loss_per_trade": 1000,
+ "daily_loss_limit": 2000,
+ "product": "delivery",
+ "_product_note": "delivery (hold for days) matches the back-test, which holds up to 21 trading days. intraday must be closed the same day, so the multi-day odds below would not apply to it.",
+ "stop_k": 1.5,
+ "_stop_k_note": "stop = entry minus stop_k times one day's volatility (risklab daily vol when present, else ATR 14). Assumed; the skills' default is a 1.5 ATR stop.",
+ "horizon_days": 21,
+ "min_reward_risk": 1.5,
+ "_min_reward_risk_note": "nse-day-trader skill default (min_reward_risk 1.5).",
+ "paths": 10000,
+ "charges": {
+  "intraday": {
+   "brokerage_pct": {"v": 0.1, "source": "nse-day-trader skill (Groww intraday: Rs 20 or 0.1% per order, whichever lower, min Rs 5)", "as_of": "2026-11-16"},
+   "brokerage_cap_rs": {"v": 20, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "brokerage_min_rs": {"v": 5, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "stt_buy_pct": {"v": 0.0, "source": "nse-day-trader skill (STT on the sell side only)", "as_of": "2026-11-16"},
+   "stt_sell_pct": {"v": 0.025, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "stamp_buy_pct": {"v": 0.003, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "exchange_pct": {"v": 0.00297, "source": "nse-day-trader skill (NSE transaction charge)", "as_of": "2026-11-16"},
+   "sebi_pct": {"v": 0.0001, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "ipft_pct": {"v": 0.0001, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "dp_sell_rs": {"v": 0, "source": "no depository charge on intraday", "as_of": "2026-11-16"},
+   "gst_pct": {"v": 18, "source": "nse-day-trader skill (GST on brokerage, exchange, SEBI and IPFT charges)", "as_of": "2026-11-16"}
+  },
+  "delivery": {
+   "brokerage_pct": {"v": 0.0, "source": "assumed: zero-brokerage delivery (Dhan); not in the skills' table", "as_of": "2026-11-16", "_assumed": true},
+   "brokerage_cap_rs": {"v": 0, "source": "assumed", "as_of": "2026-11-16", "_assumed": true},
+   "brokerage_min_rs": {"v": 0, "source": "assumed", "as_of": "2026-11-16", "_assumed": true},
+   "stt_buy_pct": {"v": 0.1, "source": "assumed: delivery STT 0.1% on buy and sell; not in the skills' table", "as_of": "2026-11-16", "_assumed": true},
+   "stt_sell_pct": {"v": 0.1, "source": "assumed: delivery STT 0.1% on buy and sell; not in the skills' table", "as_of": "2026-11-16", "_assumed": true},
+   "stamp_buy_pct": {"v": 0.015, "source": "assumed: delivery stamp duty 0.015% on buy; not in the skills' table", "as_of": "2026-11-16", "_assumed": true},
+   "exchange_pct": {"v": 0.00297, "source": "nse-day-trader skill (NSE transaction charge, same for delivery)", "as_of": "2026-11-16"},
+   "sebi_pct": {"v": 0.0001, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "ipft_pct": {"v": 0.0001, "source": "nse-day-trader skill", "as_of": "2026-11-16"},
+   "dp_sell_rs": {"v": 13.5, "source": "assumed: depository charge per sell, before GST; check your broker", "as_of": "2026-11-16", "_assumed": true},
+   "gst_pct": {"v": 18, "source": "nse-day-trader skill (GST on brokerage, exchange, SEBI, IPFT and DP charges)", "as_of": "2026-11-16"}
+  }
+ }
+}
