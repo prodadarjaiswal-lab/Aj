@@ -151,6 +151,13 @@ Rules:
 - First result (local build from the 250 Dhan closes in chart-data.json, 13 Nov close): 135 plans, none passes every check. The tested edge (about +1 to +3% beyond Nifty over 21 days) is small next to a 1.5-volatility stop, so reward to risk is under 1.5 and the average result after delivery charges is negative. That is the honest answer, not a bug.
 - Not done here: the workflow that commits docs/*.json does not yet list docs/tradeplan.json (left to the thread fixing the scheduled runs). desk_check.js clicks the research presets on #screener, but they moved to the Research tab in 2105c73, so it times out on the current page; changing `#screener` to `#research` in it makes it pass.
 
+## 16 Nov: Evidence Desk, risk lab (Agent B)
+- New `scripts/dhan_refresh/risklab.py`, called from tech_model.py before tradeplan.run (in try/except). Writes `docs/risklab.json`: vol (GJR-GARCH(1,1) skew-t on the last 1,000 sessions, 1- and 5-day forecasts, persistence; EWMA fallback named in "model"), var (Nifty 50: 1-day 95% / 99% VaR from the GARCH forecast, Kupiec on the last 250 sessions with parameters fitted only on earlier data), conformal (MAPIE split conformal, 21-session return range at 90%, chronological split with a 21-session gap, measured coverage next to the target). All vol, VaR and range numbers are fractions of price (0.02 = 2%), which is what tradeplan.py reads for d1.
+- Saturdays or `--full` only: signals (stationary-bootstrap interval on each signal's mean out-of-sample 10-day excess return; SPA p-value for the family and StepM at 5% decide "survives"), track (bootstrap interval per live score band once 30+ picks are graded at 21 days), pairs (Engle-Granger re-test of the pairs quant.pairs_scan considers: counts and a one-line verdict, no trades). Weekday runs carry the last full results over and say so in notes.
+- tech_model.backtest takes an optional `series` dict and fills it with each signal's out-of-sample cases by date; tech-model.json is unchanged.
+- Workflows install arch 9.0.0, mapie 1.6.0, scikit-learn 1.9.1 (resolve on Python 3.11 with numpy 2.1.3). Any missing library is noted and skipped; the nightly job does not fail.
+- Runtime on synthetic data (11 years, this machine): 50 stocks 4.2 s nightly / 5.7 s full; 500 stocks 23.1 s nightly / 24.6 s full. Not yet run on the real Dhan history.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.
