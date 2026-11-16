@@ -551,6 +551,11 @@ def run_full(dhan, root: Path) -> dict:
         (root / "docs/chart-data.json").write_text(json.dumps(ch, separators=(",", ":")), encoding="utf-8")
     except Exception as e:
         print(f"  chart data failed: {str(e)[:120]}")
+    try:                                                # training table for the weekly formula lab (quant-lab.yml)
+        import formula_lab
+        print(formula_lab.write_sample(data, nifty, root, res["signals"]))
+    except Exception as e:
+        print(f"  formula sample failed: {str(e)[:200]}")
     try:                                                # quant modules on the same Dhan history
         import glob as _g
         import quant
