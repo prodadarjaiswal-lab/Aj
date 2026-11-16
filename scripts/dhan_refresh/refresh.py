@@ -208,6 +208,18 @@ def build_maps(scrip_csv: str, symbols: list[str], indices: list[str]) -> tuple[
 CLOSE_DONE = dt.time(15, 35)
 
 
+def session_clock(now: dt.datetime) -> dt.datetime:
+    """A run that starts after midnight and before 09:00 IST is the previous evening's run, late.
+
+    GitHub has started scheduled runs 7 to 10 hours late (16 Nov: due 16:17 IST, started 02:11 IST).
+    Without this the late run thinks it is the next day, Dhan's history does not have the
+    finished session yet, the quote is not added for the wrong date, and the whole session is lost.
+    """
+    if now.time() < dt.time(9, 0):
+        now = (now - dt.timedelta(days=1)).replace(hour=23, minute=59, second=0, microsecond=0)
+    return now
+
+
 def drop_partial(o: dict, now: dt.datetime) -> dict:
     """A run during market hours must not store today's unfinished candle as a close."""
     if o["d"] and o["d"][-1] == now.date().isoformat() and now.timetz().replace(tzinfo=None) < CLOSE_DONE:
@@ -466,9 +478,8 @@ def main(argv=None) -> int:
         print(f"missing secret {e}", file=sys.stderr)
         return 2
     import requests
-    now = dt.datetime.now(IST)
-    # GitHub often delays scheduled runs by hours: a Friday-evening run that starts after midnight is still Friday's work
-    if now.weekday() == 6 or (now.weekday() == 5 and now.hour >= 10):
+    now = session_clock(dt.datetime.now(IST))
+    if now.weekday() >= 5:
         print("weekend; nothing to do")
         return 0
     try:
