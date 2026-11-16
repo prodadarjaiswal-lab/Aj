@@ -144,6 +144,13 @@ Rules:
 - ✅ **Technical and Value are dropdowns** in Analyze.
 - First run: 2,809 of 2,986 stocks profiled. The first run's company-data load hit the time limit; that data refreshes weekly, so nightly runs cover all.
 
+## 16 Nov: Evidence Desk, trade plan (Agent A)
+- New `scripts/dhan_refresh/tradeplan.py`, called from tech_model.py after research.run. Writes `docs/tradeplan.json`: one plan per stock whose new signal passed the out-of-sample test for today's market (rising or weak): entry (last Dhan close on the auction.tick_for step), stop (entry minus 1.5 x one day's volatility: risklab.json d1 when it exists, else ATR 14), target (the signal's tested average 21-day move), odds and average rupee result from 10,000 block-bootstrap replays net of charges, size within max loss, capital and the 10% stock cap, and six checks (reward to risk, value after charges, turnover, position cap, daily loss limit, results or board meeting while held). Failing plans are written too, with the reason.
+- New `config/trading.json`: capital Rs 1,00,000, max loss Rs 1,000 a trade, daily limit Rs 2,000 are EXAMPLE values (`_assumed: true`): set your own. Intraday rates from the nse-day-trader skill; delivery STT, stamp, zero brokerage and the DP charge are marked assumed.
+- Analyze view: a "Trade plan" card (levels, odds, size, each check pass or fail, basis tags, "Place by hand. This desk never sends orders."). Stocks without a tested new signal say "No tested setup today". Plans travel in the per-stock d/*.json files.
+- First result (local build from the 250 Dhan closes in chart-data.json, 13 Nov close): 135 plans, none passes every check. The tested edge (about +1 to +3% beyond Nifty over 21 days) is small next to a 1.5-volatility stop, so reward to risk is under 1.5 and the average result after delivery charges is negative. That is the honest answer, not a bug.
+- Not done here: the workflow that commits docs/*.json does not yet list docs/tradeplan.json (left to the thread fixing the scheduled runs). desk_check.js clicks the research presets on #screener, but they moved to the Research tab in 2105c73, so it times out on the current page; changing `#screener` to `#research` in it makes it pass.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.

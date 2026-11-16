@@ -128,6 +128,7 @@ def build(out: Path) -> dict:
             "rs": _j(ROOT / "docs/research.json", {}),
             "jr": _j(ROOT / "docs/journal-review.json", {}),
             "nf": _j(ROOT / "docs/nse-feeds.json", {}),
+            "tp": _j(ROOT / "docs/tradeplan.json", {}),
             "qr": _j(ROOT / "docs/results.json", {}),
             "all": _branch("allstocks", "all-stocks.json") or _j(ROOT / "docs/all-stocks.json", {}),
             "usmain": ["SPY", "QQQ"] + [k for k in _j(ROOT / "config/us_watch.json", {}) if not k.startswith("_")],
@@ -187,6 +188,9 @@ def build(out: Path) -> dict:
     for sym, fl in ((data["nf"] or {}).get("filings") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fl"] = fl
     data["nf"] = {**(data["nf"] or {}), "filings": {}}
+    for sym, x in ((data["tp"] or {}).get("plans") or {}).items():          # trade plans: loaded per stock
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["tp"] = x
+    data["tp"] = {k: (data["tp"] or {}).get(k) for k in ("asof", "config_assumed", "charges")} | {"syms": sorted((data["tp"] or {}).get("plans") or {})}
     data["ix"] = (data["all"] or {}).get("index") or [[r["s"], r.get("name") or r["s"], 1] for r in board.get("rows", [])]
     data["all"] = {"asof": (data["all"] or {}).get("asof"), "count": (data["all"] or {}).get("count"), "fund_asof": (data["all"] or {}).get("fund_asof")}
     for sym, f in (data["pf"].get("fit") or {}).items():

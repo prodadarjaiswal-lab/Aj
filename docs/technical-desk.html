@@ -137,6 +137,7 @@ details>summary{cursor:pointer;font-weight:600}
   <p class="note" id="detailnote" role="status"></p>
   <div class="pnl" id="verdict"></div>
   <div class="pnl" id="combo"></div>
+  <div class="pnl" id="tplan"></div>
   <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Price chart · 1 year</h2><span class="basis" id="chartbasis">exact (Dhan daily closes)</span></div><div id="pchart"></div></div>
   <div class="pnl"><div class="row" style="justify-content:space-between"><h2>Last swings and why</h2><span class="basis">Dhan prices · NSE filings</span></div><div id="swings"></div></div>
   <nav class="row jump" aria-label="Sections"><a class="chip" href="#techsec">1 Technical</a><a class="chip" href="#valsec">2 Value</a><a class="chip" href="#fitsec">3 Verdict and your portfolio</a></nav>
@@ -674,16 +675,29 @@ function swingsCard(c){
   if(!sw.length){el.innerHTML=`<p class="note">${c.us?"Swings cover NSE stocks.":"Swings appear once this stock's 2-year Dhan history is loaded (nightly)."}</p>`;return}
   el.innerHTML=`<div class="tw"><table><tr><th>From → to</th><th class="n">Move</th><th class="n">Nifty</th><th class="n">Beyond Nifty</th><th>Likely reason</th></tr>${sw.map(([a,b,pa,pb,mv,e],i)=>`<tr><td>${esc(a.slice(2))} → ${esc(b.slice(2))}${i===0?' <span class="basis">in progress</span>':""}<div class="sm">${num(pa,1)} → ${num(pb,1)}</div></td><td class="n ${cls(mv)}">${pc(mv,0)}</td><td class="n ${cls(e.mkt)}">${pc(e.mkt,0)}</td><td class="n ${cls(mv-(e.mkt||0))}">${pc(mv-(e.mkt||0),0)}</td><td>${(e.why||[]).map(esc).join("; ")}</td></tr>`).join("")}</table></div><p class="note">Turning points of 10%+ on Dhan daily closes, last 2 years. "Beyond Nifty" = the stock's move minus the Nifty's over the same days. Reasons are the market and industry moves over the same days and any quarterly results filed inside the swing; they are likely drivers, not proof.</p>`;
 }
+function tplan(sym){const T=D.tp||{},el=$("tplan");if(!el)return;const p=(D.tpp||{})[sym],has=(T.syms||[]).includes(sym);
+  const head=`<div class="row" style="justify-content:space-between"><h2>Trade plan</h2><span class="basis">${T.asof?"close of "+esc(T.asof):"no plan file yet"}</span></div>`,foot=`<p><b>Place by hand. This desk never sends orders.</b></p><p class="note">Research software, not advice. A stop can fill worse than its price when the stock gaps.</p>`;
+  if(!has){el.innerHTML=head+`<p>No tested setup today.</p><p class="note">A plan appears only when a signal that passed the out-of-sample back-test (tested on years it was not fitted on) is new on this stock.</p>`+foot;return}
+  if(!p){el.innerHTML=head+`<p class="note">Loading the plan…</p>`;return}
+  const B=p.basis||{},tg=k=>B[k]?` <span class="basis">${esc(B[k])}</span>`:"",rs=x=>(x<0?"−₹":"₹")+num(Math.abs(x),2),bad=p.checks.filter(x=>!x.ok).length,
+    tile=(k,v,b,d)=>`<div class="tile"><div class="k">${k}${tg(b)}</div><div class="v">${v}</div>${d?`<div class="d">${d}</div>`:""}</div>`,nm=((D.model||{}).names||{})[p.signal]||p.signal;
+  el.innerHTML=head+`<p class="${bad?"bad":"good"}"><b>${bad?`Not a trade today: ${bad} of ${p.checks.length} checks fail.`:`All ${p.checks.length} checks pass.`}</b></p>
+  <p class="note">Signal: ${esc(nm)}. ${esc(B.test||"")}.</p>
+  <div class="tiles">${tile("Entry",rs(p.entry),"entry","last close, on a "+num(p.tick,2)+" step")}${tile("Stop",rs(p.stop),"stop","volatility from "+esc(p.vol_src))}${tile("Target",rs(p.target),"target","the signal's tested average move")}${tile("Reward to risk",num(p.rr,2),"rr","rupees gained at target per rupee lost at stop")}
+  ${tile("Target first",Math.round(p.p_target*100)+"%","p_target")}${tile("Stop first",Math.round(p.p_stop*100)+"%","p_stop")}${tile("Average result after charges",p.exp_net_rs==null?"–":rs(p.exp_net_rs),"exp_net_rs",p.exp_net_rs==null?"":"per trade at this size")}
+  ${tile("Shares",num(p.qty,0),"qty",rs(p.qty*p.entry)+" position")}${tile("Loss if stopped",rs(p.risk_rs),"risk_rs")}${tile("Charges, round trip",rs(p.charges_rs),"charges_rs",esc((T.charges||{}).product||""))}</div>
+  <p class="note">Odds: share of 10,000 replays of this stock's own past daily moves (plus the signal's tested drift) that close at the target, or at the stop, first.${T.config_assumed?" <b>Size uses example capital and loss limits</b> (config/trading.json); set your own.":""}</p>
+  <div class="tw"><table><tr><th>Check</th><th>Result</th><th>Why</th></tr>${p.checks.map(x=>`<tr><td>${esc(x.rule)}</td><td class="${x.ok?"good":"bad"}"><b>${x.ok?"pass":"fail"}</b></td><td>${esc(x.note)}</td></tr>`).join("")}</table></div>`+foot}
 const CH={};
 function chunkOf(k){const c=[...String(k).toUpperCase()].find(x=>/[A-Z0-9]/.test(x))||"_";return /[A-Z]/.test(c)?c:"0"}
 function loadDetail(sym){
   const keys=[sym,IDXKEY[sym]].filter(Boolean),names=[...new Set(keys.map(chunkOf))].filter(n=>(D.chunks||[]).includes(n)&&!CH[n]);
   return Promise.all(names.map(n=>fetch("d/"+n+".json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{CH[n]=j;
-    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.fs)((D.flowState=D.flowState||{}).s=D.flowState.s||{})[k]=x.fs;if(x.mc)(D.quant.mc=D.quant.mc||{})[k]=x.mc;if(x.var)(D.quant.var=D.quant.var||{})[k]=x.var;if(x.fl)((D.nf=D.nf||{}).filings=D.nf.filings||{})[k]=x.fl;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
+    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.fs)((D.flowState=D.flowState||{}).s=D.flowState.s||{})[k]=x.fs;if(x.mc)(D.quant.mc=D.quant.mc||{})[k]=x.mc;if(x.var)(D.quant.var=D.quant.var||{})[k]=x.var;if(x.fl)((D.nf=D.nf||{}).filings=D.nf.filings||{})[k]=x.fl;if(x.tp)(D.tpp=D.tpp||{})[k]=x.tp;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
 }
 let SHOWN="";
 function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym)render(sym);const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}
-function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);try{localStorage.setItem("td-last",sym)}catch(e){}}
+function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);tplan(sym);try{localStorage.setItem("td-last",sym)}catch(e){}}
 function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));["screener","research","analyze"].forEach(x=>$(x).hidden=t!==x);if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
 $("ddall").addEventListener("click",e=>{const all=[...document.querySelectorAll("#screener .dd")],open=all.some(d=>!d.open);all.forEach(d=>d.open=open);e.target.textContent=open?"Close all":"Open all"});

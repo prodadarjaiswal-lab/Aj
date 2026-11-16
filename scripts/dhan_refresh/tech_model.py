@@ -578,6 +578,11 @@ def run_full(dhan, root: Path) -> dict:
         print(research.run(data, nifty, root, dhan))
     except Exception as e:
         print(f"  value / portfolio modules failed: {str(e)[:200]}")
+    try:                                                # trade plan for stocks with a new tested signal (never sends orders)
+        import tradeplan
+        print(tradeplan.run(data, nifty, root))
+    except Exception as e:
+        print(f"  trade plan failed: {str(e)[:200]}")
     if changes:
         try:
             import telegram as T
