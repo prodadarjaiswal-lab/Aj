@@ -1,6 +1,6 @@
 {
- "_note": "Trade-plan settings (scripts/dhan_refresh/tradeplan.py). capital, max_loss_per_trade and daily_loss_limit are EXAMPLE values, not yours: edit them to your own account and rules, then set _assumed to false. Research software, not advice: the desk prints a plan to place by hand and never sends orders.",
- "_assumed": true,
+ "_note": "Trade-plan settings (scripts/dhan_refresh/tradeplan.py). capital 1,00,000 and max_loss_per_trade 1,000 confirmed by the owner on 17 Nov 2026. daily_loss_limit 2,000 is still an example value. Research software, not advice: the desk prints a plan to place by hand and never sends orders.",
+ "_assumed": false,
  "capital": 100000,
  "max_loss_per_trade": 1000,
  "daily_loss_limit": 2000,

@@ -99,7 +99,7 @@ def test_run_writes_plans_and_failing_checks(tmp_path):
     assert "vol from ATR" in msg
     out = json.loads((root / "docs/tradeplan.json").read_text())
     assert set(out) == {"asof", "config_assumed", "charges", "plans"}
-    assert out["config_assumed"] is True
+    assert out["config_assumed"] is bool(CFG.get("_assumed", True))
     assert set(out["plans"]) == {"AAA", "BBB"}
     p = out["plans"]["AAA"]
     assert set(p) == {"signal", "entry", "stop", "target", "rr", "tick", "vol_src", "p_target", "p_stop", "exp_net_rs",
