@@ -666,7 +666,7 @@ function chunkOf(k){const c=[...String(k).toUpperCase()].find(x=>/[A-Z0-9]/.test
 function loadDetail(sym){
   const keys=[sym,IDXKEY[sym]].filter(Boolean),names=[...new Set(keys.map(chunkOf))].filter(n=>(D.chunks||[]).includes(n)&&!CH[n]);
   return Promise.all(names.map(n=>fetch("d/"+n+".json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{CH[n]=j;
-    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.mc)(D.quant.mc=D.quant.mc||{})[k]=x.mc;if(x.var)(D.quant.var=D.quant.var||{})[k]=x.var;if(x.fl)((D.nf=D.nf||{}).filings=D.nf.filings||{})[k]=x.fl;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
+    Object.entries(j).forEach(([k,x])=>{if(x.a)D.auction.symbols[k]=Object.assign({},D.auction.symbols[k]||{},x.a);if(x.ch){(D.chart.s=D.chart.s||{})[k]=x.ch}if(x.fc&&PF.fit&&PF.fit[k])PF.fit[k].c=x.fc;if(x.fs)((D.flowState=D.flowState||{}).s=D.flowState.s||{})[k]=x.fs;if(x.mc)(D.quant.mc=D.quant.mc||{})[k]=x.mc;if(x.var)(D.quant.var=D.quant.var||{})[k]=x.var;if(x.fl)((D.nf=D.nf||{}).filings=D.nf.filings||{})[k]=x.fl;if(x.p){D.prof[k]=x.p;if(!(D.chart.s||{})[k]&&x.p.ch)(D.chart.s=D.chart.s||{})[k]=x.p.ch}})}).catch(e=>{CH[n]={_err:String(e)}})));
 }
 let SHOWN="";
 function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym)render(sym);const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}

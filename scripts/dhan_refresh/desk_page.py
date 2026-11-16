@@ -173,6 +173,9 @@ def build(out: Path) -> dict:
     for sym, v in (q.get("var") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["var"] = v
     data["quant"] = {**q, "mc": {k: {"p_up": m.get("p_up")} for k, m in (q.get("mc") or {}).items()}, "var": {}}
+    for sym, st_ in ((data.get("flowState") or {}).get("s") or {}).items():      # live tape/footprint: loaded per stock
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fs"] = st_
+    data["flowState"] = {"s": {}}
     for sym, fl in ((data["nf"] or {}).get("filings") or {}).items():
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["fl"] = fl
     data["nf"] = {**(data["nf"] or {}), "filings": {}}

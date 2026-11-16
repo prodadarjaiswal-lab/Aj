@@ -467,7 +467,8 @@ def main(argv=None) -> int:
         return 2
     import requests
     now = dt.datetime.now(IST)
-    if now.weekday() >= 5:
+    # GitHub often delays scheduled runs by hours: a Friday-evening run that starts after midnight is still Friday's work
+    if now.weekday() == 6 or (now.weekday() == 5 and now.hour >= 10):
         print("weekend; nothing to do")
         return 0
     try:
