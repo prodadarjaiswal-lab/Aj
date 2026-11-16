@@ -75,6 +75,26 @@ def _chart(ch: dict) -> dict:
     return out
 
 
+def _opt(name: str, out: Path) -> dict:
+    """An optional lab file (risklab.json, formula.json): next to the page first, else docs/; {} when missing."""
+    for f in (out.parent / name, ROOT / "docs" / name):
+        if f.exists():
+            return _j(f, {})
+    return {}
+
+
+def _plan_rows(plans: dict) -> list:
+    """One compact row per trade plan for the Plan table: sym, signal, entry, stop, target, chance of target,
+    expected rupees after charges, shares, checks passed, checks total, failing reasons."""
+    rows = []
+    for sym, p in sorted((plans or {}).items()):
+        ch = p.get("checks") or []
+        rows.append([sym, p.get("signal"), p.get("entry"), p.get("stop"), p.get("target"), p.get("p_target"), p.get("exp_net_rs"),
+                     p.get("qty"), sum(1 for c in ch if c.get("ok")), len(ch),
+                     [f"{c.get('rule')}: {c.get('note')}" for c in ch if not c.get("ok")]])
+    return rows
+
+
 def build(out: Path) -> dict:
     import datetime as dt
     import refresh as R
@@ -129,6 +149,7 @@ def build(out: Path) -> dict:
             "jr": _j(ROOT / "docs/journal-review.json", {}),
             "nf": _j(ROOT / "docs/nse-feeds.json", {}),
             "tp": _j(ROOT / "docs/tradeplan.json", {}),
+            "rl": _opt("risklab.json", out), "fx": _opt("formula.json", out),
             "qr": _j(ROOT / "docs/results.json", {}),
             "all": _branch("allstocks", "all-stocks.json") or _j(ROOT / "docs/all-stocks.json", {}),
             "usmain": ["SPY", "QQQ"] + [k for k in _j(ROOT / "config/us_watch.json", {}) if not k.startswith("_")],
@@ -164,6 +185,9 @@ def build(out: Path) -> dict:
         ["Macro (NSE terminal)", ((nset.get("macro") or {}).get("usdinr") or [[None]])[-1][0], "monthly series", "monthly"],
         ["Research profiles and Dhan fundamentals (Nifty 500)", data["rs"].get("fund_asof"), f"{len(data['rs'].get('stocks', {}))} stocks", "daily"],
         ["All NSE stocks (search, charts, swings)", (data["all"] or {}).get("asof"), f"{(data['all'] or {}).get('count') or 0} listed equities", "daily"],
+        ["Trade plans", data["tp"].get("asof"), f"{len(data['tp'].get('plans') or {})} plans", "daily"],
+        ["Risk lab (volatility, VaR, signal test)", data["rl"].get("asof"), f"{len(data['rl'].get('vol') or {})} stocks" if data["rl"] else "not computed yet", "daily"],
+        ["Formula lab", data["fx"].get("asof"), data["fx"].get("verdict") or "not computed yet", "weekly"],
         ["Live order flow", flow.get("t") if flow.get("d") == today_ist else "market closed", "market hours only", "live"]]}
     html = (ROOT / "docs/technical-desk.html").read_text(encoding="utf-8")
     blob = json.dumps(data, separators=(",", ":"), default=str).replace("</", "<\\/")
@@ -190,7 +214,31 @@ def build(out: Path) -> dict:
     data["nf"] = {**(data["nf"] or {}), "filings": {}}
     for sym, x in ((data["tp"] or {}).get("plans") or {}).items():          # trade plans: loaded per stock
         chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["tp"] = x
-    data["tp"] = {k: (data["tp"] or {}).get(k) for k in ("asof", "config_assumed", "charges")} | {"syms": sorted((data["tp"] or {}).get("plans") or {})}
+    cfg = _j(ROOT / "config/trading.json", {})
+    data["tp"] = {k: (data["tp"] or {}).get(k) for k in ("asof", "config_assumed", "charges")} | {
+        "syms": sorted((data["tp"] or {}).get("plans") or {}), "rows": _plan_rows((data["tp"] or {}).get("plans")),
+        "cfg": {"capital": cfg.get("capital"), "max_loss": cfg.get("max_loss_per_trade"), "daily": cfg.get("daily_loss_limit"),
+                "assumed": bool(cfg.get("_assumed", True)),
+                "daily_example": bool(re.search(r"daily_loss_limit[^.]*example", cfg.get("_note", "")))}}
+    rl = data["rl"] or {}
+    for part, key in (("vol", "vol"), ("var", "var")):                       # risk lab per-stock numbers: loaded per stock
+        for sym, x in (rl.get(part) or {}).items():
+            chunks.setdefault(_chunk(sym), {}).setdefault(sym, {}).setdefault("rl", {})[key] = x
+    for sym, x in ((rl.get("conformal") or {}).get("by_sym") or {}).items():
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {}).setdefault("rl", {})["ci"] = x
+    if rl:
+        data["rl"] = {k: rl.get(k) for k in ("asof", "signals", "track", "pairs", "notes")} | {
+            "conformal": {k: (rl.get("conformal") or {}).get(k) for k in ("coverage_target", "coverage_measured")},
+            "n_vol": len(rl.get("vol") or {}), "n_var": len(rl.get("var") or {})}
+    for sym, x in (data["usw"] or {}).items():                               # US weekly closes: loaded per stock
+        chunks.setdefault(_chunk(sym), {}).setdefault(sym, {})["uw"] = x
+    data["usw"] = {}
+    qkeep = ("q", "pat_yoy", "rev_yoy", "rev_qoq", "margin", "margin_chg", "flags", "turnaround")
+    data["qr"] = {**(data["qr"] or {}), "stocks": {s_: {k: v for k, v in x.items() if k in qkeep} for s_, x in ((data["qr"] or {}).get("stocks") or {}).items()}}
+    for x in ((data["rs"] or {}).get("stocks") or {}).values():             # unrounded ratios from Dhan: 2 decimals is what the page shows
+        for k in ("pe_sec", "d_fii", "d_dii"):
+            if isinstance(x.get(k), float):
+                x[k] = round(x[k], 2)
     data["ix"] = (data["all"] or {}).get("index") or [[r["s"], r.get("name") or r["s"], 1] for r in board.get("rows", [])]
     data["all"] = {"asof": (data["all"] or {}).get("asof"), "count": (data["all"] or {}).get("count"), "fund_asof": (data["all"] or {}).get("fund_asof")}
     for sym, f in (data["pf"].get("fit") or {}).items():

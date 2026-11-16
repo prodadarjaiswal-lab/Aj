@@ -163,6 +163,13 @@ Rules:
 - Workflows install arch 9.0.0, mapie 1.6.0, scikit-learn 1.9.1 (resolve on Python 3.11 with numpy 2.1.3). Any missing library is noted and skipped; the nightly job does not fail.
 - Runtime on synthetic data (11 years, this machine): 50 stocks 4.2 s nightly / 5.7 s full; 500 stocks 23.1 s nightly / 24.6 s full. Not yet run on the real Dhan history.
 
+## 17 Nov: Evidence Desk, page integration (Agent D)
+- Tabs now read Screen, Analyze, Plan, Proof. The research screener is the first section of Screen; old #screener, #research (scrolls to it) and #analyze links still work.
+- Plan: a sortable table of every plan in tradeplan.json (stock, signal, entry, stop, target, chance of target, expected rupees after charges, shares, checks passed). Failing rows are greyed with the failing checks under the stock name; a line above says why no plan passes (today all 135 fail the many-signals test because risklab.json has no signal results yet). The capital / max-loss line reads config/trading.json (own values) and flags the daily loss limit as an example. Tapping a row opens the stock in Analyze.
+- Proof: (a) signals with their tested 10-day excess return (tech-model.json), the risk lab's 95% interval as a bar and a "survives" badge, headline "N of M signals survive..."; (b) for the selected stock: GARCH volatility forecast, GARCH vs historical 1-day VaR with Kupiec, the 21-session conformal range with target and measured coverage (the lab stores no realised volatility, so no forecast-vs-actual line); (c) the chosen formula, its out-of-sample t and hit rate against the score, the verdict in words, the candidate formulas; (d) live record bands against the score-0 control, or "First grades due about 1 Dec 2026". risklab.json and formula.json are optional (read next to the page first, else docs/); a missing file shows "Not computed yet" in its panel only.
+- desk_page.py: risk-lab per-stock numbers and the US weekly closes now travel in d/*.json; results.json is trimmed to the fields the page shows. desk_check.js also visits #plan and #proof, clicks a plan row, and exits 1 on a console error or sideways scroll at 400 and 1100 px.
+- Not done: the page is 1.22 MB (was 1.32 MB before this change), still over the 1 MB target. The rest is screener data the page needs on load (research.json 379 KB, tech-today 123 KB, stock index 115 KB); getting under 1 MB means loading the screener lazily, which is a separate change.
+
 ## Order of work now
 1. Monday 16 Nov: check the first live order-flow session, Telegram replies from the live job, and the nightly run (Monte Carlo and VaR for NIFTY are new).
 3. Once 4+ weeks of option snapshots and live flow exist, back-test the options and order-flow signals.
