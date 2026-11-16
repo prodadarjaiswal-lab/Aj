@@ -3,8 +3,9 @@
 Research software, not advice. It prints levels to place by hand; it never sends orders.
 
   entry   last Dhan close (the back-test buys at the close of the day the signal appears), snapped to the tick
-  stop    entry - stop_k x one day's volatility (docs/risklab.json vol[SYM].d1 when present, else ATR 14)
-  target  entry x (1 + the signal's tested out-of-sample average excess move over horizon_days)
+  stop    entry - stop_k x one day's volatility x sqrt(horizon_days) (vol: docs/risklab.json vol[SYM].d1 when present, else ATR 14)
+  target  entry + target_r x (entry - stop); open plans are closed at the horizon. The signal's tested out-of-sample
+          average excess move over horizon_days sets the drift in the replays.
   odds    quant.bootstrap_paths on the stock's own daily returns (demeaned, plus the signal's tested drift),
           stop and target applied path by path on daily closes, net of round-trip charges
   size    floor(max_loss_per_trade / (entry - stop)), capped by capital and by stock_cap (config/portfolio.json)
@@ -157,11 +158,15 @@ def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: d
         vol_rs, vol_src = float(td["atr"]), "ATR 14"
     else:
         return None
-    stop = snap(entry - float(cfg.get("stop_k", 1.5)) * vol_rs, tick, "down")
+    # Stop: scaled to the holding period, so ordinary day-to-day noise over h sessions does not knock the
+    # trade out before the tested edge has time to show (one-day vol x sqrt(h) x stop_k).
+    stop = snap(entry - float(cfg.get("stop_k", 1.0)) * vol_rs * math.sqrt(h), tick, "down")
     move = float(st[f"x{h}"])
-    target = snap(entry * (1 + move), tick, "down")
     if stop <= 0 or stop >= entry:
         return None
+    # Target: a multiple of the risk taken (trader-exit rule), not the average move; a plan still open after
+    # h sessions is closed at that day's price, so the tested drift is what pays on average.
+    target = snap(entry + float(cfg.get("target_r", 2.0)) * (entry - stop), tick, "up")
     rr = round((target - entry) / (entry - stop), 2)
     qty, by = size(entry, stop, cfg, stock_cap)
     sim = simulate(o["c"], entry, stop, target, qty, math.log1p(move) / h, h, r, int(cfg.get("paths", 10000)))
