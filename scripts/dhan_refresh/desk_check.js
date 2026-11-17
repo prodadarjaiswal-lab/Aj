@@ -14,11 +14,11 @@ for(const s of syms){await p.fill('#q',s);await p.press('#q','Enter');await p.wa
 await p.goto('http://desk.local/desk.html#research');await p.waitForTimeout(400);const pre=[];
 for(const k of await p.evaluate(()=>[...document.querySelectorAll('#presets [data-pre]')].map(b=>b.dataset.pre))){await p.click(`[data-pre="${k}"]`);await p.waitForTimeout(80);pre.push(k+'='+(await p.evaluate(()=>document.querySelector('#n-research').textContent)).replace(' stocks',''))}
 const view={};
-for(const t of ['screener','plan','proof']){await p.goto('http://desk.local/desk.html#'+t);await p.waitForTimeout(500);
+for(const t of ['screener','proof']){await p.goto('http://desk.local/desk.html#'+t);await p.waitForTimeout(500);
  const o=await ov();if(o)bad.push('#'+t+' overflow '+o);
- view[t]=await p.evaluate(t=>t==='plan'?document.querySelectorAll('#planT tr[data-s]').length+' rows':t==='proof'?['pf-sig','pf-risk','pf-fx','pf-live'].map(i=>i.slice(3)+':'+(/Not computed yet/.test(document.getElementById(i).textContent)?'none':'ok')).join(','):'ok',t)}
-if(view.plan&&!view.plan.startsWith('0')){await p.goto('http://desk.local/desk.html#plan');await p.waitForTimeout(300);await p.click('#planT th button[data-k="5"]');await p.click('#planT tr[data-s]');await p.waitForTimeout(400);
- if(!(await p.evaluate(()=>!document.getElementById('analyze').hidden)))bad.push('plan row did not open Analyze')}
+ view[t]=await p.evaluate(t=>t==='screener'?'summary '+document.querySelectorAll('#deskSumT tr').length+' rows':t==='proof'?['pf-sig','pf-risk','pf-fx','pf-live'].map(i=>i.slice(3)+':'+(/Not computed yet/.test(document.getElementById(i).textContent)?'none':'ok')).join(','):'ok',t)}
+if(await p.$('#deskSum button[data-s]')){await p.goto('http://desk.local/desk.html#screener');await p.waitForTimeout(300);await p.click('#deskSum button[data-s]');await p.waitForTimeout(400);
+ if(!(await p.evaluate(()=>!document.getElementById('analyze').hidden)))bad.push('summary chip did not open Analyze')}
 const o=await ov();if(bad.length||errs.length||o)fail=1;
 console.log(name,'checked',syms.length,'problems',bad.length,bad.slice(0,5).join(' '),'| live+snapshot',live,'| gamma',gex,'| presets',pre.join(' '),'| views',JSON.stringify(view),'| overflow',o,'| errors',errs.slice(0,3));}
 await b.close();process.exitCode=fail})();

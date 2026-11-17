@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Technical Desk</title>
+<title>Evidence Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -93,13 +93,14 @@ details>summary{cursor:pointer;font-weight:600}
 <div class="wrap">
 <header>
   <div class="row" style="justify-content:space-between;align-items:end">
-    <div><h1>Technical Desk</h1><p class="sub" id="asof"></p><p class="sub" id="livenote"></p></div>
+    <div><h1>Evidence Desk</h1><p class="sub" id="asof"></p><p class="sub" id="livenote"></p></div>
     <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screen</button><button class="tab" role="tab" data-t="analyze" aria-selected="false">Analyze</button><button class="tab" role="tab" data-t="proof" aria-selected="false">Proof</button></div>
   </div>
 </header>
 
 <section id="screener" class="wrap" style="gap:10px">
   <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
+  <div class="pnl" id="deskSum"></div>
   <div class="pnl" id="research"><div class="row" style="justify-content:space-between"><h2>Research screener · all Nifty 500</h2><span class="cnt" id="n-research"></span></div>
     <p class="note basisline" id="b-research"></p>
     <div class="row" id="presets" role="group" aria-label="Screens"></div>
@@ -135,6 +136,7 @@ details>summary{cursor:pointer;font-weight:600}
 <section id="analyze" class="wrap" style="gap:14px" hidden>
   <div class="row"><div class="srch"><input id="q" placeholder="Search any NSE stock by name or symbol" autocomplete="off" aria-label="Search any stock" role="combobox" aria-expanded="false" aria-controls="sugg"><ul id="sugg" role="listbox" hidden></ul></div><div class="row" id="quick"></div></div>
   <p class="note" id="detailnote" role="status"></p><p id="livequote" aria-live="polite"></p>
+  <div class="pnl" id="evStrip"></div>
   <div class="pnl" id="verdict"></div>
   <div class="pnl" id="combo"></div>
   <div class="pnl" id="tplan"></div>
@@ -246,7 +248,7 @@ function line(pts,{w=300,h=90,zero=false}={}){ // pts: [x,y]
   return `<svg viewBox="0 0 ${w} ${h}" role="img">${zero?`<line x1="4" x2="${w-4}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)"/>`:""}<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.6"/><circle cx="${X(pts[pts.length-1][0])}" cy="${Y(pts[pts.length-1][1])}" r="2.6" fill="var(--accent)"/><text x="4" y="${h-1}">${esc(num(lo,0))}</text><text x="${w-4}" y="9" text-anchor="end">${esc(num(hi,0))}</text></svg>`;
 }
 function gexChart(by,spot,flip){
-  const ks=Object.keys(by||{}).map(Number).sort((a,b)=>a-b);if(ks.length<3)return"";
+  by=Object.fromEntries(Object.entries(by||{}).map(([k,v])=>[+k,+v]).filter(([k,v])=>Number.isFinite(k)&&Number.isFinite(v)));const ks=Object.keys(by).map(Number).sort((a,b)=>a-b);if(ks.length<3)return"";
   const W=320,H=150,pad=8,mx=Math.max(...ks.map(k=>Math.abs(by[k])))||1,x=k=>pad+(k-ks[0])/(ks[ks.length-1]-ks[0]||1)*(W-2*pad),y=v=>H/2-v/mx*(H/2-16),bw=Math.max(2,(W-2*pad)/ks.length*0.7);
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gamma by strike"><line x1="${pad}" x2="${W-pad}" y1="${H/2}" y2="${H/2}" stroke="var(--line)"/>`;
   ks.forEach(k=>{const v=by[k],yy=y(v);s+=`<rect x="${(x(k)-bw/2).toFixed(1)}" y="${Math.min(yy,H/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.abs(yy-H/2).toFixed(1)}" fill="${v>=0?"var(--up)":"var(--down)"}"/>`});
@@ -720,7 +722,7 @@ function loadDetail(sym){
 }
 let SHOWN="";
 function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym){render(sym);proofRisk(sym)}const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}
-function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);tplan(sym);try{liveQuote(sym)}catch(e){}try{localStorage.setItem("td-last",sym)}catch(e){}}
+function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);tplan(sym);try{evStrip(sym)}catch(e){console.error("evStrip",e)}try{liveQuote(sym)}catch(e){}try{localStorage.setItem("td-last",sym)}catch(e){}}
 function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));const r=t==="research";if(r)t="screener";["screener","analyze","plan","proof"].forEach(x=>$(x).hidden=t!==x);if(r)setTimeout(()=>$("research").scrollIntoView(),0);if(t==="proof"&&SHOWN)loadDetail(SHOWN).then(()=>proofRisk(SHOWN));if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
 $("ddall").addEventListener("click",e=>{const all=[...document.querySelectorAll("#screener .dd")],open=all.some(d=>!d.open);all.forEach(d=>d.open=open);e.target.textContent=open?"Close all":"Open all"});
@@ -820,11 +822,11 @@ function proofRisk(sym){const el=$("pf-risk");if(!el||!sym)return;const R=D.rl||
   <p class="note">Target: the real return lands inside the range ${C.coverage_target!=null?Math.round(C.coverage_target*100)+"%":"–"} of the time. Measured on test years (all stocks): ${C.coverage_measured!=null?(C.coverage_measured*100).toFixed(1)+"%":"not measured"}.</p>`}
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":h==="plan"?"analyze":["research","proof"].includes(h)?h:"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
-screener();researchInit();planTab();proofTab();journalReview();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+screener();try{deskSum()}catch(e){console.error("deskSum",e)}researchInit();planTab();proofTab();journalReview();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 
 /* ===== Live prices: the GitHub connector reads live.json from the `live` branch (GitHub Actions writes it every 5s
    in market hours, from Dhan). No Dhan login in the page. Absent connector -> the page keeps the nightly prices. ===== */
-const LIVE={eq:{},t:null,ok:false,at:0,busy:false};
+var LIVE={eq:{},t:null,ok:false,at:0,busy:false};
 function istNow(){return new Date(Date.now()+5.5*3600e3)}
 function mktOpen(){const d=istNow(),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>0&&w<6&&m>=555&&m<=930}
 function liveText(r){for(const b of (r&&r.content)||[]){const x=b&&b.resource;if(x&&typeof x.text==="string")return x.text;
@@ -842,7 +844,7 @@ async function livePoll(mcp){if(LIVE.busy)return;LIVE.busy=true;
       try{mktTiles()}catch(e){console.error("live tiles",e)}}
     LIVE.ok=true;LIVE.at=Date.now();LIVE.t=d.t;
     liveNote(fresh?`<b style="color:var(--up)">● LIVE</b> prices ${esc(String(d.t).slice(11,19))} IST${mktOpen()?", every 5s":", market closed"}`:`Market closed · last live prices ${esc(String(d.t).slice(0,16))} IST`);
-    if(typeof SHOWN!=="undefined"&&SHOWN)liveQuote(SHOWN)}
+    if(typeof SHOWN!=="undefined"&&SHOWN){liveQuote(SHOWN);try{evStrip(SHOWN)}catch(e){}}}
   catch(e){const c=e&&e.code;const why=c==="server_not_connected"?"add the GitHub connector in Claude":c==="needs_reauth"?"reconnect GitHub in Claude":c==="not_granted"||c==="consent_required"?"GitHub not allowed for this page":"retrying";
     if(!LIVE.ok||Date.now()-LIVE.at>120000)liveNote(`LIVE off (${esc(why)}) · showing nightly prices`)}
   finally{LIVE.busy=false}}
@@ -850,4 +852,38 @@ async function livePoll(mcp){if(LIVE.busy)return;LIVE.busy=true;
   if(!mcp){liveNote("Live prices need the desk opened in Claude with the GitHub connector · showing nightly prices");return}
   liveNote("LIVE connecting…");
   const loop=async()=>{if(!document.hidden)await livePoll(mcp);setTimeout(loop,mktOpen()?5000:60000)};loop()})();
+
+/* ===== One combined view: what every engine (and the skill it came from) says today ===== */
+function deskSum(){const el=$("deskSum");if(!el)return;const T=D.tp||{},rows=T.rows||[],R=D.rl||{},S=R.signals||{},F=D.fx||{};
+  const pass=rows.filter(r=>r[8]===r[9]),why={};rows.forEach(r=>(r[10]||[]).forEach(x=>{const k=String(x).split(":")[0];why[k]=(why[k]||0)+1}));
+  const top=Object.entries(why).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([k,n])=>`${esc(k)} (${n})`).join(", ");
+  const near=rows.slice().sort((a,b)=>(b[8]-a[8])||((b[6]||-1e9)-(a[6]||-1e9))).slice(0,5);
+  const ks=Object.keys(S),surv=ks.filter(k=>S[k].survives).length,vn=(R.notes||[]).find(n=>String(n).startsWith("var:")),C=R.conformal||{};
+  const chip=(ok,t)=>`<span class="tag" style="color:var(${ok===true?"--up":ok===false?"--down":"--mute"})">${t}</span>`;
+  const live=typeof LIVE!=="undefined"&&LIVE.ok&&LIVE.t?"live "+esc(String(LIVE.t).slice(11,16))+" IST":D.live_t?"live "+esc(D.live_t.slice(11,16))+" IST":"nightly close";
+  const line=(name,src,st,body)=>`<tr><td><b>${name}</b><div class="note">${src}</div></td><td>${st}</td><td>${body}</td></tr>`;
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Evidence Desk today</h2><span class="basis">${esc(T.asof?"close of "+T.asof:"")}</span></div>
+  <p class="note">One answer from every engine on the desk. A trade needs all of them to agree; when one says no, it says why.</p>
+  <div style="overflow-x:auto"><table id="deskSumT"><tr><th>Engine (skill it came from)</th><th>Status</th><th>What it says today</th></tr>
+  ${line("Market","Technical desk + Dhan live feed",chip(true,live),`Nifty is ${D.regimeUp===false?"below":"above"} its 200-day average: market <b>${D.regimeUp===false?"weak":"rising"}</b>.`)}
+  ${line("Trade plans","nse-day-trader, trader-entry, -exit, -timemachine, -budget, -risk",T.asof?chip(pass.length>0,pass.length+" of "+rows.length+" pass"):chip(null,"not run yet"),
+     rows.length?(pass.length?`${pass.length} plans clear all ${rows[0][9]} checks. `:`No stock clears every check. `)+(top?`Most common reason: ${top}.`:""):"No tested setup today.")}
+  ${line("Proof: many-ideas test","quant-toolkit (arch: bootstrap, SPA/StepM)",ks.length?chip(surv>0,surv+" of "+ks.length+" survive"):chip(null,"Saturday"),
+     ks.length?(surv?`${surv} signals still look real after correcting for testing ${ks.length} at once.`:`None of the ${ks.length} signals survives once you correct for testing many at once, so the desk calls no trades. That is the honest result, not a fault.`):"Runs on Saturdays.")}
+  ${line("Proof: risk forecasts","quant-toolkit (GARCH, VaR, MAPIE)",R.asof?chip(true,(R.n_vol||0)+" stocks"):chip(null,"not run yet"),
+     R.asof?`Volatility forecast for ${R.n_vol||0} stocks. ${vn?esc(String(vn).replace(/^var:\s*/,"VaR check: ").split("(")[0].trim()+"."):""}${C.coverage_measured!=null?` 21-day ranges held ${Math.round(C.coverage_measured*100)}% of the time (aim ${Math.round((C.coverage_target||0.9)*100)}%).`:""}`:"Not computed yet.")}
+  ${line("Proof: machine-found formula","pysr (symbolic regression)",F.verdict?chip(F.verdict==="beats_score",F.verdict==="beats_score"?"beats score":"score stays"):chip(null,"Saturday"),
+     F.verdict?(F.verdict==="beats_score"?`A formula beat the hand-written score out of sample: <code>${esc((F.chosen||{}).equation||"")}</code>.`:`The best formula (<code>${esc((F.chosen||{}).equation||"")}</code>) did not beat the hand-written score, so the score stays.`):"First search runs this Saturday.")}
+  </table></div>
+  ${near.length?`<p class="note" style="margin-top:8px">Closest to a trade (most checks passed): ${near.map(r=>`<button class="chip" data-s="${esc(r[0])}">${esc(r[0])} ${r[8]}/${r[9]}</button>`).join(" ")}</p>`:""}
+  <p class="note">Research software, not advice. Place any trade by hand; this desk never sends orders.</p>`;
+  el.onclick=e=>{const b=e.target.closest("button[data-s]");if(!b)return;tab("analyze");show(b.dataset.s)}}
+function evStrip(sym){const el=$("evStrip");if(!el||!sym)return;const p=(D.tpp||{})[sym],x=(D.rlp||{})[sym]||{},q=typeof LIVE!=="undefined"?LIVE.eq[sym]:null;
+  const bits=[];
+  if(q&&q.ltp)bits.push(`Live ₹${num(q.ltp,2)}`);
+  if(p){const ch=p.checks||[],ok=ch.filter(c=>c.ok).length;bits.push(ok===ch.length?`<b style="color:var(--up)">Trade plan passes all ${ch.length} checks</b>`:`Trade plan: ${ok}/${ch.length} checks; fails ${esc(ch.filter(c=>!c.ok).map(c=>c.rule).join(", "))}`)}
+  else bits.push((D.tp&&(D.tp.syms||[]).includes(sym))?"Trade plan loading…":"No tested setup today");
+  if(x.vol&&x.vol.d1)bits.push(`Typical day move ${pc(x.vol.d1,1)} (GARCH)`);
+  if(x.ci&&x.ci.length===2)bits.push(`Likely 21-day range ${pc(x.ci[0],0)} to ${pc(x.ci[1],0)}`);
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Evidence for ${esc(sym)}</h2><span class="basis">all engines, one line</span></div><p>${bits.join(" · ")}</p>`}
 </script>
