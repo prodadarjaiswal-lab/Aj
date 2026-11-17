@@ -93,7 +93,7 @@ details>summary{cursor:pointer;font-weight:600}
 <div class="wrap">
 <header>
   <div class="row" style="justify-content:space-between;align-items:end">
-    <div><h1>Technical Desk</h1><p class="sub" id="asof"></p></div>
+    <div><h1>Technical Desk</h1><p class="sub" id="asof"></p><p class="sub" id="livenote"></p></div>
     <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screen</button><button class="tab" role="tab" data-t="analyze" aria-selected="false">Analyze</button><button class="tab" role="tab" data-t="plan" aria-selected="false">Plan</button><button class="tab" role="tab" data-t="proof" aria-selected="false">Proof</button></div>
   </div>
 </header>
@@ -134,7 +134,7 @@ details>summary{cursor:pointer;font-weight:600}
 
 <section id="analyze" class="wrap" style="gap:14px" hidden>
   <div class="row"><div class="srch"><input id="q" placeholder="Search any NSE stock by name or symbol" autocomplete="off" aria-label="Search any stock" role="combobox" aria-expanded="false" aria-controls="sugg"><ul id="sugg" role="listbox" hidden></ul></div><div class="row" id="quick"></div></div>
-  <p class="note" id="detailnote" role="status"></p>
+  <p class="note" id="detailnote" role="status"></p><p id="livequote" aria-live="polite"></p>
   <div class="pnl" id="verdict"></div>
   <div class="pnl" id="combo"></div>
   <div class="pnl" id="tplan"></div>
@@ -262,8 +262,8 @@ function profile(hist,poc,val,vah){
 
 /* ---------- screener ---------- */
 function valueTag(s){const v=((D.n50[s]||{}).val)||{};const g=v.gap;return g==null?"":g<=-0.03?"value support":g<0.05?"fair":"expensive"}
-function screener(){
-  const m=D.markets||{},tiles=[];
+function mktTiles(){const m=D.markets||{},tiles=[];
+
   const lv=x=>x&&x.live?` · live ${x.live}`:"";const nf=D.idx["Nifty 50"];if(nf)tiles.push(["Nifty 50"+lv(nf),num(nf.c,0),nf.chg]);const bn=D.idx["Nifty Bank"];if(bn)tiles.push(["Nifty Bank"+lv(bn),num(bn.c,0),bn.chg]);
   const vix=D.idx["India VIX"];if(vix)tiles.push(["India VIX",num(vix.c,2),vix.chg]);
   Object.values(m.futures||{}).forEach(f=>tiles.push([f.name,num(f.ltp,1),f.chg]));
@@ -271,6 +271,9 @@ function screener(){
   const fd=(D.nf||{}).fiidii||{},fdd=Object.keys(fd).sort().pop();
   if(fdd){["FII","DII"].forEach(k=>{if(fd[fdd][k])tiles.push([`${k} net, ${fdd.slice(5)} (₹ Cr)`,num(fd[fdd][k].net,0),fd[fdd][k].net>0?1e-9:-1e-9])})}
   $("mkts").innerHTML=tiles.map(([k,v,c])=>`<div class="tile"><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d ${cls(c)}">${c!=null&&Math.abs(c)<1e-6?(c>0?"net buying":"net selling"):pc(c,2)}</div></div>`).join("");
+}
+function screener(){
+  const m=D.markets||{};mktTiles();
   const miss=(m.missing||[]).map(x=>String(x)),gaps=[];
   if(miss.some(x=>x.includes("newsheadline")))gaps.push("news (service not enabled on this Dhan account)");
   if(miss.some(x=>x.startsWith("USDINR")))gaps.push("USD/INR (no live contract in Dhan's list)");
@@ -717,7 +720,7 @@ function loadDetail(sym){
 }
 let SHOWN="";
 function show(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;SHOWN=sym;$("q").value=sym;render(sym);loadDetail(sym).then(()=>{if(SHOWN===sym){render(sym);proofRisk(sym)}const bad=Object.values(CH).find(x=>x&&x._err);$("detailnote").textContent=bad?"Some detail could not be loaded ("+bad._err+"); showing the summary.":""})}
-function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);tplan(sym);try{localStorage.setItem("td-last",sym)}catch(e){}}
+function render(sym){sym=(sym||"").toUpperCase().trim();if(!sym)return;const c=ctx(sym),v=verdict(c),cb=combo(c,v);priceChart(c);swingsCard(c);scorecard(c,v);levels(c);$("sesswrap").hidden=$("optwrap").hidden=!!(c.us||v.none);if(!c.us){flowcards(c);opts(c)}mcvar(c);readout(c);vscore(c,cb.vv);valuation(c);vbt(c);fitCard(c);hedgeCard(c,cb);news(c);tplan(sym);try{liveQuote(sym)}catch(e){}try{localStorage.setItem("td-last",sym)}catch(e){}}
 function tab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));const r=t==="research";if(r)t="screener";["screener","analyze","plan","proof"].forEach(x=>$(x).hidden=t!==x);if(r)setTimeout(()=>$("research").scrollIntoView(),0);if(t==="proof"&&SHOWN)loadDetail(SHOWN).then(()=>proofRisk(SHOWN));if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.t)));
 $("ddall").addEventListener("click",e=>{const all=[...document.querySelectorAll("#screener .dd")],open=all.some(d=>!d.open);all.forEach(d=>d.open=open);e.target.textContent=open?"Close all":"Open all"});
@@ -818,4 +821,33 @@ function proofRisk(sym){const el=$("pf-risk");if(!el||!sym)return;const R=D.rl||
 const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":["research","plan","proof"].includes(h)?h:"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
 screener();researchInit();planTab();proofTab();journalReview();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
+
+/* ===== Live prices: the GitHub connector reads live.json from the `live` branch (GitHub Actions writes it every 5s
+   in market hours, from Dhan). No Dhan login in the page. Absent connector -> the page keeps the nightly prices. ===== */
+const LIVE={eq:{},t:null,ok:false,at:0,busy:false};
+function istNow(){return new Date(Date.now()+5.5*3600e3)}
+function mktOpen(){const d=istNow(),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>0&&w<6&&m>=555&&m<=930}
+function liveText(r){for(const b of (r&&r.content)||[]){const x=b&&b.resource;if(x&&typeof x.text==="string")return x.text;
+  if(b&&b.type==="text"&&typeof b.text==="string"){const i=b.text.indexOf('{"t"');if(i>=0)return b.text.slice(i)}}
+  const p=r&&r.payload;return p&&typeof p==="object"&&p.q?JSON.stringify(p):null}
+function liveNote(h){const el=$("livenote");if(el)el.innerHTML=h}
+function liveQuote(sym){const el=$("livequote");if(!el)return;const q=LIVE.eq[sym];
+  el.innerHTML=q&&q.ltp?`<b>Live ${esc(sym)}: ₹${num(q.ltp,2)}</b> <span class="${cls(q.pc?q.ltp/q.pc-1:null)}">${q.pc?pc(q.ltp/q.pc-1,2):""}</span> <span class="note">Dhan via GitHub, ${esc((LIVE.t||"").slice(11,19))} IST · exact</span>`:""}
+async function livePoll(mcp){if(LIVE.busy)return;LIVE.busy=true;
+  try{const r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"Aj",path:"live.json",ref:"refs/heads/live"},{cache:false});
+    const t=liveText(r);if(!t)throw{code:"empty"};const d=JSON.parse(t);if(!d.q||!d.t)throw{code:"empty"};
+    const today=istNow().toISOString().slice(0,10),fresh=String(d.t).slice(0,10)===today;
+    if(fresh){const ix=d.q.IDX_I||{};[["Nifty 50","13"],["Nifty Bank","25"],["India VIX","21"]].forEach(([n,sid])=>{const a=ix[sid];if(a&&a[0]&&a[4])D.idx[n]={c:a[0],chg:a[0]/a[4]-1,live:String(d.t).slice(11,16)}});
+      const eq={};for(const[sid,a]of Object.entries(d.q.NSE_EQ||{})){const s=(D.lsid||{})[sid];if(s&&a&&a[0])eq[s]={ltp:a[0],pc:a[4]||null}}LIVE.eq=eq;
+      try{mktTiles()}catch(e){console.error("live tiles",e)}}
+    LIVE.ok=true;LIVE.at=Date.now();LIVE.t=d.t;
+    liveNote(fresh?`<b style="color:var(--up)">● LIVE</b> prices ${esc(String(d.t).slice(11,19))} IST${mktOpen()?", every 5s":", market closed"}`:`Market closed · last live prices ${esc(String(d.t).slice(0,16))} IST`);
+    if(typeof SHOWN!=="undefined"&&SHOWN)liveQuote(SHOWN)}
+  catch(e){const c=e&&e.code;const why=c==="server_not_connected"?"add the GitHub connector in Claude":c==="needs_reauth"?"reconnect GitHub in Claude":c==="not_granted"||c==="consent_required"?"GitHub not allowed for this page":"retrying";
+    if(!LIVE.ok||Date.now()-LIVE.at>120000)liveNote(`LIVE off (${esc(why)}) · showing nightly prices`)}
+  finally{LIVE.busy=false}}
+(async()=>{let mcp=null;try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}
+  if(!mcp){liveNote("Live prices need the desk opened in Claude with the GitHub connector · showing nightly prices");return}
+  liveNote("LIVE connecting…");
+  const loop=async()=>{if(!document.hidden)await livePoll(mcp);setTimeout(loop,mktOpen()?5000:60000)};loop()})();
 </script>

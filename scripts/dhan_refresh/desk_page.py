@@ -141,7 +141,7 @@ def build(out: Path) -> dict:
             "markets": _j(ROOT / "docs/markets.json", {}),
             "flow": flow if flow.get("d") == today_ist else {}, "flowState": {"s": fs},
             "track": {"summary": track.get("summary", {})}, "us": _j(ROOT / "docs/us-value.json", {"rows": []}),
-            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx, "live_t": live_t if live_t[:10] == today_ist else None,
+            "usq": us_state.get("quotes", {}), "n50": n50, "idx": idx, "lsid": sym_of, "live_t": live_t if live_t[:10] == today_ist else None,
             "quant": _j(ROOT / "docs/quant.json", {}),
             "vm": _vm(_j(ROOT / "docs/value-model.json", {})), "pf": _j(ROOT / "docs/portfolio.json", {}),
             "usd": _j(ROOT / "docs/us-desk.json", {}),
