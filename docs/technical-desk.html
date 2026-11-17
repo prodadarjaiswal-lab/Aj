@@ -94,11 +94,12 @@ details>summary{cursor:pointer;font-weight:600}
 <header>
   <div class="row" style="justify-content:space-between;align-items:end">
     <div><h1>Technical Desk</h1><p class="sub" id="asof"></p><p class="sub" id="livenote"></p></div>
-    <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screen</button><button class="tab" role="tab" data-t="analyze" aria-selected="false">Analyze</button><button class="tab" role="tab" data-t="plan" aria-selected="false">Plan</button><button class="tab" role="tab" data-t="proof" aria-selected="false">Proof</button></div>
+    <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="screener" aria-selected="true">Screen</button><button class="tab" role="tab" data-t="analyze" aria-selected="false">Analyze</button><button class="tab" role="tab" data-t="proof" aria-selected="false">Proof</button></div>
   </div>
 </header>
 
 <section id="screener" class="wrap" style="gap:10px">
+  <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
   <div class="pnl" id="research"><div class="row" style="justify-content:space-between"><h2>Research screener · all Nifty 500</h2><span class="cnt" id="n-research"></span></div>
     <p class="note basisline" id="b-research"></p>
     <div class="row" id="presets" role="group" aria-label="Screens"></div>
@@ -112,7 +113,6 @@ details>summary{cursor:pointer;font-weight:600}
     <div class="row"><button class="chip" id="rsMore" hidden>Show more</button><span class="note" id="rsNote"></span></div>
   </div>
   <div class="row" style="justify-content:space-between"><p class="note" style="margin:0">Tap a section to open it. Tap any stock for its chart and full analysis.</p><button class="chip" id="ddall">Open all</button></div>
-  <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
   <details class="dd" id="dd-rsum" open><summary><span class="ddt">Research screener: today's top evidence</span><span class="cnt" id="n-rsum"></span></summary><div class="ddb">
     <div class="tw"><table id="rsSum"></table></div>
     <div class="row"><button class="chip on" data-goto="research">Go to the full research screener ↑</button><span class="note">12 screens and filters across the Nifty 500</span></div>
@@ -818,7 +818,7 @@ function proofRisk(sym){const el=$("pf-risk");if(!el||!sym)return;const R=D.rl||
   <h3>One-day Value at Risk (loss not exceeded on 95 or 99 days in 100)</h3>${g?`<div class="tw"><table><tr><th>Method</th><th class="n">95%</th><th class="n">99%</th><th>Back-test (Kupiec, last 250 days)</th></tr><tr><td>GARCH forecast</td><td class="n">${pc(g.garch95,2).replace("+","")}</td><td class="n">${pc(g.garch99,2).replace("+","")}</td><td>${g.kupiec_ok?'<span class="tag good">passed at 95% and 99%</span>':'<span class="tag bad">failed</span>'}</td></tr><tr><td>Historical (last ${hv?hv.days_used:"–"} days)</td><td class="n">${pc(hp("95"),2).replace("+","")}</td><td class="n">${pc(hp("99"),2).replace("+","")}</td><td class="sm">not back-tested</td></tr></table></div><p class="note">Kupiec checks that losses beyond the VaR happened about as often as promised (5 or 1 in 100).</p>`:`<p class="note">VaR is computed for Nifty 50 stocks only.</p>`}
   <h3>Range for the next 21 sessions</h3>${ci?`<p>${pc(ci[0],1)} to ${pc(ci[1],1)} <span class="basis">estimate</span></p>`:`<p class="note">No range for this stock.</p>`}
   <p class="note">Target: the real return lands inside the range ${C.coverage_target!=null?Math.round(C.coverage_target*100)+"%":"–"} of the time. Measured on test years (all stocks): ${C.coverage_measured!=null?(C.coverage_measured*100).toFixed(1)+"%":"not measured"}.</p>`}
-const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":["research","plan","proof"].includes(h)?h:"screener";
+const pick=h=>["analyze","analyzer","quant"].includes(h)?"analyze":h==="plan"?"analyze":["research","proof"].includes(h)?h:"screener";
 window.addEventListener("hashchange",()=>tab(pick(location.hash.slice(1))));
 screener();researchInit();planTab();proofTab();journalReview();bsInit();quantTab();fbt();mypf();$("mypf2").innerHTML=$("mypf").innerHTML;investPicks();{const t=(D.track||{}).summary||{},np=((t.rising||{}).picks||0)+((t.dips||{}).picks||0);$("n-track").textContent=np?np+" picks logged":"";$("n-pf").textContent=(PF.summary||{}).proxy?"no holdings":((PF.summary||{}).count||"")+" holdings"}let first="TCS";try{first=localStorage.getItem("td-last")||"TCS"}catch(e){}show(first);tab(pick(location.hash.slice(1)));
 
