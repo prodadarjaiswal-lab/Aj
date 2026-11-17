@@ -124,7 +124,9 @@ def test_risklab_vol_used_when_present(tmp_path):
     TP.run(data, {"c": [100.0] * 10}, root)
     p = json.loads((root / "docs/tradeplan.json").read_text())["plans"]["AAA"]
     assert p["vol_src"] == "risklab daily vol"
-    assert p["entry"] - p["stop"] == pytest.approx(1.5 * 0.01 * p["entry"], abs=p["tick"] + 0.01)
+    k, h, r = CFG["stop_k"], CFG["horizon_days"], CFG["target_r"]
+    assert p["entry"] - p["stop"] == pytest.approx(k * 0.01 * p["entry"] * h ** 0.5, abs=p["tick"] + 0.01)
+    assert p["target"] - p["entry"] == pytest.approx(r * (p["entry"] - p["stop"]), abs=p["tick"] + 0.01)
 
 
 def test_weak_market_uses_weak_flag(tmp_path):
@@ -134,3 +136,10 @@ def test_weak_market_uses_weak_flag(tmp_path):
     root = _root(tmp_path, today, SIG)
     TP.run(data, {"c": [300 - i * 0.5 for i in range(300)]}, root)      # falling: below its 200-day average
     assert json.loads((root / "docs/tradeplan.json").read_text())["plans"] == {}
+
+
+def test_joint_check_gates_on_risklab_signals():
+    no = TP._joint_check("flag", {})
+    assert no["ok"] is False and "not run yet" in no["note"]
+    assert TP._joint_check("flag", {"flag": {"survives": False, "spa_p": 0.2}})["ok"] is False
+    assert TP._joint_check("flag", {"flag": {"survives": True, "spa_p": 0.01}})["ok"] is True

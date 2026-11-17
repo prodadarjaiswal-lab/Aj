@@ -3,8 +3,9 @@
 Research software, not advice. It prints levels to place by hand; it never sends orders.
 
   entry   last Dhan close (the back-test buys at the close of the day the signal appears), snapped to the tick
-  stop    entry - stop_k x one day's volatility (docs/risklab.json vol[SYM].d1 when present, else ATR 14)
-  target  entry x (1 + the signal's tested out-of-sample average excess move over horizon_days)
+  stop    entry - stop_k x one day's volatility x sqrt(horizon_days) (vol: docs/risklab.json vol[SYM].d1 when present, else ATR 14)
+  target  entry + target_r x (entry - stop); open plans are closed at the horizon. The signal's tested out-of-sample
+          average excess move over horizon_days sets the drift in the replays.
   odds    quant.bootstrap_paths on the stock's own daily returns (demeaned, plus the signal's tested drift),
           stop and target applied path by path on daily closes, net of round-trip charges
   size    floor(max_loss_per_trade / (entry - stop)), capped by capital and by stock_cap (config/portfolio.json)
@@ -142,8 +143,21 @@ def events_in(feeds: dict, sym: str, asof: str, horizon: int) -> list:
     return out
 
 
+def _joint_check(key: str, joint: dict) -> dict:
+    """The signal must survive the risk lab's test that corrects for trying many signals at once (StepM + SPA, 5%)."""
+    j = joint.get(key)
+    if not joint:
+        return {"rule": "survives the many-signals test", "ok": False, "note": "not run yet (docs/risklab.json has no signal results)"}
+    if not j or not j.get("survives"):
+        p = (j or {}).get("spa_p")
+        return {"rule": "survives the many-signals test", "ok": False,
+                "note": f"{key} does not survive at 5%" + (f" (SPA p {p:.3f})" if isinstance(p, (int, float)) else "")}
+    return {"rule": "survives the many-signals test", "ok": True,
+            "note": f"{key} survives at 5% (SPA p {j.get('spa_p')})"}
+
+
 def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: dict, stock_cap: float, min_cr: float,
-             feeds: dict, asof: str, up: bool) -> dict | None:
+             feeds: dict, asof: str, up: bool, joint: dict | None = None) -> dict | None:
     key, st = sig
     h = int(cfg.get("horizon_days", 21))
     last = float(td.get("c") or o["c"][-1])
@@ -157,11 +171,15 @@ def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: d
         vol_rs, vol_src = float(td["atr"]), "ATR 14"
     else:
         return None
-    stop = snap(entry - float(cfg.get("stop_k", 1.5)) * vol_rs, tick, "down")
+    # Stop: scaled to the holding period, so ordinary day-to-day noise over h sessions does not knock the
+    # trade out before the tested edge has time to show (one-day vol x sqrt(h) x stop_k).
+    stop = snap(entry - float(cfg.get("stop_k", 1.0)) * vol_rs * math.sqrt(h), tick, "down")
     move = float(st[f"x{h}"])
-    target = snap(entry * (1 + move), tick, "down")
     if stop <= 0 or stop >= entry:
         return None
+    # Target: a multiple of the risk taken (trader-exit rule), not the average move; a plan still open after
+    # h sessions is closed at that day's price, so the tested drift is what pays on average.
+    target = snap(entry + float(cfg.get("target_r", 2.0)) * (entry - stop), tick, "up")
     rr = round((target - entry) / (entry - stop), 2)
     qty, by = size(entry, stop, cfg, stock_cap)
     sim = simulate(o["c"], entry, stop, target, qty, math.log1p(move) / h, h, r, int(cfg.get("paths", 10000)))
@@ -179,6 +197,7 @@ def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: d
         {"rule": "position cap", "ok": qty >= 1, "note": f"{qty} shares, Rs {qty * entry:,.0f}; set by {by}"},
         {"rule": "daily loss limit", "ok": 0 < risk <= float(cfg["daily_loss_limit"]),
          "note": f"loss at stop Rs {risk:,.0f} of the Rs {float(cfg['daily_loss_limit']):,.0f} daily limit"},
+        _joint_check(key, joint or {}),
         {"rule": "no results or board meeting while held", "ok": not ev,
          "note": "; ".join(f"{e['d']} {e.get('p', '')}" for e in ev) or f"none in the next {h} sessions (NSE calendar)"},
     ]
@@ -200,7 +219,9 @@ def run(data: dict, nifty: dict, root) -> str:
     model = _j(root / "docs/tech-model.json", {})
     today = _j(root / "docs/tech-today.json", {})
     feeds = _j(root / "docs/nse-feeds.json", {})
-    vol = (_j(root / "docs/risklab.json", {}) or {}).get("vol") or {}
+    rl = _j(root / "docs/risklab.json", {}) or {}
+    vol = rl.get("vol") or {}
+    joint = rl.get("signals") or {}
     r = rates(cfg)
     up = regime_up(nifty)
     h = int(cfg.get("horizon_days", 21))
@@ -212,7 +233,7 @@ def run(data: dict, nifty: dict, root) -> str:
         if not o or not sig or len(o.get("c") or []) < 60:
             continue
         p = plan_one(sym, o, td, sig, cfg, r, vol, float(pf.get("stock_cap", 0.10)), float(pf.get("min_traded_cr", 1.0)),
-                     feeds, asof, up)
+                     feeds, asof, up, joint)
         if p:
             plans[sym] = p
     out = {"asof": asof, "config_assumed": bool(cfg.get("_assumed", True)),

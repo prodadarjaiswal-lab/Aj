@@ -275,8 +275,9 @@ def stats(rows):
     return out
 
 
-def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
-    """data: {sym: {d,o,h,l,c,v}}; nifty: {d,c}."""
+def backtest(data: dict, nifty: dict, oos_years: float = 2.0, series: dict | None = None) -> dict:
+    """data: {sym: {d,o,h,l,c,v}}; nifty: {d,c}. series, if given, is filled with {signal: {date: [10-day excess, ...]}}
+    for out-of-sample cases (risklab tests them)."""
     nmap = dict(zip(nifty["d"], nifty["c"]))
     nm200 = dict(zip(nifty["d"], rolling_mean(nifty["c"], 200)))
     cut = (dt.date.fromisoformat(nifty["d"][-1]) - dt.timedelta(days=int(365 * oos_years))).isoformat()
@@ -309,6 +310,8 @@ def backtest(data: dict, nifty: dict, oos_years: float = 2.0) -> dict:
                 base.append((ex(5), ex(10), ex(21), T.atr_trade(i), up, oos))
             for k in new:
                 rows[k].append((ex(5), ex(10), ex(21), T.atr_trade(i), up, oos))
+                if series is not None and oos:
+                    series.setdefault(k, {}).setdefault(d[i], []).append(ex(10))
     out = {"cutoff": cut, "signals": {}, "data_guard": "cases within 10 days before / 21 after a one-day move above 40% are excluded"}
     sel = lambda r, up, oos: [x for x in r if x[4] == up and x[5] == oos]
     out["base"] = {p: {m: stats(sel(base, up, oos)) for m, up in (("up", True), ("weak", False))}
@@ -508,7 +511,8 @@ def _git_show(root: Path, branch: str, path: str) -> str | None:
 def run_full(dhan, root: Path) -> dict:
     """Daily: re-run the back-test on YEARS of Dhan history, promote or drop signals, write today's signals and the desk file."""
     data, nifty, end = fetch(dhan, root, YEARS)
-    res = backtest(data, nifty)
+    ser = {}
+    res = backtest(data, nifty, series=ser)
     res.update({"asof": nifty["d"][-1], "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
                 "note": "Excess return vs Nifty 50 from the close of the first day a signal appears. ATR trade: stop 2 ATR, "
                         "target 3 ATR, exit day 21. Today's Nifty 500 members (survivorship bias)."})
@@ -551,6 +555,11 @@ def run_full(dhan, root: Path) -> dict:
         (root / "docs/chart-data.json").write_text(json.dumps(ch, separators=(",", ":")), encoding="utf-8")
     except Exception as e:
         print(f"  chart data failed: {str(e)[:120]}")
+    try:                                                # training table for the weekly formula lab (quant-lab.yml)
+        import formula_lab
+        print(formula_lab.write_sample(data, nifty, root, res["signals"]))
+    except Exception as e:
+        print(f"  formula sample failed: {str(e)[:200]}")
     try:                                                # quant modules on the same Dhan history
         import glob as _g
         import quant
@@ -578,6 +587,11 @@ def run_full(dhan, root: Path) -> dict:
         print(research.run(data, nifty, root, dhan))
     except Exception as e:
         print(f"  value / portfolio modules failed: {str(e)[:200]}")
+    try:                                                # risk lab: GARCH vol / VaR, conformal intervals, joint signal test
+        import risklab
+        print(risklab.run(data, nifty, root, ser))
+    except Exception as e:
+        print(f"  risk lab failed: {str(e)[:200]}")
     try:                                                # trade plan for stocks with a new tested signal (never sends orders)
         import tradeplan
         print(tradeplan.run(data, nifty, root))
