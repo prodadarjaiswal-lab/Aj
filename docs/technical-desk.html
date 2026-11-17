@@ -862,7 +862,8 @@ function liveNote(h){const el=$("livenote");if(el)el.innerHTML=h}
 function liveQuote(sym){const el=$("livequote");if(!el)return;const q=LIVE.eq[sym];
   el.innerHTML=q&&q.ltp?`<b>Live ${esc(sym)}: ₹${num(q.ltp,2)}</b> <span class="${cls(q.pc?q.ltp/q.pc-1:null)}">${q.pc?pc(q.ltp/q.pc-1,2):""}</span> <span class="note">Dhan via GitHub, ${esc((LIVE.t||"").slice(11,19))} IST · exact</span>`:""}
 async function livePoll(mcp){if(LIVE.busy)return;LIVE.busy=true;
-  try{const r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"Aj",path:"live.json",ref:"refs/heads/live"},{cache:false});
+  try{let r;try{r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"aj-live",path:"live.json"},{cache:false})}
+    catch(e0){if(e0&&["server_not_connected","needs_reauth","not_granted","consent_required"].includes(e0.code))throw e0;r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"Aj",path:"live.json",ref:"refs/heads/live"},{cache:false})}
     const t=liveText(r);if(!t)throw{code:"empty"};const d=JSON.parse(t);if(!d.q||!d.t)throw{code:"empty"};
     const today=istNow().toISOString().slice(0,10),fresh=String(d.t).slice(0,10)===today;
     if(fresh){const ix=d.q.IDX_I||{};[["Nifty 50","13"],["Nifty Bank","25"],["India VIX","21"]].forEach(([n,sid])=>{const a=ix[sid];if(a&&a[0]&&a[4])D.idx[n]={c:a[0],chg:a[0]/a[4]-1,live:String(d.t).slice(11,16)}});

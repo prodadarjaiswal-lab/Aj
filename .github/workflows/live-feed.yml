@@ -30,6 +30,8 @@ jobs:
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GH_TOKEN: ${{ github.token }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
         run: |
           cd scripts/dhan_refresh
           python bot.py menu || true

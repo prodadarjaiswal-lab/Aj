@@ -76,6 +76,39 @@ def push(payload: dict, state: dict | None = None, extra: dict | None = None) ->
     run("add", *files)
     run("commit", "-q", "--amend", "--no-edit", "--allow-empty")
     run("push", "-q", "-f", "origin", "HEAD:refs/heads/live")
+    mirror_public(payload)
+
+
+PUB = ROOT / "live-public"
+_pub_warned = False
+
+
+def mirror_public(payload: dict) -> None:
+    """Also write live.json alone to a public prices-only repo, so the desk can read it through the
+    claude.ai GitHub connector (which cannot see the private repo). Needs repo secrets PUBLIC_LIVE_REPO
+    (owner/name) and PUBLIC_LIVE_TOKEN (fine-grained token, Contents: write on that repo only).
+    Off when either is missing. A failure here never stops the private feed."""
+    global _pub_warned
+    repo, tok = os.environ.get("PUBLIC_LIVE_REPO", "").strip(), os.environ.get("PUBLIC_LIVE_TOKEN", "").strip()
+    if not repo or not tok:
+        return
+    try:
+        run = lambda *a: subprocess.run(["git", "-C", str(PUB), *a], check=True, capture_output=True, timeout=60)
+        if not (PUB / ".git").exists():
+            PUB.mkdir(parents=True, exist_ok=True)
+            run("init", "-q")
+            run("config", "user.name", "live-feed")
+            run("config", "user.email", "live-feed@users.noreply.github.com")
+            run("remote", "add", "origin", f"https://x-access-token:{tok}@github.com/{repo}.git")
+        (PUB / "live.json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+        run("add", "live.json")
+        first = subprocess.run(["git", "-C", str(PUB), "rev-parse", "-q", "--verify", "HEAD"], capture_output=True).returncode != 0
+        run("commit", "-q", *([] if first else ["--amend"]), "-m", "live prices")
+        run("push", "-q", "-f", "origin", "HEAD:refs/heads/main")
+    except Exception as e:  # never print the token: report only the exception type
+        if not _pub_warned:
+            print(f"public live mirror failed: {type(e).__name__}", file=sys.stderr)
+            _pub_warned = True
 
 
 def prior_state(day: str) -> dict:
