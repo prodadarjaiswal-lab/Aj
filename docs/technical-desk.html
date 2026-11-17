@@ -89,6 +89,32 @@ details>summary{cursor:pointer;font-weight:600}
 @media (prefers-reduced-motion:no-preference){.pnl{transition:border-color .15s}}
 #planT tr[data-s]{cursor:pointer}#planT tr.off td{opacity:.55}#planT th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted}
 .eq{font:600 15px var(--mono);background:var(--soft);border-radius:8px;padding:10px;overflow-wrap:anywhere}.hl{font-size:15px;margin:0}
+
+/* Visibility pass (17 Nov): more contrast, larger key numbers, calmer panels, bigger tap targets. */
+:root{--mute:#4b5953;--line:#d0dad5;--shadow:0 1px 2px rgba(16,32,26,.06),0 4px 14px rgba(16,32,26,.05)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mute:#a6b5ae;--line:#2c3b35;--shadow:0 1px 2px rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--mute:#a6b5ae;--line:#2c3b35;--shadow:0 1px 2px rgba(0,0,0,.4)}
+body{font-size:15.5px;line-height:1.55}
+h1{font-size:23px;letter-spacing:-.01em}h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);margin-right:8px;vertical-align:2px}
+h2{font-size:16.5px}
+.sub,.note{font-size:13px}
+header{background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tab{padding:8px 18px;min-height:38px}
+.pnl{border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.tiles{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.tile{background:var(--panel);padding:10px 12px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;font-weight:500}.tile .v{font-size:20px;font-weight:600;margin-top:2px}.tile .d{font-size:13px;font-weight:600}
+.chip{font-size:13px;padding:5px 12px;min-height:30px}
+.tag{font-size:12.5px;padding:2px 9px;white-space:nowrap}
+table{font-size:13.5px}
+th{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+tbody tr:nth-child(even) td,table tr:nth-child(even) td{background:color-mix(in srgb,var(--soft) 45%,transparent)}
+tr:hover td{background:var(--soft)}
+#deskSum h2{font-size:18px}#deskSumT td:first-child{min-width:130px}#deskSumT td:nth-child(2){white-space:nowrap}
+#evStrip p{font-size:15px;font-weight:500}
+#livenote b{font-weight:700}
+@media (max-width:520px){.tiles{grid-template-columns:1fr 1fr;gap:8px}.tile{padding:8px 10px}.tile .v{font-size:17px}
+ h1{font-size:20px}header{padding-block:8px 6px;gap:6px}header .sub{font-size:12px;line-height:1.4}.tab{padding:7px 14px;min-height:36px}}
 </style>
 <div class="wrap">
 <header>
