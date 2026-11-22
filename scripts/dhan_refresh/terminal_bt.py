@@ -3,15 +3,17 @@
 Research software, not advice. Never places orders.
 
 For each session D of the last ~22 sessions and each Nifty 500 stock:
-  pick      the stock had a NEW tested daily signal (docs/tech-model.json: tested in rising or weak markets)
-            on one of the 3 closes up to D-1, exactly as the Evidence Desk showed it that morning.
+  pick      the stock had a NEW daily signal on one of the 3 closes up to D-1 that is tested for that day's market
+            (docs/tech-model.json: 'tested' when the Nifty was above its 200-day average, else 'tested_weak'),
+            and 20-day average turnover of Rs 5 crore or more.
   entry     close of the 5-minute Dhan bar ending at the checkpoint (09:30, 12:30, 15:00), long only.
   exits     day   : the 15:25 bar close, same day (intraday, 0.06% round-trip cost)
             plan  : stop entry - 0.5 x ATR14, target entry + 1.0 x ATR14 on 5-minute bars, else the 15:25 close
                     (stop counted first when a bar touches both)
             next  : next session's close (overnight hold, 0.25% delivery cost)
   excess    each return minus the Nifty 50's return over the same window.
-  rupees    shares = floor(max_loss_per_trade / (0.5 x ATR)) capped by capital (config/trading.json), plan exit.
+  rupees    shares = floor(max_loss_per_trade / (0.5 x ATR)) capped by capital (config/trading.json), plan exit,
+            at most 5 picks per checkpoint per day (most signals first, then strongest vs the Nifty at entry).
 
 Intraday filters known at the checkpoint (no look-ahead) are tested on the picks and on all stocks, to find a
 better screener: above session VWAP, up from the open, stronger than the Nifty since the previous close,
@@ -37,6 +39,8 @@ LAST_BAR = 15 * 60 + 20
 COST_DAY, COST_NEXT = 0.0006, 0.0025
 STOP_ATR, TGT_ATR = 0.5, 1.0
 SESSIONS = 22
+MAX_PER_CHECK = 5          # rupee P&L: at most this many picks per checkpoint per day (more signals, then stronger vs Nifty)
+MIN_TURNOVER_CR = 5.0      # picks need 20-day average turnover of Rs 5 crore or more
 
 INDICES = ["Nifty 50", "Nifty Bank", "Nifty IT", "Nifty Midcap 100", "Nifty Financial Services", "Nifty Auto",
            "Nifty Pharma", "Nifty FMCG", "Nifty Metal", "Nifty Energy", "Nifty PSU Bank", "Nifty Realty", "India VIX"]
@@ -135,11 +139,26 @@ def atr14(h, l, c, i):
     return sum(tr) / 14
 
 
-def backtest(daily: dict, intra: dict, nifty_d: dict, nifty_i: dict, tested: set, cfg: dict) -> dict:
+def regime_up(nc: list, i: int) -> bool:
+    """Nifty above its 200-day average at index i (the desk's rule in tradeplan.regime_up)."""
+    return i < 200 or nc[i] > sum(nc[i - 199:i + 1]) / 200
+
+
+def turnover_ok(c, v, i) -> bool:
+    if not v:
+        return True
+    k = range(max(0, i - 19), i + 1)
+    return sum(c[j] * (v[j] or 0) for j in k) / len(k) / 1e7 >= MIN_TURNOVER_CR
+
+
+def backtest(daily: dict, intra: dict, nifty_d: dict, nifty_i: dict, tested, cfg: dict) -> dict:
     """daily[sym] = {d,o,h,l,c,v}; intra[sym] = {date: rows}; nifty_d = {d,c}; nifty_i = {date: rows}."""
     import tech_model as TM
     days = sorted(d for d in nifty_i if len(nifty_i[d]) >= 60)[-SESSIONS:]
     nclose = dict(zip(nifty_d["d"], nifty_d["c"]))
+    t_up, t_weak = tested if isinstance(tested, tuple) else (set(tested), set(tested))
+    npos = {d: i for i, d in enumerate(nifty_d["d"])}
+    cand = {}
     cap, maxloss = float(cfg.get("capital", 100000)), float(cfg.get("max_loss_per_trade", 1000))
     res = {(pop, ck, f, ex): [] for pop in ("picks", "all") for ck in CHECKS for f in FILTERS for ex in ("day", "plan", "next")}
     trades, by_signal, daily_pnl = [], {}, {d: {ck: 0.0 for ck in CHECKS} for d in days}
@@ -171,7 +190,8 @@ def backtest(daily: dict, intra: dict, nifty_d: dict, nifty_i: dict, tested: set
             if ip < 260:
                 continue
             new = set().union(*(flags(k) - flags(k - 1) for k in range(ip - 2, ip + 1))) & flags(ip)
-            sig = sorted(new & tested)
+            up = regime_up(nifty_d["c"], npos[prev[-1]]) if prev[-1] in npos else True
+            sig = sorted(new & (t_up if up else t_weak)) if turnover_ok(col["c"], v, ip) else []
             is_pick = bool(sig)
             if is_pick:
                 picks_by_day.setdefault(D, []).append(sym)
@@ -211,12 +231,14 @@ def backtest(daily: dict, intra: dict, nifty_d: dict, nifty_i: dict, tested: set
                 if is_pick:
                     qty = min(math.floor(maxloss / (STOP_ATR * a)), math.floor(cap / e))
                     pnl = qty * (px - e) - qty * e * COST_DAY
-                    daily_pnl[D][ck] += pnl
+                    cand.setdefault((D, ck), []).append((len(sig), (e / pc - 1) - (ne / nprev - 1 if nprev else 0), pnl))
                     trades.append({"d": D, "ck": ck, "s": sym, "sig": sig, "e": round(e, 2), "x": round(px, 2), "why": why,
                                    "qty": qty, "pnl": round(pnl), "ret": round((px / e - 1 - COST_DAY) * 100, 2),
                                    "f": [k for k in ("vwap", "up_open", "rs", "volx", "orb") if f[k]]})
                     for s_ in sig:
                         by_signal.setdefault((s_, ck), []).append((outs["plan"][0] - outs["plan"][1], outs["plan"][0], D))
+    for (D, ck), xs in cand.items():
+        daily_pnl[D][ck] = sum(x[2] for x in sorted(xs, key=lambda x: (-x[0], -x[1]))[:MAX_PER_CHECK])
     out = {"days": days, "checks": list(CHECKS), "filters": FILTERS, "grid": {}, "signals": {}, "equity": {}}
     for (pop, ck, fk, ex), xs in res.items():
         out["grid"].setdefault(pop, {}).setdefault(ck, {}).setdefault(fk, {})[ex] = summarize(xs, days)
@@ -242,10 +264,12 @@ def backtest(daily: dict, intra: dict, nifty_d: dict, nifty_i: dict, tested: set
     return out
 
 
-def watchlist(daily: dict, nifty_d: dict, tested: set, cfg: dict) -> list:
+def watchlist(daily: dict, nifty_d: dict, tested, cfg: dict) -> list:
     """Picks for the next session: new tested signal on the last 3 closes, with ATR plan levels."""
     import tech_model as TM
     nclose = dict(zip(nifty_d["d"], nifty_d["c"]))
+    t_up, t_weak = tested if isinstance(tested, tuple) else (set(tested), set(tested))
+    tested = t_up if regime_up(nifty_d["c"], len(nifty_d["c"]) - 1) else t_weak
     out = []
     for sym, o in daily.items():
         keep = [i for i, d in enumerate(o["d"]) if d in nclose]
@@ -256,7 +280,7 @@ def watchlist(daily: dict, nifty_d: dict, tested: set, cfg: dict) -> list:
         T = TM.Tech(col["o"], col["h"], col["l"], col["c"], v, [nclose[o["d"][i]] for i in keep])
         i = len(keep) - 1
         new = set().union(*(T.flags(k) - T.flags(k - 1) for k in range(i - 2, i + 1))) & T.flags(i)
-        sig = sorted(new & tested)
+        sig = sorted(new & tested) if turnover_ok(col["c"], v, i) else []
         a = atr14(col["h"], col["l"], col["c"], i)
         if sig and a:
             c = col["c"][i]
@@ -352,7 +376,7 @@ def main() -> int:
     cfg = json.loads((root / "config/trading.json").read_text(encoding="utf-8")) if (root / "config/trading.json").exists() else {}
     cfg = {k: (v.get("v") if isinstance(v, dict) else v) for k, v in cfg.items()}
     tm = json.loads((root / "docs/tech-model.json").read_text(encoding="utf-8"))
-    tested = {k for k, r in tm["signals"].items() if r.get("tested") or r.get("tested_weak")}
+    tested = ({k for k, r in tm["signals"].items() if r.get("tested")}, {k for k, r in tm["signals"].items() if r.get("tested_weak")})
     cid, pin, sec = (os.environ[k] for k in ("DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET"))
     dhan = R.Dhan(cid, R.login(cid, pin, sec))
     now = dt.datetime.now(R.IST)
@@ -377,7 +401,7 @@ def main() -> int:
         if n % 50 == 0:
             print(f"  fetched {n}/{len(rows)}", flush=True)
     res = backtest(daily, intra, nifty_d, nifty_i, tested, cfg)
-    res.update({"asof": now.strftime("%Y-%m-%d %H:%M"), "stocks": len(daily), "skipped": skipped, "tested": sorted(tested),
+    res.update({"asof": now.strftime("%Y-%m-%d %H:%M"), "stocks": len(daily), "skipped": skipped, "tested": {"rising": sorted(tested[0]), "weak": sorted(tested[1])},
                 "signal_names": tm.get("names", {}), "cfg": {"capital": cfg.get("capital"), "max_loss": cfg.get("max_loss_per_trade")},
                 "method": __doc__.split("\n\n", 1)[1].split("Also writes")[0].strip()})
     (outdir / "backtest.json").write_text(json.dumps(res, separators=(",", ":")), encoding="utf-8")

@@ -1,0 +1,201 @@
+<title>Aj Trading Terminal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: a trading-desk console. Status bar, market tape, then the proof (back-test) before any list of names. */
+:root{
+  --bg:#f3f4f1; --panel:#ffffff; --ink:#17202a; --mute:#5d6873; --line:#d9ddd6;
+  --amber:#b86e00; --up:#0b7a5a; --down:#c2412d; --chip:#eceee8;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141b; --panel:#151d26; --ink:#e4e8ec; --mute:#8b97a3; --line:#25313d;
+  --amber:#f0a83a; --up:#3fcf9b; --down:#ff7a62; --chip:#1d2833; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141b; --panel:#151d26; --ink:#e4e8ec; --mute:#8b97a3; --line:#25313d;
+  --amber:#f0a83a; --up:#3fcf9b; --down:#ff7a62; --chip:#1d2833; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-head);margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:28px;font-weight:700}
+h2{font-size:19px;font-weight:600}
+.eyebrow{font:500 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+.mute{color:var(--mute)}
+.num,td.n,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font:12px var(--f-mono);color:var(--mute);border-block:1px solid var(--line);padding-block:8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--mute)}
+.dot.ok{background:var(--up)} .dot.warn{background:var(--amber)}
+.up{color:var(--up)} .down{color:var(--down)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:820px){.grid3{grid-template-columns:1fr}}
+.mk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:980px){.mk{grid-template-columns:1fr}}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font:500 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.ck{display:flex;flex-direction:column;gap:10px}
+.ck .big{font:600 30px var(--f-mono);font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:13px}
+.kv dt{color:var(--mute)} .kv dd{margin:0;text-align:right;font-family:var(--f-mono)}
+.pill{display:inline-block;font:600 11px var(--f-mono);letter-spacing:.05em;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--mute);text-transform:uppercase}
+.pill.pass{background:color-mix(in srgb,var(--up) 18%,transparent);color:var(--up)}
+.pill.fail{background:color-mix(in srgb,var(--down) 16%,transparent);color:var(--down)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:500 12px var(--f-mono);background:transparent;color:var(--mute);border:0;padding:6px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--amber);color:var(--bg)}
+.seg button:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cell{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25}
+.cell small{color:var(--mute);font-size:11px}
+td.hit{box-shadow:inset 3px 0 0 var(--up)}
+.note{font-size:13px;color:var(--mute);max-width:75ch}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline}
+svg text{fill:var(--mute);font:10px var(--f-mono)}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">NSE · MCX · Research software, not advice</div>
+      <h1>Aj Trading Terminal</h1>
+    </div>
+    <div class="seg" role="group" aria-label="Theme"><button id="th-auto" aria-pressed="true">Auto</button><button id="th-light" aria-pressed="false">Light</button><button id="th-dark" aria-pressed="false">Dark</button></div>
+  </header>
+  <div class="bar" id="status"></div>
+
+  <section class="panel">
+    <div class="head"><h2>Markets</h2><span class="mute mono" id="mk-asof"></span></div>
+    <div class="mk" id="mk" style="margin-top:12px"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>Did the desk's picks make money? Last month, bought at three times of day</h2><span class="mute mono" id="bt-asof"></span></div>
+    <p class="note" id="bt-lede"></p>
+    <div class="grid3" id="cks"></div>
+  </section>
+
+  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>Screener rules tested</h2>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Which stocks"><button id="pop-picks" aria-pressed="true">Desk picks</button><button id="pop-all" aria-pressed="false">All Nifty 500</button></div>
+        <div class="seg" role="group" aria-label="Exit"><button id="ex-plan" aria-pressed="true">Stop / target</button><button id="ex-day" aria-pressed="false">Hold to 3:25</button><button id="ex-next" aria-pressed="false">Next close</button></div>
+      </div>
+    </div>
+    <p class="note">Each cell: average return after costs minus the Nifty's move over the same time, and the number of trades. A green edge means the rule passed the one-month test (30+ trades, positive in both halves of the month, t of 2 or more).</p>
+    <div class="scroll"><table id="grid"></table></div>
+  </section>
+
+  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>Rules that passed</h2><span class="pill" id="pass-n"></span></div>
+    <div class="scroll"><table id="passing"></table></div>
+  </section>
+
+  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>Next session's desk picks</h2><span class="mute mono" id="wl-asof"></span></div>
+    <p class="note">Stocks with a new tested daily signal. Levels use the same rule as the back-test: stop 0.5 ATR below the entry, target 1 ATR above, shares sized so the stop loses at most your max loss per trade. Shown from yesterday's close; recompute from the actual entry price.</p>
+    <div class="scroll"><table id="wl"></table></div>
+  </section>
+
+  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>Back-test trades</h2><span class="mute mono">latest 80</span></div>
+    <div class="scroll"><table id="trades"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>How this was tested</h2>
+    <pre class="note mono" id="method" style="white-space:pre-wrap;margin:10px 0 0"></pre>
+  </section>
+</div>
+
+<script>
+const BT=/*BT*/null, MK=/*MK*/null, WL=/*WL*/null, META=/*META*/null;
+const $=id=>document.getElementById(id);
+const pct=(x,d=2)=>x==null?"–":(x>0?"+":"")+x.toFixed(d)+"%";
+const cls=x=>x==null?"":x>0?"up":x<0?"down":"";
+const inr=x=>x==null?"–":(x<0?"−":"")+"₹"+Math.abs(Math.round(x)).toLocaleString("en-IN");
+const fmt=x=>x==null?"–":x.toLocaleString("en-IN",{maximumFractionDigits:x>=1000?0:2});
+
+/* theme toggle */
+(function(){const set=t=>{if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);
+  ["auto","light","dark"].forEach(k=>$("th-"+k).setAttribute("aria-pressed",String(k===t)));try{localStorage.setItem("th",t)}catch(e){}};
+  ["auto","light","dark"].forEach(k=>$("th-"+k).onclick=()=>set(k));let t="auto";try{t=localStorage.getItem("th")||"auto"}catch(e){}set(t)})();
+
+function spark(a,w=110,h=28){if(!a||a.length<2)return"";const lo=Math.min(...a),hi=Math.max(...a),r=hi-lo||1;
+  const p=a.map((v,i)=>[(i/(a.length-1))*(w-4)+2,h-3-((v-lo)/r)*(h-6)]);const up=a[a.length-1]>=a[0];
+  const col=up?"var(--up)":"var(--down)";const d="M"+p.map(q=>q[0].toFixed(1)+" "+q[1].toFixed(1)).join("L");
+  const e=p[p.length-1];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}L${e[0].toFixed(1)} ${h}L2 ${h}Z" fill="${col}" opacity=".12"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5"/><circle cx="${e[0]}" cy="${e[1]}" r="2.2" fill="${col}"/></svg>`}
+
+function status(){const s=[];
+  s.push(`<span><span class="dot ${MK?"ok":"warn"}"></span>Markets ${MK?MK.asof+" IST":"missing"}</span>`);
+  s.push(`<span><span class="dot ${BT?"ok":"warn"}"></span>Back-test ${BT?BT.asof+" IST":"missing"}</span>`);
+  s.push(`<span><span class="dot warn"></span>Live ticks: not wired yet (next build step)</span>`);
+  s.push(`<span>Page built ${META.built} IST</span>`);
+  $("status").innerHTML=s.join("")}
+
+function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file yet.</p>';return}
+  $("mk-asof").textContent="closes as of "+MK.asof+" IST";
+  $("mk").innerHTML=Object.entries(MK.groups).map(([g,rows])=>`<div class="scroll"><h3 style="font-size:15px;margin-bottom:6px">${g}</h3><table>
+   <tr><th>Name</th><th class="n">Last</th><th class="n">Day</th><th class="n">1M</th><th>60D</th></tr>
+   ${rows.map(r=>`<tr title="${r.contract||""}"><td>${r.name}${r.expiry?` <small class="mute">${r.expiry.slice(5)}</small>`:""}</td><td class="n">${fmt(r.last)}</td>
+   <td class="n ${cls(r.chg)}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
+   </table></div>`).join("")+(MK.missing&&MK.missing.length?`<p class="mute" style="grid-column:1/-1;font-size:12px">Not returned by Dhan: ${MK.missing.join("; ")}</p>`:"")}
+
+function equity(a){if(!a||!a.length)return"";const w=300,h=70,lo=Math.min(0,...a),hi=Math.max(0,...a),r=hi-lo||1;
+  const y=v=>h-6-((v-lo)/r)*(h-14),x=i=>a.length===1?w/2:4+i*(w-8)/(a.length-1);
+  const d="M"+a.map((v,i)=>x(i).toFixed(1)+" "+y(v).toFixed(1)).join("L");const col=a[a.length-1]>=0?"var(--up)":"var(--down)";
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-label="Cumulative rupee result"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`}
+
+function checkpoints(){if(!BT){$("cks").innerHTML='<p class="mute">The back-test has not run yet.</p>';return}
+  $("bt-asof").textContent=`${BT.days[0]} to ${BT.days[BT.days.length-1]} · ${BT.days.length} sessions · ${BT.stocks} stocks`;
+  const tot=Object.values(BT.picks_per_day).reduce((a,b)=>a+b,0);
+  $("bt-lede").textContent=`The desk flagged ${tot} stock-days with a new tested signal. Each was bought at 9:30, 12:30 and 3:00 PM with a stop 0.5 ATR below and a target 1 ATR above, closed by 3:25 PM, sized to lose at most ${inr(BT.cfg.max_loss)} at the stop on ${inr(BT.cfg.capital)} capital, after charges.`;
+  $("cks").innerHTML=BT.checks.map(ck=>{const g=BT.grid.picks[ck].any,p=g.plan||{},dy=g.day||{},nx=g.next||{};const eq=BT.equity[ck]||[];const tot=eq.length?eq[eq.length-1]:0;
+    return `<div class="panel ck"><div class="head"><h3 style="font-size:17px">Bought at ${ck}</h3><span class="pill ${p.pass?"pass":p.n?"fail":""}">${p.pass?"passes":p.n?"not proven":"no trades"}</span></div>
+    <div><div class="big ${cls(tot)}">${inr(tot)}</div><div class="mute" style="font-size:12px">total, stop / target exit, ${p.n||0} trades</div></div>
+    ${equity(eq)}
+    <dl class="kv"><dt>Avg vs Nifty, stop/target</dt><dd class="${cls(p.ex)}">${pct(p.ex)}</dd>
+    <dt>Win rate</dt><dd>${p.hit==null?"–":(p.hit*100).toFixed(0)+"%"}</dd>
+    <dt>t-stat</dt><dd>${p.t??"–"}</dd>
+    <dt>First half / second half</dt><dd><span class="${cls(p.h1)}">${pct(p.h1)}</span> / <span class="${cls(p.h2)}">${pct(p.h2)}</span></dd>
+    <dt>Hold to 3:25 PM, vs Nifty</dt><dd class="${cls(dy.ex)}">${pct(dy.ex)}</dd>
+    <dt>Hold to next close, vs Nifty</dt><dd class="${cls(nx.ex)}">${pct(nx.ex)}</dd></dl></div>`}).join("")}
+
+let POP="picks",EX="plan";
+function grid(){if(!BT)return;const F=BT.filters;
+  $("grid").innerHTML=`<tr><th>Rule at the time of entry</th>${BT.checks.map(c=>`<th class="n">${c}</th>`).join("")}</tr>`+
+   Object.keys(F).map(k=>`<tr><td>${F[k]}</td>${BT.checks.map(c=>{const s=(BT.grid[POP][c][k]||{})[EX]||{n:0};
+     return `<td class="n ${s.pass?"hit":""}"><div class="cell"><span class="${cls(s.ex)}">${s.n?pct(s.ex):"–"}</span><small>${s.n} trades${s.n?` · win ${(s.hit*100).toFixed(0)}%`:""}</small></div></td>`}).join("")}</tr>`).join("");
+  ["picks","all"].forEach(k=>$("pop-"+k).setAttribute("aria-pressed",String(k===POP)));["plan","day","next"].forEach(k=>$("ex-"+k).setAttribute("aria-pressed",String(k===EX)))}
+["picks","all"].forEach(k=>$("pop-"+k).onclick=()=>{POP=k;grid()});["plan","day","next"].forEach(k=>$("ex-"+k).onclick=()=>{EX=k;grid()});
+
+function passing(){if(!BT)return;const P=BT.passing||[];$("pass-n").textContent=P.length+" of "+(2*3*Object.keys(BT.filters).length*3);
+  $("pass-n").className="pill "+(P.length?"pass":"fail");
+  const EXN={plan:"stop / target",day:"hold to 3:25",next:"next close"};
+  $("passing").innerHTML=P.length?`<tr><th>Stocks</th><th>Time</th><th>Rule</th><th>Exit</th><th class="n">Trades</th><th class="n">Avg vs Nifty</th><th class="n">Win</th><th class="n">t</th><th class="n">Halves</th></tr>`+
+   P.slice(0,15).map(b=>`<tr><td>${b.pop==="picks"?"Desk picks":"All Nifty 500"}</td><td class="mono">${b.ck}</td><td>${BT.filters[b.f]}</td><td>${EXN[b.exit]}</td><td class="n">${b.n}</td><td class="n ${cls(b.ex)}">${pct(b.ex)}</td><td class="n">${(b.hit*100).toFixed(0)}%</td><td class="n">${b.t}</td><td class="n">${pct(b.h1)} / ${pct(b.h2)}</td></tr>`).join("")
+   :`<tr><td class="mute">No rule passed this month. Nothing here is a tested setup yet, so the terminal will not alert on any of them.</td></tr>`}
+
+function watch(){if(!WL){$("wl").innerHTML='<tr><td class="mute">No watchlist file yet.</td></tr>';return}
+  $("wl-asof").textContent="from the "+WL.asof+" close";const N=(BT&&BT.signal_names)||{};
+  $("wl").innerHTML=WL.rows.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">ATR</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Shares</th></tr>`+
+   WL.rows.map(r=>`<tr><td><b>${r.s}</b></td><td style="white-space:normal;min-width:220px">${r.sig.map(s=>N[s]||s).join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n">${fmt(r.atr)}</td>
+   <td class="n down">${fmt(r.c-r.stop_atr*r.atr)}</td><td class="n up">${fmt(r.c+r.tgt_atr*r.atr)}</td><td class="n">${r.qty_rule}</td></tr>`).join("")
+   :`<tr><td class="mute">No stock has a new tested signal for the next session.</td></tr>`}
+
+function trades(){if(!BT)return;const T=(BT.trades||[]).slice(-80).reverse();
+  $("trades").innerHTML=T.length?`<tr><th>Day</th><th>Time</th><th>Stock</th><th class="n">Entry</th><th class="n">Exit</th><th>How</th><th class="n">Shares</th><th class="n">P&amp;L</th><th>Intraday state</th></tr>`+
+   T.map(t=>`<tr><td class="mono">${t.d.slice(5)}</td><td class="mono">${t.ck}</td><td>${t.s}</td><td class="n">${fmt(t.e)}</td><td class="n">${fmt(t.x)}</td><td>${t.why}</td><td class="n">${t.qty}</td><td class="n ${cls(t.pnl)}">${inr(t.pnl)}</td><td class="mute" style="font-size:12px">${t.f.join(", ")||"–"}</td></tr>`).join("")
+   :`<tr><td class="mute">No desk picks in this month.</td></tr>`}
+
+status();markets();checkpoints();grid();passing();watch();trades();
+$("method").textContent=BT?BT.method:"";
+</script>
