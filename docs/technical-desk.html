@@ -908,7 +908,14 @@ function deskSum(){const el=$("deskSum");if(!el)return;const T=D.tp||{},rows=T.r
   const cap=((T.cfg||{}).capital)||100000,ml=((T.cfg||{}).max_loss)||1000;
   const risk=go?pass.reduce((a,r)=>a+ml,0):0;
   const wl=go?pass:near;
-  const watch=wl.length?`<h2 style="margin:14px 0 0">${go?"Trades":"Watch, not trade"}</h2><div class="watch">${wl.map(r=>`<button class="chip" data-s="${esc(r[0])}"><b>${esc(r[0])}</b> ${r[8]}/${r[9]}${r[8]<r[9]&&(r[10]||[]).length?`<span class="miss">missing: ${esc(String(r[10][0]).split(":")[0])}</span>`:""}</button>`).join("")}</div>`:"";
+  const chipR=r=>`<button class="chip" data-s="${esc(r[0])}"><b>${esc(r[0])}</b> ${r[8]}/${r[9]}${r[8]<r[9]&&(r[10]||[]).length?`<span class="miss">missing: ${esc(String(r[10][0]).split(":")[0])}</span>`:""}</button>`;
+  const NV=D.nval||{},inv=Object.keys(NV).filter(s=>/BELOW/.test(String(((NV[s]||{}).val||{}).verdict||""))).sort((a,b)=>NV[a].val.gap-NV[b].val.gap).slice(0,10);
+  const wOnly=near.filter(r=>r[8]<r[9]);
+  const SEC={trade:{t:"Trade",n:pass.length,h:pass.length?pass.map(chipR).join(""):`<p class="note">No stock clears all ${n9} checks today. Nothing to trade.</p>`},
+    invest:{t:"Invest",n:inv.length,h:inv.length?inv.map(s=>`<button class="chip" data-s="${esc(s)}"><b>${esc(s)}</b> priced ${Math.round(-NV[s].val.gap*100)}% below its growth<span class="miss" style="color:var(--mute)">P/E ${num(NV[s].val.pe,1)}</span></button>`).join(""):`<p class="note">No stock is priced below its delivered growth.</p>`},
+    watch:{t:"Watch",n:wOnly.length,h:wOnly.length?wOnly.map(chipR).join(""):`<p class="note">Nothing close to a setup.</p>`}};
+  const cur=(window.TIW&&SEC[window.TIW])?window.TIW:pass.length?"trade":"watch";
+  const watch=`<div class="tiw" style="display:flex;gap:8px;margin-top:14px">${Object.entries(SEC).map(([k,v])=>`<button class="chip${k===cur?" on":""}" data-k="${k}" style="flex:1;font-size:15px;padding:10px 6px;font-weight:700">${v.t} <span style="opacity:.8">${v.n}</span></button>`).join("")}</div><div class="watch">${SEC[cur].h}</div>`;
   const st=(ok,t)=>`<span style="color:var(${ok===true?"--up":ok===false?"--down":"--mute"});font-weight:700">${t}</span>`;
   const eng=[["Market",st(D.regimeUp!==false,D.regimeUp===false?"weak":"rising"),live],
     ["Trade plans",st(pass.length>0,`${pass.length} of ${rows.length} pass`),top?`top miss: ${top}`:""],
@@ -919,7 +926,7 @@ function deskSum(){const el=$("deskSum");if(!el)return;const T=D.tp||{},rows=T.r
   <p class="riskl">Capital ₹${num(cap,0)} · max loss ₹${num(ml,0)} per trade · at risk today ₹${num(risk,0)}</p>
   ${watch}
   <details style="margin-top:12px"><summary class="note">How every engine voted</summary><div style="overflow-x:auto"><table id="deskSumT">${eng.map(([a,b,c])=>`<tr><td><b>${a}</b></td><td>${b}</td><td class="note">${c}</td></tr>`).join("")}</table></div></details>`;
-  el.onclick=e=>{const b=e.target.closest("button[data-s]");if(!b)return;tab("analyze");show(b.dataset.s)}}
+  el.onclick=e=>{const k=e.target.closest("button[data-k]");if(k){window.TIW=k.dataset.k;deskSum();return}const b=e.target.closest("button[data-s]");if(!b)return;tab("analyze");show(b.dataset.s)}}
 function evStrip(sym){const el=$("evStrip");if(!el||!sym)return;const p=(D.tpp||{})[sym],x=(D.rlp||{})[sym]||{},q=typeof LIVE!=="undefined"?LIVE.eq[sym]:null;
   const bits=[];
   if(q&&q.ltp)bits.push(`Live ₹${num(q.ltp,2)}`);
