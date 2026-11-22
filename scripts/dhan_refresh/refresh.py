@@ -479,9 +479,9 @@ def main(argv=None) -> int:
         return 2
     import requests
     now = session_clock(dt.datetime.now(IST))
-    if now.weekday() >= 5:
-        print("weekend; nothing to do")
-        return 0
+    if now.weekday() >= 5:  # weekend run: catch up to Friday's close instead of doing nothing
+        now = (now - dt.timedelta(days=now.weekday() - 4)).replace(hour=23, minute=59, second=0, microsecond=0)
+        print(f"weekend; refreshing up to Friday {now.date()}")
     try:
         token = login(cid, pin, sec)
         scrip = requests.get(SCRIP_MASTER, timeout=60).text
