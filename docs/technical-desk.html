@@ -115,6 +115,12 @@ tr:hover td{background:var(--soft)}
 #livenote b{font-weight:700}
 @media (max-width:520px){.tiles{grid-template-columns:1fr 1fr;gap:8px}.tile{padding:8px 10px}.tile .v{font-size:17px}
  h1{font-size:20px}header{padding-block:8px 6px;gap:6px}header .sub{font-size:12px;line-height:1.4}.tab{padding:7px 14px;min-height:36px}}
+.vbar{border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between;color:#fff;background:var(--down)}
+.vbar.go{background:var(--up)}.vbar.stale{background:var(--warn)}
+.vbar .vh{font-size:1.55rem;font-weight:800;letter-spacing:.02em}.vbar .vr{font-size:.98rem;opacity:.95}.vbar .vd{font-size:.82rem;opacity:.85}
+.riskl{font-size:.9rem;color:var(--mute);margin:8px 2px 0}
+.watch{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.watch button{text-align:left;line-height:1.25}.watch .miss{display:block;font-size:.75rem;color:var(--down)}
+.foot{font-size:.78rem;color:var(--mute);text-align:center;padding:14px 0 6px}
 </style>
 <div class="wrap">
 <header>
@@ -125,9 +131,10 @@ tr:hover td{background:var(--soft)}
 </header>
 
 <section id="screener" class="wrap" style="gap:10px">
-  <details class="dd" id="dd-mkts" open><summary><span class="ddt">Markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts"></div><p class="note" id="mktnote"></p></div></details>
   <div class="pnl" id="deskSum"></div>
-  <div class="pnl" id="research"><div class="row" style="justify-content:space-between"><h2>Research screener · all Nifty 500</h2><span class="cnt" id="n-research"></span></div>
+  <div class="tiles" id="mkts"></div>
+  <details class="dd" id="dd-mkts"><summary><span class="ddt">More markets</span><span class="cnt" id="n-mkts"></span></summary><div class="ddb"><div class="tiles" id="mkts2"></div><p class="note" id="mktnote" hidden></p></div></details>
+  <div class="pnl" id="research"><div class="row" style="justify-content:space-between"><h2>Screener · Nifty 500</h2><span class="cnt" id="n-research"></span></div>
     <p class="note basisline" id="b-research"></p>
     <div class="row" id="presets" role="group" aria-label="Screens"></div>
     <div class="row filt">
@@ -139,8 +146,8 @@ tr:hover td{background:var(--soft)}
     <div class="tw"><table id="rsT"></table></div>
     <div class="row"><button class="chip" id="rsMore" hidden>Show more</button><span class="note" id="rsNote"></span></div>
   </div>
-  <div class="row" style="justify-content:space-between"><p class="note" style="margin:0">Tap a section to open it. Tap any stock for its chart and full analysis.</p><button class="chip" id="ddall">Open all</button></div>
-  <details class="dd" id="dd-rsum" open><summary><span class="ddt">Research screener: today's top evidence</span><span class="cnt" id="n-rsum"></span></summary><div class="ddb">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">More</h2><button class="chip" id="ddall">Open all</button></div>
+  <details class="dd" id="dd-rsum" hidden><summary><span class="ddt">Research screener: today's top evidence</span><span class="cnt" id="n-rsum"></span></summary><div class="ddb">
     <div class="tw"><table id="rsSum"></table></div>
     <div class="row"><button class="chip on" data-goto="research">Go to the full research screener ↑</button><span class="note">12 screens and filters across the Nifty 500</span></div>
   </div></details>
@@ -156,6 +163,7 @@ tr:hover td{background:var(--soft)}
   <details class="dd" id="dd-quant"><summary><span class="ddt">Portfolio and pairs (Nifty 50)</span><span class="cnt" id="n-quant"></span></summary><div class="ddb"><div class="cards"><div><h3>Markowitz</h3><div id="front"></div><div id="wts"></div></div><div><h3>Walk-forward test and portfolio VaR</h3><div id="wf"></div></div></div><h3>Pairs and mean reversion</h3><div id="pairsS"></div><div class="cards"><div class="tw"><table id="pairsT"></table></div><div id="pairChart"></div></div></div></details>
   <details class="dd" id="dd-board"><summary><span class="ddt">Full back-test scoreboards</span><span class="cnt" id="n-board"></span></summary><div class="ddb"><div class="tw"><table id="board"></table></div><div class="tw" style="margin-top:10px"><table id="aboard"></table></div><div class="tw" style="margin-top:10px"><table id="sboard"></table></div><p class="note" id="boardnote"></p></div></details>
   <details class="dd" id="dd-fresh"><summary><span class="ddt">Data freshness check</span><span class="cnt" id="n-fresh"></span></summary><div class="ddb"><div class="tw"><table id="fresh"></table></div><p class="note">Green: from the latest trading session. Amber: older than that. Every section above is rebuilt from these files on each publish.</p></div></details>
+  <p class="foot">Research, not advice. Trades are placed by hand.</p>
 </section>
 
 
@@ -259,7 +267,7 @@ const tested=Object.keys(sig).filter(k=>sig[k][flag]&&!WARN.includes(k)&&!DIPS.i
 const dipsOk=DIPS.filter(k=>(sig[k]||{})[flag]);
 const bySym={};(D.board.rows||[]).forEach(r=>bySym[r.s]=r);
 const today=D.today.stocks||{};
-$("asof").textContent=`${D.live_t?"Live Dhan prices "+D.live_t.slice(11,16)+" IST · ":""}Dhan data to ${D.today.asof||"?"} · market ${D.regimeUp===false?"weak (Nifty below its 200-day)":"rising (Nifty above its 200-day)"} · ${D.flow&&D.flow.t?"live order flow "+D.flow.t+" IST":"no live session"}`;
+$("asof").textContent=`${D.live_t?"Live "+D.live_t.slice(11,16)+" IST · ":""}Data to ${D.today.asof||"?"} · market ${D.regimeUp===false?"weak":"rising"}`;
 
 /* ---------- charts (one scale per chart; labels from tokens) ---------- */
 function hbars(rows,{w=300,rowH=11,fmt=v=>num(v,0),mark}={}){ // rows: [label, value, cls]
@@ -298,6 +306,9 @@ function mktTiles(){const m=D.markets||{},tiles=[];
   Object.entries(D.usq||{}).filter(([s])=>!D.usmain||D.usmain.includes(s)).forEach(([s,q])=>tiles.push([s+" (US, Dhan)",num(q.price,2),q.prev?q.price/q.prev-1:null]));
   const fd=(D.nf||{}).fiidii||{},fdd=Object.keys(fd).sort().pop();
   if(fdd){["FII","DII"].forEach(k=>{if(fd[fdd][k])tiles.push([`${k} net, ${fdd.slice(5)} (₹ Cr)`,num(fd[fdd][k].net,0),fd[fdd][k].net>0?1e-9:-1e-9])})}
+  const T_=([k,v,c])=>`<div class="tile"><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d ${cls(c)}">${c!=null&&Math.abs(c)<1e-6?(c>0?"net buying":"net selling"):pc(c,2)}</div></div>`;
+  const key=tiles.filter(t=>/^(Nifty 50|Nifty Bank|India VIX|FII net)/.test(t[0])),rest=tiles.filter(t=>!key.includes(t));
+  $("mkts").innerHTML=key.map(T_).join("");if($("mkts2"))$("mkts2").innerHTML=rest.map(T_).join("");return;
   $("mkts").innerHTML=tiles.map(([k,v,c])=>`<div class="tile"><div class="k">${esc(k)}</div><div class="v">${v}</div><div class="d ${cls(c)}">${c!=null&&Math.abs(c)<1e-6?(c>0?"net buying":"net selling"):pc(c,2)}</div></div>`).join("");
 }
 function screener(){
@@ -357,7 +368,7 @@ function evChips(x){
   const w=x.warn.map(k=>`<span class="ev w">${esc(NM(k))}</span>`);
   const f=Object.entries(x.fq||{}).filter(([,q])=>q>=4).map(([k])=>`<span class="ev t">${esc(k)} top 40%</span>`);
   const tested=[...t,...i,...f].filter(c=>c.includes('ev t')),ctx_=[...t,...i].filter(c=>c.includes('ev u'));
-  const all=[...tested,...w,...ctx_.slice(0,2)];if(ctx_.length>2)all.push(`<span class="sm">+${ctx_.length-2} more</span>`);
+  const pool=[...tested,...w,...ctx_],all=pool.slice(0,3);if(pool.length>3)all.push(`<span class="sm">+${pool.length-3}</span>`);
   return all.join("")||'<span class="sm">none</span>';
 }
 function flowCell(x){if(!x.vwap&&x.buy==null)return'<span class="sm">–</span>';const up=x.vwap==="above";return `<span class="${up?"good":"bad"}">${up?"above":"below"} VWAP</span><div class="sm">${x.buy!=null?"buyers "+Math.round(x.buy*100)+"%":""}${x.auction?" · "+esc(String(x.auction).replace("yesterday's value","value").slice(0,34)):""}</div>`}
@@ -369,9 +380,9 @@ function research(){
   let rows=list.map(([s,x])=>Object.assign({s},x)).filter(x=>P[3](x)&&(!ind||x.ind===ind)&&(!val||x.value===val)&&(!tr||(tr==="up"?(x.vs200||0)>0:(x.vs200||0)<0))&&(!to||(x.turnover_cr||0)>=10));
   rows.sort(P[4]);
   cnt("research",rows.length);
-  $("b-research").innerHTML=`<b>${esc(P[1])}</b>: ${esc(P[2])}. <span class="ev t">green</span> passed a back-test · <span class="ev u">dashed</span> context only · <span class="ev w">red</span> tested warning. <details style="display:inline"><summary class="note" style="display:inline;font-weight:400">How the score works</summary><span class="note">${esc((D.rs||{}).method||"")}</span></details>`;
-  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th>Order flow (last session)</th><th class="n">P/E</th><th class="n">ROCE</th><th>Last results</th><th class="n">FII Δ</th><th>3-month move: why</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button>${((D.nf||{}).events||{})[x.s]?` <span class="ev w" title="${esc(D.nf.events[x.s].map(e=>e.d+" "+e.p).join("; "))}">event ${esc(D.nf.events[x.s][0].d.slice(5))}</span>`:""}<div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td style="min-width:120px">${flowCell(x)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td style="min-width:110px">${resCell(x.s)}</td><td class="n ${cls(x.d_fii)}">${x.d_fii!=null?(x.d_fii>0?"+":"")+num(x.d_fii,1):"–"}</td><td style="min-width:170px">${whyCell(x)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
-  $("rsMore").hidden=rows.length<=LIM;$("rsNote").textContent=rows.length?`showing ${Math.min(LIM,rows.length)} of ${rows.length}; data ${esc((D.rs||{}).asof||"")}, Dhan fundamentals ${esc((D.rs||{}).fund_asof||"")}`:"";
+  $("b-research").innerHTML="";if(0)$("b-research").innerHTML=`<b>${esc(P[1])}</b>: ${esc(P[2])}. <span class="ev t">green</span> passed a back-test · <span class="ev u">dashed</span> context only · <span class="ev w">red</span> tested warning. <details style="display:inline"><summary class="note" style="display:inline;font-weight:400">How the score works</summary><span class="note">${esc((D.rs||{}).method||"")}</span></details>`;
+  $("rsT").innerHTML=rows.length?`<tr><th>Stock</th><th class="n">Score</th><th>Evidence</th><th class="n">3m vs Nifty</th><th class="n">P/E</th><th class="n">ROCE</th><th>Last results</th></tr>`+rows.slice(0,LIM).map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button>${((D.nf||{}).events||{})[x.s]?` <span class="ev w" title="${esc(D.nf.events[x.s].map(e=>e.d+" "+e.p).join("; "))}">event ${esc(D.nf.events[x.s][0].d.slice(5))}</span>`:""}<div class="sm">${esc((x.ind||"").slice(0,22))}</div></td><td class="n ${x.score>0?"good":x.score<0?"bad":""}">${x.score}</td><td style="min-width:150px">${evChips(x)}</td><td class="n ${cls(x.rs3)}">${pc(x.rs3,0)}</td><td class="n">${valCell(x)}</td><td class="n">${x.roce!=null?num(x.roce,0)+"%":"–"}</td><td style="min-width:110px">${resCell(x.s)}</td></tr>`).join(""):`<tr><td class="note">No stock matches these filters today.</td></tr>`;
+  $("rsMore").hidden=rows.length<=LIM;$("rsNote").textContent=rows.length?`${Math.min(LIM,rows.length)} of ${rows.length}`:"";
 }
 function researchSummary(){
   const rows=Object.entries(RS).filter(([s,x])=>x.score>0&&(x.turnover_cr||0)>=10).sort((a,b)=>b[1].score-a[1].score).slice(0,8);
@@ -876,7 +887,7 @@ async function livePoll(mcp){if(LIVE.busy)return;LIVE.busy=true;
     if(!LIVE.ok||Date.now()-LIVE.at>120000)liveNote(`LIVE off (${esc(why)}) · showing nightly prices`)}
   finally{LIVE.busy=false}}
 (async()=>{let mcp=null;try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}
-  if(!mcp){liveNote("Live prices need the desk opened in Claude with the GitHub connector · showing nightly prices");return}
+  if(!mcp){liveNote("");return}
   liveNote("LIVE connecting…");
   const loop=async()=>{if(!document.hidden)await livePoll(mcp);setTimeout(loop,mktOpen()?5000:60000)};loop()})();
 
@@ -889,21 +900,25 @@ function deskSum(){const el=$("deskSum");if(!el)return;const T=D.tp||{},rows=T.r
   const chip=(ok,t)=>`<span class="tag" style="color:var(${ok===true?"--up":ok===false?"--down":"--mute"})">${t}</span>`;
   const live=typeof LIVE!=="undefined"&&LIVE.ok&&LIVE.t?"live "+esc(String(LIVE.t).slice(11,16))+" IST":D.live_t?"live "+esc(D.live_t.slice(11,16))+" IST":"nightly close";
   const line=(name,src,st,body)=>`<tr><td><b>${name}</b><div class="note">${src}</div></td><td>${st}</td><td>${body}</td></tr>`;
-  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Evidence Desk today</h2><span class="basis">${esc(T.asof?"close of "+T.asof:"")}</span></div>
-  <p class="note">One answer from every engine on the desk. A trade needs all of them to agree; when one says no, it says why.</p>
-  <div style="overflow-x:auto"><table id="deskSumT"><tr><th>Engine (skill it came from)</th><th>Status</th><th>What it says today</th></tr>
-  ${line("Market","Technical desk + Dhan live feed",chip(true,live),`Nifty is ${D.regimeUp===false?"below":"above"} its 200-day average: market <b>${D.regimeUp===false?"weak":"rising"}</b>.`)}
-  ${line("Trade plans","nse-day-trader, trader-entry, -exit, -timemachine, -budget, -risk",T.asof?chip(pass.length>0,pass.length+" of "+rows.length+" pass"):chip(null,"not run yet"),
-     rows.length?(pass.length?`${pass.length} plans clear all ${rows[0][9]} checks. `:`No stock clears every check. `)+(top?`Most common reason: ${top}.`:""):"No tested setup today.")}
-  ${line("Proof: many-ideas test","quant-toolkit (arch: bootstrap, SPA/StepM)",ks.length?chip(surv>0,surv+" of "+ks.length+" survive"):chip(null,"Saturday"),
-     ks.length?(surv?`${surv} signals still look real after correcting for testing ${ks.length} at once.`:`None of the ${ks.length} signals survives once you correct for testing many at once, so the desk calls no trades. That is the honest result, not a fault.`):"Runs on Saturdays.")}
-  ${line("Proof: risk forecasts","quant-toolkit (GARCH, VaR, MAPIE)",R.asof?chip(true,(R.n_vol||0)+" stocks"):chip(null,"not run yet"),
-     R.asof?`Volatility forecast for ${R.n_vol||0} stocks. ${vn?esc(String(vn).replace(/^var:\s*/,"VaR check: ").split("(")[0].trim()+"."):""}${C.coverage_measured!=null?` 21-day ranges held ${Math.round(C.coverage_measured*100)}% of the time (aim ${Math.round((C.coverage_target||0.9)*100)}%).`:""}`:"Not computed yet.")}
-  ${line("Proof: machine-found formula","pysr (symbolic regression)",F.verdict?chip(F.verdict==="beats_score",F.verdict==="beats_score"?"beats score":"score stays"):chip(null,"Saturday"),
-     F.verdict?(F.verdict==="beats_score"?`A formula beat the hand-written score out of sample: <code>${esc((F.chosen||{}).equation||"")}</code>.`:`The best formula (<code>${esc((F.chosen||{}).equation||"")}</code>) did not beat the hand-written score, so the score stays.`):"First search runs this Saturday.")}
-  </table></div>
-  ${near.length?`<p class="note" style="margin-top:8px">Closest to a trade (most checks passed): ${near.map(r=>`<button class="chip" data-s="${esc(r[0])}">${esc(r[0])} ${r[8]}/${r[9]}</button>`).join(" ")}</p>`:""}
-  <p class="note">Research software, not advice. Place any trade by hand; this desk never sends orders.</p>`;
+  const stale=T.asof&&D.fresh&&D.fresh.session&&String(T.asof).slice(0,10)<String(D.fresh.session).slice(0,10);
+  const go=pass.length>0&&!stale,n9=rows.length?rows[0][9]:7;
+  const head=stale?"DATA STALE · NO TRADE":go?`TRADE · ${pass.length} setup${pass.length>1?"s":""}`:"NO TRADE TODAY";
+  const reason=stale?"Trade plans are older than the latest data.":go?`${pass.map(r=>esc(r[0])).join(", ")} clear all ${n9} checks.`
+    :!rows.length?"No tested setup fired.":ks.length&&!surv?`0 of ${rows.length} plans pass · 0 of ${ks.length} signals survive the many-ideas test`:`0 of ${rows.length} plans pass all ${n9} checks`;
+  const cap=((T.cfg||{}).capital)||100000,ml=((T.cfg||{}).max_loss)||1000;
+  const risk=go?pass.reduce((a,r)=>a+ml,0):0;
+  const wl=go?pass:near;
+  const watch=wl.length?`<h2 style="margin:14px 0 0">${go?"Trades":"Watch, not trade"}</h2><div class="watch">${wl.map(r=>`<button class="chip" data-s="${esc(r[0])}"><b>${esc(r[0])}</b> ${r[8]}/${r[9]}${r[8]<r[9]&&(r[10]||[]).length?`<span class="miss">missing: ${esc(String(r[10][0]).split(":")[0])}</span>`:""}</button>`).join("")}</div>`:"";
+  const st=(ok,t)=>`<span style="color:var(${ok===true?"--up":ok===false?"--down":"--mute"});font-weight:700">${t}</span>`;
+  const eng=[["Market",st(D.regimeUp!==false,D.regimeUp===false?"weak":"rising"),live],
+    ["Trade plans",st(pass.length>0,`${pass.length} of ${rows.length} pass`),top?`top miss: ${top}`:""],
+    ["Many-ideas test",ks.length?st(surv>0,`${surv} of ${ks.length} survive`):st(null,"pending"),""],
+    ["Risk forecasts",R.asof?st(true,`${R.n_vol||0} stocks`):st(null,"pending"),C.coverage_measured!=null?`ranges held ${Math.round(C.coverage_measured*100)}%`:""],
+    ["Formula search",F.verdict?st(F.verdict==="beats_score",F.verdict==="beats_score"?"beats score":"score stays"):st(null,"pending"),""]];
+  el.innerHTML=`<div class="vbar ${stale?"stale":go?"go":""}"><span class="vh">${head}</span><span class="vr">${reason}</span><span class="vd">${esc(T.asof?"close "+T.asof:"")}</span></div>
+  <p class="riskl">Capital ₹${num(cap,0)} · max loss ₹${num(ml,0)} per trade · at risk today ₹${num(risk,0)}</p>
+  ${watch}
+  <details style="margin-top:12px"><summary class="note">How every engine voted</summary><div style="overflow-x:auto"><table id="deskSumT">${eng.map(([a,b,c])=>`<tr><td><b>${a}</b></td><td>${b}</td><td class="note">${c}</td></tr>`).join("")}</table></div></details>`;
   el.onclick=e=>{const b=e.target.closest("button[data-s]");if(!b)return;tab("analyze");show(b.dataset.s)}}
 function evStrip(sym){const el=$("evStrip");if(!el||!sym)return;const p=(D.tpp||{})[sym],x=(D.rlp||{})[sym]||{},q=typeof LIVE!=="undefined"?LIVE.eq[sym]:null;
   const bits=[];

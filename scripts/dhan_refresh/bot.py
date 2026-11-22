@@ -25,11 +25,11 @@ STATUS = {"lead": "a leader", "improve": "improving", "neutral": "neutral", "fad
 
 DESK_URL = "https://claude.ai/artifact/QHCtbgKuHA17eSSS4zbd9h"
 TERMINAL_URL = "https://claude.ai/artifact/JBe9w1vLcwPQFyfmYHoRDz"
-LINKS = (f'📌 <b>Your trading desks</b>\n<a href="{DESK_URL}">Technical Desk</a>: screener, then Analyze for any stock '
-         f'(technical, value, combined verdict and fit with your portfolio).\n<a href="{TERMINAL_URL}">NSE Terminal</a>: '
-         "markets, sectors and valuations.\nOpen while signed in to claude.ai. Prices from Dhan.")
+LINKS = (f'📌 <b>Evidence Desk</b>\n<a href="{DESK_URL}">Open the desk</a>: today\'s verdict (trade or no trade), '
+         "the watch list, Nifty, Bank Nifty, VIX and FII flows, and the Nifty 500 screener. Tap any stock for its full analysis.\n"
+         "Open while signed in to claude.ai.")
 
-MENU = [("desk", "Open the Technical Desk and NSE Terminal"), ("review", "What am I missing? Your research journal checked against the desk"), ("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
+MENU = [("desk", "Open the Evidence Desk"), ("review", "What am I missing? Your research journal checked against the desk"), ("flow", "Order flow and auction levels: flow TCS"), ("options", "Option OI, expected move and gamma: options NIFTY"),
         ("rising", "Turning bullish: tested breakout signals, with value"), ("dips", "Proven stocks after a sharp fall (tested)"),
         ("bargains", "Blue chips now cheap, India and US"), ("portfolio", "Markowitz portfolios (Nifty 50)"), ("pairs", "Pairs trading scan"), ("markets", "Commodities, USD/INR and the day's movers with news"), ("record", "Live track record of the bot's picks"), ("alert", "Your alerts (alert TCS above 3450 to add)")]
 DESCRIPTION = ("Your NSE terminal. Prices from Dhan.\n"
@@ -996,8 +996,14 @@ def pin_links() -> str:
     """Pin the desk links in the owner's chat, once: skipped when the pinned message already carries them."""
     chat = T.call("getChat", chat_id=T.chat_id())
     pinned = (chat.get("pinned_message") or {})
-    if DESK_URL in str(pinned.get("text", "")) + str(pinned.get("entities", "")):
+    text = str(pinned.get("text", ""))
+    if DESK_URL in text + str(pinned.get("entities", "")) and "Evidence Desk" in text and "NSE Terminal" not in text:
         return "links already pinned"
+    if pinned.get("message_id"):                       # the old pin listed the retired NSE Terminal: take it down first
+        try:
+            T.call("unpinChatMessage", chat_id=T.chat_id(), message_id=pinned["message_id"])
+        except Exception:
+            pass
     m = T.call("sendMessage", chat_id=T.chat_id(), text=LINKS, parse_mode="HTML", disable_web_page_preview=True)
     T.call("pinChatMessage", chat_id=T.chat_id(), message_id=m["message_id"], disable_notification=True)
     return "links pinned"

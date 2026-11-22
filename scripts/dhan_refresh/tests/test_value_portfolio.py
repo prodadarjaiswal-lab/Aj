@@ -170,13 +170,15 @@ def test_pin_links_once(monkeypatch):
     def fake(method, **kw):
         calls.append(method)
         if method == "getChat":
-            return {"pinned_message": {"text": "x", "entities": [{"url": B.DESK_URL}]}} if len(calls) > 3 else {}
+            if len(calls) > 4:
+                return {"pinned_message": {"message_id": 7, "text": "Evidence Desk", "entities": [{"url": B.DESK_URL}]}}
+            return {"pinned_message": {"message_id": 3, "text": "Technical Desk NSE Terminal", "entities": [{"url": B.DESK_URL}]}}
         if method == "sendMessage":
             return {"message_id": 7}
         return True
     monkeypatch.setattr(B.T, "call", fake)
     monkeypatch.setattr(B.T, "chat_id", lambda: "1")
-    assert B.pin_links() == "links pinned" and calls == ["getChat", "sendMessage", "pinChatMessage"]
+    assert B.pin_links() == "links pinned" and calls == ["getChat", "unpinChatMessage", "sendMessage", "pinChatMessage"]
     assert B.pin_links() == "links already pinned"
 
 
