@@ -1,8 +1,6 @@
 name: All NSE stocks (Dhan)
 
 on:
-  schedule:
-    - cron: "17 14 * * 1-5"    # 19:47 IST, after the nightly refresh
   workflow_dispatch: {}
 
 permissions:

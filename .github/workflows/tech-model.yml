@@ -2,8 +2,6 @@ name: Technical model back-test
 
 on:
   # Runs daily inside the nightly refresh (same Dhan login). This file is for a manual run and a Saturday catch-up.
-  schedule:
-    - cron: "40 3 * * 6"     # Saturdays 09:10 IST
   workflow_dispatch: {}
 
 permissions:

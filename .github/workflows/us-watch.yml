@@ -1,9 +1,6 @@
 name: US stock alerts
 
 on:
-  schedule:
-    - cron: "25 13 * * 1-5"   # 13:25 UTC: before the 09:30 New York open in summer and winter; runs up to 5 h 45 m
-    - cron: "15 19 * * 1-5"   # 19:15 UTC: picks up and runs to the 16:00 New York close
   workflow_dispatch:
     inputs:
       mode:

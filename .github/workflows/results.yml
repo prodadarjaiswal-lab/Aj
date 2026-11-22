@@ -1,8 +1,6 @@
 name: Quarterly results (NSE XBRL)
 
 on:
-  schedule:
-    - cron: "17 2 * * 3,6"     # Wednesday and Saturday 07:47 IST; incremental, so later runs are short
   workflow_dispatch: {}
 
 permissions:
