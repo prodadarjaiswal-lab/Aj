@@ -43,5 +43,27 @@
    "no longer passes in rising markets: Volume breakout above the 20-day high (existing setup)",
    "now passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
   ]
+ },
+ {
+  "asof": "2026-11-20",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "volbreak",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [
+   "gap",
+   "os14"
+  ],
+  "changes": [
+   "now passes in rising markets: Volume breakout above the 20-day high (existing setup)",
+   "no longer passes in weak markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
+   "no longer passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
+  ]
  }
 ]

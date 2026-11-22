@@ -1,135 +1,135 @@
 {
- "asof": "2026-11-17 12:14",
+ "asof": "2026-11-20 23:59",
  "source": "Dhan",
  "futures": {
   "GOLD": {
    "name": "Gold (MCX, Rs/10 g)",
    "contract": "GOLD-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 134820.0,
-   "prev": 134539.0,
-   "chg": 0.00209,
-   "oi": 15579,
-   "high": 135341,
-   "low": 134520
+   "ltp": 121949.0,
+   "prev": 121778.0,
+   "chg": 0.0014,
+   "oi": 11511,
+   "high": 123975,
+   "low": 121424
   },
   "SILVER": {
    "name": "Silver (MCX, Rs/kg)",
    "contract": "SILVER-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 169408.0,
-   "prev": 167863.0,
-   "chg": 0.0092,
-   "oi": 16765,
-   "high": 171025,
-   "low": 167936
-  },
-  "CRUDEOIL": {
-   "name": "Crude oil (MCX, Rs/bbl)",
-   "contract": "CRUDEOIL-19NOV2026-FUT",
-   "expiry": "2026-11-19",
-   "ltp": 7933.0,
-   "prev": 8079.0,
-   "chg": -0.01807,
-   "oi": 10769,
-   "high": 7989,
-   "low": 7927
+   "ltp": 148900.0,
+   "prev": 147813.0,
+   "chg": 0.00735,
+   "oi": 14455,
+   "high": 153100,
+   "low": 146868
   },
   "NATURALGAS": {
    "name": "Natural gas (MCX, Rs/mmBtu)",
    "contract": "NATURALGAS-24NOV2026-FUT",
    "expiry": "2026-11-24",
-   "ltp": 291.3,
-   "prev": 294.4,
-   "chg": -0.01053,
-   "oi": 33194,
-   "high": 292.3,
-   "low": 289
+   "ltp": 306.3,
+   "prev": 306.6,
+   "chg": -0.00098,
+   "oi": 10560,
+   "high": 311,
+   "low": 292.2
+  },
+  "CRUDEOIL": {
+   "name": "Crude oil (MCX, Rs/bbl)",
+   "contract": "CRUDEOIL-18DEC2026-FUT",
+   "expiry": "2026-12-18",
+   "ltp": 7720.0,
+   "prev": 7807.0,
+   "chg": -0.01114,
+   "oi": 8866,
+   "high": 7787,
+   "low": 7508
   },
   "COPPER": {
    "name": "Copper (MCX, Rs/kg)",
    "contract": "COPPER-30NOV2026-FUT",
    "expiry": "2026-11-30",
-   "ltp": 1277.4,
-   "prev": 1283.25,
-   "chg": -0.00456,
-   "oi": 7304,
-   "high": 1286.15,
-   "low": 1273
+   "ltp": 1154.0,
+   "prev": 1152.9,
+   "chg": 0.00095,
+   "oi": 4987,
+   "high": 1180,
+   "low": 1141.45
   }
  },
  "news": {},
  "movers": [
   {
-   "s": "KAYNES",
-   "r1": -0.1312,
-   "last": 2980.0,
+   "s": "MTARTECH",
+   "r1": -0.057,
+   "last": 5614.5,
    "headlines": []
   },
   {
-   "s": "RHIM",
-   "r1": -0.0957,
-   "last": 330.15,
+   "s": "PFOCUS",
+   "r1": -0.0541,
+   "last": 252.7,
    "headlines": []
   },
   {
-   "s": "TMPV",
-   "r1": -0.087,
-   "last": 262.4,
+   "s": "IIFL",
+   "r1": -0.0504,
+   "last": 611.95,
    "headlines": []
   },
   {
-   "s": "LAURUSLABS",
-   "r1": -0.0842,
-   "last": 2220.0,
+   "s": "STLTECH",
+   "r1": -0.05,
+   "last": 621.85,
    "headlines": []
   },
   {
-   "s": "PREMIERENE",
-   "r1": -0.0819,
-   "last": 822.5,
+   "s": "AETHER",
+   "r1": -0.0449,
+   "last": 1620.3,
    "headlines": []
   },
   {
-   "s": "AMBER",
-   "r1": -0.0768,
-   "last": 6252.0,
+   "s": "THANGAMAYL",
+   "r1": -0.0417,
+   "last": 3813.0,
    "headlines": []
   },
   {
-   "s": "BELRISE",
-   "r1": 0.0924,
-   "last": 235.09,
+   "s": "INDUSINDBK",
+   "r1": 0.0859,
+   "last": 1003.0,
    "headlines": []
   },
   {
-   "s": "DEEPAKFERT",
-   "r1": 0.0721,
-   "last": 1352.8,
+   "s": "EIHOTEL",
+   "r1": 0.0779,
+   "last": 334.15,
    "headlines": []
   },
   {
-   "s": "MAXHEALTH",
-   "r1": 0.0663,
-   "last": 1009.9,
+   "s": "NAVA",
+   "r1": 0.063,
+   "last": 563.95,
    "headlines": []
   },
   {
-   "s": "VIJAYA",
-   "r1": 0.0549,
-   "last": 1487.5,
+   "s": "CUB",
+   "r1": 0.0625,
+   "last": 248.8,
    "headlines": []
   },
   {
-   "s": "FORTIS",
-   "r1": 0.0513,
-   "last": 803.2,
+   "s": "WELSPUNLIV",
+   "r1": 0.0618,
+   "last": 268.78,
    "headlines": []
   },
   {
-   "s": "ASAHIINDIA",
-   "r1": 0.0494,
-   "last": 1165.05,
+   "s": "ASTERDM",
+   "r1": 0.0541,
+   "last": 779.3,
    "headlines": []
   }
  ],
@@ -140,17 +140,17 @@
   "news CURRENCY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news GLOBAL: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news INDIAN_ECONOMY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
-  "news KAYNES: /data/newsheadline returned 401: {\"error",
-  "news RHIM: /data/newsheadline returned 401: {\"error",
-  "news TMPV: /data/newsheadline returned 401: {\"error",
-  "news LAURUSLABS: /data/newsheadline returned 401: {\"error",
-  "news PREMIERENE: /data/newsheadline returned 401: {\"error",
-  "news AMBER: /data/newsheadline returned 401: {\"error",
-  "news BELRISE: /data/newsheadline returned 401: {\"error",
-  "news DEEPAKFERT: /data/newsheadline returned 401: {\"error",
-  "news MAXHEALTH: /data/newsheadline returned 401: {\"error",
-  "news VIJAYA: /data/newsheadline returned 401: {\"error",
-  "news FORTIS: /data/newsheadline returned 401: {\"error",
-  "news ASAHIINDIA: /data/newsheadline returned 401: {\"error"
+  "news MTARTECH: /data/newsheadline returned 401: {\"error",
+  "news PFOCUS: /data/newsheadline returned 401: {\"error",
+  "news IIFL: /data/newsheadline returned 401: {\"error",
+  "news STLTECH: /data/newsheadline returned 401: {\"error",
+  "news AETHER: /data/newsheadline returned 401: {\"error",
+  "news THANGAMAYL: /data/newsheadline returned 401: {\"error",
+  "news INDUSINDBK: /data/newsheadline returned 401: {\"error",
+  "news EIHOTEL: /data/newsheadline returned 401: {\"error",
+  "news NAVA: /data/newsheadline returned 401: {\"error",
+  "news CUB: /data/newsheadline returned 401: {\"error",
+  "news WELSPUNLIV: /data/newsheadline returned 401: {\"error",
+  "news ASTERDM: /data/newsheadline returned 401: {\"error"
  ]
 }
