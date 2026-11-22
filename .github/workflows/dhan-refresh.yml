@@ -38,13 +38,19 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: cd scripts/dhan_refresh && python daily_digest.py --send || true
+      - name: Trading Terminal back-test (09:30 / 12:30 / 15:00, last month) and markets board
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python terminal_bt.py || echo "::warning::Terminal back-test failed"
       - name: Commit if changed
         run: |
-          git add -N docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv 2>/dev/null || true
-          if git diff --quiet -- docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
+          git add -N docs/terminal docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv 2>/dev/null || true
+          if git diff --quiet -- docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          for f in docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json; do [ -e "$f" ] && git add "$f"; done
+          for f in docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json; do [ -e "$f" ] && git add "$f"; done
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git pull -q --rebase --autostash -X theirs origin main || { git rebase --abort 2>/dev/null || true; git pull -q --no-rebase --autostash -X ours origin main; }
           git push
