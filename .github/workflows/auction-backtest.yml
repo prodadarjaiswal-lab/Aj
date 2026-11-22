@@ -1,8 +1,6 @@
 name: Auction signals back-test
 
 on:
-  schedule:
-    - cron: "10 4 * * 6"     # Saturdays 09:40 IST
   workflow_dispatch: {}
 
 permissions:
