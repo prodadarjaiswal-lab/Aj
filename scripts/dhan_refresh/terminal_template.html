@@ -185,9 +185,9 @@ function passing(){if(!BT)return;const P=BT.passing||[];$("pass-n").textContent=
    :`<tr><td class="mute">No rule passed this month. Nothing here is a tested setup yet, so the terminal will not alert on any of them.</td></tr>`}
 
 function watch(){if(!WL){$("wl").innerHTML='<tr><td class="mute">No watchlist file yet.</td></tr>';return}
-  $("wl-asof").textContent="from the "+WL.asof+" close";const N=(BT&&BT.signal_names)||{};
+  $("wl-asof").textContent=(WL.rows.length>30?"top 30 of "+WL.rows.length+", ":"")+"from the "+WL.asof+" close";const N=(BT&&BT.signal_names)||{};
   $("wl").innerHTML=WL.rows.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">ATR</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Shares</th></tr>`+
-   WL.rows.map(r=>`<tr><td><b>${r.s}</b></td><td style="white-space:normal;min-width:220px">${r.sig.map(s=>N[s]||s).join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n">${fmt(r.atr)}</td>
+   WL.rows.slice(0,30).map(r=>`<tr><td><b>${r.s}</b></td><td style="white-space:normal;min-width:220px">${r.sig.map(s=>N[s]||s).join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n">${fmt(r.atr)}</td>
    <td class="n down">${fmt(r.c-r.stop_atr*r.atr)}</td><td class="n up">${fmt(r.c+r.tgt_atr*r.atr)}</td><td class="n">${r.qty_rule}</td></tr>`).join("")
    :`<tr><td class="mute">No stock has a new tested signal for the next session.</td></tr>`}
 
