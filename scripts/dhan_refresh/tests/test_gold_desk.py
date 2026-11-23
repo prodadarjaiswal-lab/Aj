@@ -49,3 +49,13 @@ def test_sma_and_rsi():
     a = np.arange(1.0, 31.0)
     assert G.sma(a, 5)[-1] == 28.0
     assert G.rsi(a)[-1] == 100
+
+
+def test_trend_gauge_up_then_down():
+    import datetime as dt
+    d0 = dt.date(2005, 1, 7)
+    px = [100 * 1.003 ** i for i in range(400)] + [100 * 1.003 ** 399 * 0.99 ** i for i in range(1, 60)]
+    rows = [[(d0 + dt.timedelta(weeks=i)).isoformat(), p] for i, p in enumerate(px)]
+    T = G.trend_gauge(rows)
+    assert T["now"] == "below" and T["dist"] < 0
+    assert T["rule"]["maxdd"] > T["hold"]["maxdd"]  # the rule side-steps part of the fall

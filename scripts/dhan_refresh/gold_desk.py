@@ -361,6 +361,57 @@ def projection(c: np.ndarray, LV: dict, ath: float, r: float = 0.065) -> dict:
     return out
 
 
+def trend_gauge(rows: list, k: int = 40, rf: float = 0.065, warm: int = 260) -> dict:
+    """The 40-week trend rule (about 200 trading days, the classic 10-month rule): own gold while the weekly close is
+    above its 40-week average, else cash at rf. Chosen over the value channel, 200-week stretch, gold/silver ratio and
+    real price because only this one had better next-52-week returns when it said OK than when it did not, in both
+    rupee and dollar gold. rows = [[date, price], ...] weekly. Back-test starts after `warm` weeks."""
+    d = [r[0] for r in rows]
+    p = np.array([r[1] for r in rows], float)
+    n = len(p)
+    if n < warm + 60:
+        return {}
+    cs = np.cumsum(np.insert(p, 0, 0))
+    ma = np.full(n, np.nan)
+    ma[k - 1:] = (cs[k:] - cs[:-k]) / k
+    on = p > ma
+    ret = np.r_[p[1:] / p[:-1] - 1, 0.0]
+    w = rf / 52
+    s0 = max(warm, k)
+    r_tr = np.where(on[s0:-1], ret[s0:-1], w)
+    eq_bh, eq_tr = np.cumprod(np.r_[1, 1 + ret[s0:-1]]), np.cumprod(np.r_[1, 1 + r_tr])
+    yrs = (n - 1 - s0) / 52
+    st = lambda e: {"cagr": round(float(e[-1] ** (1 / yrs) - 1), 4), "maxdd": round(float((e / np.maximum.accumulate(e) - 1).min()), 4)}
+    fwd = np.full(n, np.nan)
+    fwd[:-52] = p[52:] / p[:-52] - 1
+    f_on, f_off = fwd[s0:][on[s0:]], fwd[s0:][~on[s0:]]
+    # falls of 15%+ (peak to bottom) and the share of each one the rule side-stepped
+    peak = np.maximum.accumulate(p)
+    eps, j = [], s0
+    while j < n:
+        if p[j] / peak[j] - 1 <= -0.15:
+            a = int(np.flatnonzero(p[:j + 1] == peak[j])[-1])
+            e = j
+            while e < n and p[e] < peak[j]:
+                e += 1
+            b = a + int(np.argmin(p[a:e]))
+            lost = float(np.prod(1 + ret[a:b]))
+            kept = float(np.prod(np.where(on[a:b], 1 + ret[a:b], 1 + w)))
+            eps.append({"peak": d[a], "bottom": d[b], "fall": round(lost - 1, 4), "rule": round(kept - 1, 4)})
+            j = e
+        else:
+            j += 1
+    flips = [i for i in range(s0 + 1, n) if on[i] != on[i - 1]]
+    last = flips[-1] if flips else s0
+    return {"now": "above" if on[-1] else "below", "px": round(float(p[-1]), 2), "ma": round(float(ma[-1]), 2),
+            "dist": round(float(p[-1] / ma[-1] - 1), 4), "since": d[last], "weeks": n - 1 - last,
+            "from": d[s0], "to": d[-1], "hold": st(eq_bh), "rule": st(eq_tr), "trades": len(flips),
+            "out_share": round(float(1 - on[s0:].mean()), 3),
+            "fwd_on": round(float(np.nanmean(f_on)), 4), "fwd_off": round(float(np.nanmean(f_off)), 4),
+            "up_on": round(float(np.nanmean(f_on[~np.isnan(f_on)] > 0)), 3), "up_off": round(float(np.nanmean(f_off[~np.isnan(f_off)] > 0)), 3),
+            "falls": eps, "flips": [[d[i], "above" if on[i] else "below", round(float(p[i]), 2)] for i in flips[-8:]]}
+
+
 def value(long: list, hist: dict, gold_last: float, mcx: dict, silver: dict) -> dict:
     """Value channel (log trend of the weekly rupee price since 2003, bands at 1 and 2 standard deviations), price vs
     its 200-week average, gold/silver ratio, and the old desk's real-price and real-yield figures."""
@@ -477,13 +528,14 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     if mx and mx["d"] == d[i]:
         LV["mcx_k"] = round(mx["c"] / float(c[i]), 5)
     FL = falls(c, d)
+    TG = {"inr": trend_gauge(long), "usd": trend_gauge([[r[0], r[1]] for r in hist["w"] if r[1]])}
     PJ = projection(c, LV, float(ath))
     mpath = HERE.parents[1] / "docs/gold/macro.json"
     MAC = json.loads(mpath.read_text(encoding="utf-8")) if mpath.exists() else {}
     for row in FL["rows"]:
         fm = (MAC.get("falls") or {})
         row["why"] = fm.get(row["peak"][:7]) or fm.get(row["peak"][:4])
-    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "proj": PJ, "macro": MAC.get("current"), "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
+    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "proj": PJ, "trend": TG, "macro": MAC.get("current"), "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
             "long": long, "rets": rets, "daily_from": d[0], "daily_n": len(d),
             "studies": {k: hist.get(k) for k in ("gold_dd", "falls_nifty", "falls_nifty_big", "trend_strategy", "hedge")},
             "hist_source": hist.get("source"), "hist_asof": hist.get("asof"),
