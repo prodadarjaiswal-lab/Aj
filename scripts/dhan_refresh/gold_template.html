@@ -74,12 +74,12 @@ const C=x=>x==null?"":x>0?"good":x<0?"bad":"";
 const VC={"Good to buy":"good","Wait":"warn","Avoid":"bad","Not enough data":"na"};
 const f=G.f,L=G.level;
 
-$("hdr").innerHTML=`<span class="brand">GOLD DESK</span><span class="chip">Close <b>${E(G.date)}</b></span><span class="chip">Built <b>${E(G.asof)} IST</b></span><span class="chip">Prices: Dhan daily close</span>`;
+$("hdr").innerHTML=`<span class="brand">GOLD DESK</span>${G.live?`<span class="chip">Today <b>${E(G.date)} ${E(G.live.t)} IST</b> (live price, not yet a close)</span>`:`<span class="chip">Close <b>${E(G.date)}</b></span>`}<span class="chip">Built <b>${E(G.asof)} IST</b></span><span class="chip">Prices: Dhan${G.live?", today's last traded price":" daily close"}</span>`;
 
 const ch=f.last/f.prev-1,mx=G.mcx;
-$("hero").innerHTML=`<div><div class="k">Gold, ₹ per 10 g (GOLDBEES at NSE close)</div><div class="px">₹${F(f.last)}<small class="${C(ch)}">${P(ch,2)}</small></div>
+$("hero").innerHTML=`<div><div class="k">Gold, ₹ per 10 g (from GOLDBEES${G.live?", live":" at NSE close"})</div><div class="px">₹${F(f.last)}<small class="${C(ch)}">${P(ch,2)}</small></div>
  <div class="sub">GOLDBEES ₹${F(f.bees,2)} × ${L.k} · ${P(f.from_ath)} from the record ₹${F(f.ath)} (${E(f.ath_d)})</div></div>
- ${mx?`<div><div class="k">MCX future ${E(mx.contract||"")}</div><div class="px" style="font-size:24px">₹${F(mx.c)}${mx.prev?`<small class="${C(mx.c/mx.prev-1)}">${P(mx.c/mx.prev-1,2)}</small>`:""}</div><div class="sub">close ${E(mx.d)}${mx.gap!=null?` · ${P(mx.gap,2)} vs the GOLDBEES level`:""}</div></div>`:""}`;
+ ${mx?`<div><div class="k">MCX future ${E(mx.contract||"")}</div><div class="px" style="font-size:24px">₹${F(mx.c)}${mx.prev?`<small class="${C(mx.c/mx.prev-1)}">${P(mx.c/mx.prev-1,2)}</small>`:""}</div><div class="sub">${G.live&&mx.d===G.date?"live "+E(G.live.t)+" IST":"close "+E(mx.d)}${mx.gap!=null?` · ${P(mx.gap,2)} vs the GOLDBEES level`:""}</div></div>`:""}`;
 
 $("verdicts").innerHTML=G.horizons.map(h=>{const p=G.proof[h.lab],me=p.by[h.v],all=p.all;
  const ev=me&&all?`Past days with “${E(h.v)}”: gold was <b class="${C(me.avg)}">${P(me.avg)}</b> on average ${h.lab} later and up <b>${Math.round(me.up*100)}%</b> of the time (${F(me.n)} days, about ${F(me.periods,1)} periods, worst ${P(me.worst)}). All days: ${P(all.avg)}, up ${Math.round(all.up*100)}%.`:"No past days with this verdict to compare.";

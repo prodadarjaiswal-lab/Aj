@@ -1,5 +1,5 @@
 {
- "asof": "2026-11-23 11:44",
+ "asof": "2026-11-23 12:46",
  "date": "2026-11-20",
  "f": {
   "vs50": -0.1384,
@@ -504,5 +504,6 @@
  "daily_from": "2009-01-01",
  "daily_n": 4434,
  "hist_source": "Gold Desk artifact SuoChW62ZzdbenXezZi3s9 (data to 2026-11-06)",
- "hist_asof": "2026-11-06"
+ "hist_asof": "2026-11-06",
+ "live": null
 }

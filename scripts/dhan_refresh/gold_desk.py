@@ -71,6 +71,26 @@ def fetch(dhan, scrip_csv: str, today: dt.date) -> dict:
         seg, sid, sym, _ = fut["GOLD"]
         out["mcx"] = closes(sid, seg, "FUTCOM", today - dt.timedelta(days=400))
         out["mcx_contract"] = sym
+    # today's price while the market is open: Dhan's last traded price, saved under today's date until the
+    # next run replaces it with the real close
+    body = {"NSE_EQ": [int(ids["GOLDBEES"])], "IDX_I": [13]}
+    if "mcx" in out:
+        body[seg] = [int(sid)]
+    try:
+        q = dhan.post("/marketfeed/ohlc", body).get("data") or {}
+        now = dt.datetime.now(R.IST)
+        got = {}
+        for key, sg, i in (("bees", "NSE_EQ", ids["GOLDBEES"]), ("nifty", "IDX_I", 13)) + ((("mcx", seg, sid),) if "mcx" in out else ()):
+            v = (q.get(sg) or {}).get(str(i)) or {}
+            if float(v.get("last_price") or 0) > 0:
+                got[key] = float(v["last_price"])
+        if today.weekday() < 5 and "bees" in got and today.isoformat() not in out["bees"]:
+            for key, px in got.items():
+                out[key][today.isoformat()] = px
+            out["live"] = {"d": today.isoformat(), "t": now.strftime("%H:%M"), **got}
+            print(f"  today so far ({now:%H:%M} IST): {got}")
+    except Exception as ex:
+        print(f"  today's quote failed: {str(ex)[:80]}")
     return out
 
 
@@ -83,7 +103,9 @@ def merge(old: dict, new: dict) -> dict:
     for d, c in (new.get("mcx") or {}).items():
         m["mcx"][d] = c
         m["mcx_contract"][d] = sym
-    return {k: dict(sorted(v.items())) for k, v in m.items()}
+    m = {k: dict(sorted(v.items())) for k, v in m.items()}
+    m["live"] = new.get("live")  # only today's run can say a price is live
+    return m
 
 
 # ---------------------------------------------------------------- indicators (whole-series arrays)
@@ -299,7 +321,8 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     return {"asof": asof, "date": d[i], "f": f, "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
             "long": long, "rets": rets, "daily_from": d[0], "daily_n": len(d),
             "studies": {k: hist.get(k) for k in ("gold_dd", "falls_nifty", "falls_nifty_big", "trend_strategy", "hedge")},
-            "hist_source": hist.get("source"), "hist_asof": hist.get("asof")}
+            "hist_source": hist.get("source"), "hist_asof": hist.get("asof"),
+            "live": daily.get("live") if (daily.get("live") or {}).get("d") == d[i] else None}
 
 
 def render(data: dict, out: Path) -> None:
