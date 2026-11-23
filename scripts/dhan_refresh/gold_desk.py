@@ -360,8 +360,9 @@ def value(long: list, hist: dict, gold_last: float, mcx: dict, silver: dict) -> 
     V = {"t0": long[0][0], "a": round(float(a), 6), "b": round(float(b), 6), "sd": round(sd, 6), "growth": round(float(np.exp(b) - 1), 4),
          "fair": round(fair_now, 0), "z": round(float(z[-1]), 2), "vs_fair": round(gold_last / fair_now - 1, 4),
          "bands": {k: round(fair_now * float(np.exp(m * sd)), 0) for k, m in (("-2", -2), ("-1", -1), ("0", 0), ("1", 1), ("2", 2))},
-         "zones": zones, "vs200w": round(float(vs[-1]), 4), "vs200w_pct": round(float((vs[ok] < vs[-1]).mean()), 3),
-         "ma200w": round(float(ma200[-1]), 0)}
+         "zones": zones, "vs200w": round(float(vs[-1]), 4) if ok[-1] else None,
+         "vs200w_pct": round(float((vs[ok] < vs[-1]).mean()), 3) if ok[-1] else None,
+         "ma200w": round(float(ma200[-1]), 0) if ok[-1] else None}
     hv = hist.get("value") or {}
     gs = hv.get("gsr_series") or []
     com = [x for x in sorted(mcx) if x in silver]
@@ -446,7 +447,8 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     V = value(long, hist, float(c[i]), mcx, daily.get("silver") or {})
     extra = [{"px": V["bands"][k], "what": lab, "touches": None, "last": None}
              for k, lab in (("0", "Value channel trend"), ("-1", "Value channel −1σ"), ("-2", "Value channel −2σ"))]
-    extra.append({"px": V["ma200w"], "what": "200-week average", "touches": None, "last": None})
+    if V["ma200w"]:
+        extra.append({"px": V["ma200w"], "what": "200-week average", "touches": None, "last": None})
     LV = levels(c, d, I, extra)
     if mx and mx["d"] == d[i]:
         LV["mcx_k"] = round(mx["c"] / float(c[i]), 5)
