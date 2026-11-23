@@ -326,19 +326,21 @@ def intraday5(dhan, sid, seg, inst, days=40) -> dict:
 def markets(dhan, scrip_csv: str, now) -> dict:
     import markets as MK
     import refresh as R
-    start = now.date() - dt.timedelta(days=100)
+    start = now.date() - dt.timedelta(days=400)
     out = {"asof": now.strftime("%Y-%m-%d %H:%M"), "groups": {"Indices": [], "ETFs": [], "MCX": []}, "missing": [],
            "live_ids": {"IDX_I": {}, "NSE_EQ": {}, "MCX_COMM": {}}}
 
     def row(name, label, seg, inst, sid, extra=None):
         try:
             s = series(dhan.daily(sid, seg, inst, start, now.date()), R.IST)
-            c = [x for x in s["c"] if x]
+            pairs = [(d, x) for d, x in zip(s["d"], s["c"]) if x]
+            c = [x for _, x in pairs]
             if len(c) < 2:
                 raise ValueError("no history")
             r = {"k": name, "name": label, "sid": int(sid), "seg": seg, "last": c[-1], "prev": c[-2],
                  "chg": round(c[-1] / c[-2] - 1, 5), "r5": round(c[-1] / c[-6] - 1, 4) if len(c) > 5 else None,
-                 "r21": round(c[-1] / c[-22] - 1, 4) if len(c) > 21 else None, "d": s["d"][-1], "spark": c[-60:]}
+                 "r21": round(c[-1] / c[-22] - 1, 4) if len(c) > 21 else None, "d": s["d"][-1], "spark": c[-60:],
+                 "hist": {"d": [d for d, _ in pairs[-260:]], "c": c[-260:]}}
             r.update(extra or {})
             out["live_ids"][seg][str(sid)] = name
             return r

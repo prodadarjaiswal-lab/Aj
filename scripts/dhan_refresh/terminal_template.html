@@ -76,20 +76,12 @@ svg text{fill:var(--mute);font:10px var(--f-mono)}
     <div class="mk" id="mk" style="margin-top:12px"></div>
   </section>
 
-  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>What's working now</h2><span class="pill" id="regime"></span></div>
-    <p class="note" id="wk-lede"></p>
-    <div class="scroll"><table id="wk-sig"></table></div>
-  </section>
-
-  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Stocks with a working signal</h2><span class="mute mono" id="wk-asof"></span></div>
-    <div class="scroll"><table id="wk-stk"></table></div>
-  </section>
+  <section class="panel" id="sum" style="display:flex;flex-direction:column;gap:16px"></section>
 </div>
 
 <script>
 const BT=/*BT*/null, MK=/*MK*/null, WL=/*WL*/null, WK=/*WK*/null, META=/*META*/null;
+window.TMK=MK;window.TWK=WK;
 const $=id=>document.getElementById(id);
 const pct=(x,d=2)=>x==null?"–":(x>0?"+":"")+x.toFixed(d)+"%";
 const cls=x=>x==null?"":x>0?"up":x<0?"down":"";
@@ -118,24 +110,12 @@ function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file ye
   $("mk-asof").textContent="closes as of "+MK.asof+" IST";
   $("mk").innerHTML=Object.entries(MK.groups).map(([g,rows])=>`<div class="scroll"><h3 style="font-size:15px;margin-bottom:6px">${g}</h3><table>
    <tr><th>Name</th><th class="n">Last</th><th class="n">Day</th><th class="n">1M</th><th>60D</th></tr>
-   ${rows.map(r=>`<tr title="${r.contract||""}"><td>${r.name}${r.expiry?` <small class="mute">${r.expiry.slice(5)}</small>`:""}</td><td class="n" id="lv-${r.seg}-${r.sid}">${fmt(r.last)}</td>
+   ${rows.map(r=>`<tr title="${r.contract||""}" class="go" data-mk="${r.k}"><td><button class="lnk" data-mk="${r.k}">${r.name}</button>${r.expiry?` <small class="mute">${r.expiry.slice(5)}</small>`:""}</td><td class="n" id="lv-${r.seg}-${r.sid}">${fmt(r.last)}</td>
    <td class="n ${cls(r.chg)}" id="lc-${r.seg}-${r.sid}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
    </table></div>`).join("")+(MK.missing&&MK.missing.length?`<p class="mute" style="grid-column:1/-1;font-size:12px">Not returned by Dhan: ${MK.missing.join("; ")}</p>`:"")}
 
-function regime(){const W=WK||{};const el=$("regime");el.textContent=W.label||"–";el.className="pill "+(W.correction?"fail":"pass");
-  $("wk-lede").textContent=W.why||"";}
-function sigs(){const W=WK||{},S=W.signals||[];
-  $("wk-sig").innerHTML=S.length?`<tr><th>Signal</th><th class="n">Cases</th><th class="n">Beat Nifty in 10 days</th><th class="n">Avg vs Nifty, 10 days</th><th class="n">Last month, bought 9:30</th></tr>`+
-   S.map(s=>`<tr><td style="white-space:normal;min-width:240px">${s.name}</td><td class="n">${(s.n||0).toLocaleString("en-IN")}</td><td class="n">${s.hit10==null?"–":Math.round(s.hit10*100)+"%"}</td>
-   <td class="n ${cls(s.x10)}">${s.x10==null?"–":pct(s.x10*100)}</td><td class="n ${cls(s.m1)}">${s.m1==null?"–":pct(s.m1)+` <small class="mute">${s.m1n}</small>`}</td></tr>`).join("")
-   :`<tr><td class="mute">No signal passes the back-test for this kind of market. The terminal shows no picks until one does.</td></tr>`}
-function stocks(){const W=WK||{},R=W.stocks||[];$("wk-asof").textContent=W.asof?"from the "+W.asof+" close · tap a name to analyze":"";
-  $("wk-stk").innerHTML=R.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">Live</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Shares</th><th>vs Nifty 500</th></tr>`+
-   R.map(r=>`<tr><td><button class="lnk" data-s="${r.s}">${r.s}</button></td><td style="white-space:normal;min-width:200px">${r.sig.join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n" data-live="${r.s}">–</td>
-   <td class="n down">${fmt(r.stop)}</td><td class="n up">${fmt(r.tgt)}</td><td class="n">${r.qty}</td><td class="mute">${r.status||"–"}</td></tr>`).join("")
-   :`<tr><td class="mute">No stock has a working signal from the last close.</td></tr>`;
-  document.querySelectorAll("#tm-wk-stk .lnk,#wk-stk .lnk").forEach(b=>b.onclick=()=>{try{tab("analyze");show(b.dataset.s);window.scrollTo(0,0)}catch(e){}})}
-status();markets();regime();sigs();stocks();
+status();markets();
+document.addEventListener("click",e=>{const b=e.target.closest("[data-mk]");if(b&&window.azGo)azGo(b.dataset.mk)});
 /* Live prices: GitHub Actions streams Dhan prices every 5 s to the public repo prodadarjaiswal-lab/aj-live during
    market hours (one Dhan login a day). The page reads live.json through the GitHub connector. */
 const LV={ok:false,at:0,t:null,busy:false};
@@ -151,8 +131,7 @@ async function livePoll(mcp){if(LV.busy)return;LV.busy=true;
     if(fresh&&MK)for(const rows of Object.values(MK.groups))for(const r of rows){const a=((d.q[r.seg]||{})[String(r.sid)]);
       if(a&&a[0]){const base=a[4]||r.prev,el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
         if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}n++}}
-    if(fresh&&WK)for(const r of (WK.stocks||[])){const a=(d.q.NSE_EQ||{})[String(r.sid)],el=document.querySelector(`[data-live="${r.s}"]`);
-      if(a&&a[0]&&el){const c=a[4]?(a[0]/a[4]-1)*100:null;el.innerHTML=`${fmt(a[0])} <small class="${cls(c)}">${c==null?"":pct(c)}</small>`}}
+    window.TLIVE=fresh?d.q:null;window.TLIVE_T=d.t;try{document.dispatchEvent(new Event("tlive"))}catch(e){}
     LV.ok=true;LV.at=Date.now();LV.t=d.t;
     liveNote(fresh?`<b>LIVE</b> ${String(d.t).slice(11,19)} IST · ${n} board prices`:`Market closed · last live ${String(d.t).slice(0,16)} IST`,fresh)}
   catch(e){const c=e&&e.code;const why=c==="server_not_connected"?"add the GitHub connector in Claude settings":c==="needs_reauth"?"reconnect GitHub in Claude settings":c==="not_granted"||c==="consent_required"?"allow GitHub for this page":"feed not running, retrying";

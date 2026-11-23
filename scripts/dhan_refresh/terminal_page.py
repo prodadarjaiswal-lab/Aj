@@ -126,6 +126,38 @@ def _section(root: Path) -> tuple[str, str, str]:
     return "\n".join(scoped) + "\n#term .twrap{display:flex;flex-direction:column;gap:22px}", markup, "(function(){\n" + script + "\n})();"
 
 
+AZ_HTML = r"""
+<section id="az" class="wrap" style="gap:14px" hidden>
+  <div class="pnl"><div class="row" style="gap:8px"><input id="az-q" list="az-list" placeholder="Search a stock, index, ETF or MCX (Gold, Silver…)" autocomplete="off" aria-label="Search" style="flex:1;min-width:220px"><datalist id="az-list"></datalist><div class="row" id="az-quick" style="gap:6px"></div></div>
+    <p class="note" id="az-empty">Pick something to analyze.</p></div>
+  <div id="az-body" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div class="pnl" id="az-head"></div>
+    <div class="pnl"><h2>Chart · 1 year</h2><div id="az-chart"></div></div>
+    <div class="pnl"><h2>Technical</h2><div id="az-tech"></div></div>
+    <div class="pnl"><h2>Value</h2><div id="az-val"></div></div>
+    <div class="pnl"><h2>When is it good to buy?</h2><div id="az-time"></div></div>
+    <div class="row"><button class="chip" id="az-proof">Show proof</button><span class="note">How the signals were tested</span></div>
+  </div>
+</section>
+"""
+
+AZ_CSS = """
+#az-body[hidden]{display:none!important}
+.azg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.azt{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.azt span{color:var(--mute);font-size:12px}.azt b{font-size:1.05rem;color:var(--ink)}.azt small{color:var(--mute);font-size:11.5px}
+.azt.good{border-color:var(--up)}.azt.good b{color:var(--up)}.azt.bad{border-color:var(--down)}.azt.bad b{color:var(--down)}.azt.warn b{color:var(--warn)}
+.azh{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.azhc{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.azhc b{font-size:1.35rem}.azhc small{color:var(--mute)}.azhc ul{margin:6px 0 0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.azm{color:var(--mute)}
+#term .mute{background:none}
+#term tr.go{cursor:pointer}
+"""
+
+AZ_JS = Path(__file__).parent / "terminal_analyze.js"
+
+
 PORTFOLIO = r"""
 <section id="pf" class="wrap" style="gap:14px" hidden>
   <div class="pnl">
@@ -183,7 +215,7 @@ def _patch_tabs(html: str) -> str:
     html = html.replace('<button class="tab" role="tab" data-t="proof" aria-selected="false">Proof</button>',
                         '<button class="tab" role="tab" data-t="pf" aria-selected="false">Portfolio</button>', 1)
     html = html.replace('["term","screener","analyze","plan","proof"].forEach(x=>$(x).hidden=t!==x)',
-                        '["term","screener","analyze","plan","proof","pf"].forEach(x=>$(x).hidden=!(t===x||(x==="proof"&&t==="analyze")));if(t==="pf"&&window.pfRender)pfRender()', 1)
+                        '["term","screener","analyze","plan","proof","pf","az"].forEach(x=>$(x).hidden=!(x==="az"?t==="analyze":x!=="analyze"&&x!=="plan"&&t===x));if(t==="pf"&&window.pfRender)pfRender()', 1)
     html = html.replace('if(t==="proof"&&SHOWN)', 'if((t==="proof"||t==="analyze")&&SHOWN)', 1)
     html = html.replace('["research","proof"].includes(h)?h:"screener"', '["research"].includes(h)?h:h==="proof"?"analyze":h==="pf"||h==="portfolio"?"pf":"screener"', 1)
     html = html.replace('<div class="row" id="quick"></div></div>',
@@ -191,9 +223,8 @@ def _patch_tabs(html: str) -> str:
     # Analyze headline price: live Dhan price when the feed has it; re-render the open stock at most every 20 s
     html = html.replace("const last=(lf&&lf.last)||t.c||r.last||",
                         "const last=(typeof LIVE!==\"undefined\"&&LIVE.eq[sym]&&LIVE.eq[sym].ltp)||(lf&&lf.last)||t.c||r.last||", 1)
-    html = html.replace("if(typeof SHOWN!==\"undefined\"&&SHOWN){liveQuote(SHOWN);",
-                        "if(typeof SHOWN!==\"undefined\"&&SHOWN){liveQuote(SHOWN);if(!$(\"analyze\").hidden&&Date.now()-(window.__lr||0)>20000){window.__lr=Date.now();try{render(SHOWN)}catch(e){}}", 1)
-    html = html.replace('<section id="proof"', PORTFOLIO + '<section id="proof"', 1)
+    html = html.replace('<section id="proof"', AZ_HTML + PORTFOLIO + '<section id="proof"', 1)
+    html = html.replace("</style>", AZ_CSS + "\n</style>", 1)
     i = html.rfind("</script>")
     return html[:i] + "\n" + PF_JS + "\n" + ALLSEL_JS + "\n" + html[i:]
 
@@ -220,7 +251,10 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     i = html.rfind("</script>")
     html = html[:i + len("</script>")] + "\n<script>\n" + script + "\n</script>" + html[i + len("</script>"):]
     html = _patch_tabs(html)
-    for must in ('data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', "LIVE.eq[sym]&&LIVE.eq[sym].ltp"):
+    j = html.rfind("</body>")
+    j = j if j >= 0 else len(html)
+    html = html[:j] + "<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    for must in ('data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
         if must not in html:
             raise RuntimeError(f"desk page changed shape; could not insert the Terminal tab ({must})")
     out.write_text(html, encoding="utf-8")
