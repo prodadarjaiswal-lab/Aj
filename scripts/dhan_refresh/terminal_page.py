@@ -151,6 +151,7 @@ AZ_CSS = """
 .azhc{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
 .azhc b{font-size:1.35rem}.azhc small{color:var(--mute)}.azhc ul{margin:6px 0 0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:3px}
 .azm{color:var(--mute)}
+.azlv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
 #term .mute{background:none}
 #term tr.go{cursor:pointer}
 """

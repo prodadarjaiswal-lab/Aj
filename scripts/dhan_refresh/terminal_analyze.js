@@ -49,7 +49,7 @@ function feats(x){
   if(c.length>40){const e12=emaS(c,12),e26=emaS(c,26),m=c.map((_,i)=>e12[i]!=null&&e26[i]!=null?e12[i]-e26[i]:null),mv=m.filter(v=>v!=null),sg=emaS(mv,9);f.macd=mv[mv.length-1];f.macdSig=sg[sg.length-1];f.macdUp=f.macdSig!=null?f.macd>f.macdSig:null}
   else f.macdUp=t.macd?/above/.test(t.macd):null;
   if(c.length>=20){const w=c.slice(-20),sd=Math.sqrt(w.reduce((s,v)=>s+(v-m20)**2,0)/20);f.bbPos=sd?(last-(m20-2*sd))/(4*sd):null;f.bbW=m20?4*sd/m20:null}
-  f.r1m=ret(c,21)??pr.r1m??r.r1m;f.r3m=ret(c,63)??pr.r3m??r.r3m;f.r6m=ret(c,126)??r.r6m;f.r1y=c.length>=240?c[c.length-1]/c[0]-1:pr.r1y??null;
+  f.r1m=ret(c,21)??pr.r1m??r.r1m;f.r3m=ret(c,63)??pr.r3m??r.r3m;f.r6m=ret(c,126)??r.r6m;f.r1y=c.length>252?ret(c,252):c.length>=240?c[c.length-1]/c[0]-1:pr.r1y??null;
   if(c.length>=120){const w=c.slice(-252);f.hi52=last/Math.max(...w)-1;f.lo52=last/Math.min(...w)-1}else f.hi52=t.hi52!=null?t.hi52/100:null;
   if(c.length>30){const rr=c.slice(-64).map((v,i,a)=>i?Math.log(v/a[i-1]):0).slice(1),mu=rr.reduce((s,v)=>s+v,0)/rr.length;f.vol=Math.sqrt(rr.reduce((s,v)=>s+(v-mu)**2,0)/rr.length*252)}
   const nf=closes(INS["Nifty 50"]||{mk:null}).c;f.rs3=x.k==="Nifty 50"?null:(r.rs3!=null?r.rs3:(t.rs3!=null?t.rs3/100:(f.r3m!=null&&ret(nf,63)!=null?f.r3m-ret(nf,63):null)));
@@ -89,11 +89,12 @@ window.azHorizons=sym=>{const x=find(sym);return x?horizons(x,feats(x)):null};
 /* ---------- chart ---------- */
 function chart(x,f){const S=closes(x);let c=S.c;if(!c.length)return`<p class="note">No price history for this one yet.</p>`;
   const L=f.live;if(L&&Math.abs(L.ltp/c[c.length-1]-1)>1e-6)c=c.concat([L.ltp]);
-  const n=c.length,m50=c.map((_,i)=>sma(c,50,i)),m200=c.map((_,i)=>sma(c,200,i)),W=640,H=240,l=8,r=56,tp=10,b=22;
+  let m50=c.map((_,i)=>sma(c,50,i)),m200=c.map((_,i)=>sma(c,200,i));const cut=Math.max(0,c.length-252),ds0=(S.d||[]).slice(cut);c=c.slice(cut);m50=m50.slice(cut);m200=m200.slice(cut);
+  const n=c.length,W=640,H=240,l=8,r=56,tp=10,b=22;
   const all=[...c,...m50.filter(v=>v),...m200.filter(v=>v)];let lo=Math.min(...all),hi=Math.max(...all);const pd=(hi-lo)*0.05||1;lo-=pd;hi+=pd;
   const X=i=>l+i/(n-1)*(W-l-r),Y=v=>tp+(1-(v-lo)/(hi-lo))*(H-tp-b),path=a=>a.map((v,i)=>v==null?null:[X(i),Y(v)]).filter(Boolean).map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join("");
   const up=c[n-1]>=c[0],col=up?"var(--up)":"var(--down)",ticks=[0,1,2,3,4].map(i=>lo+(hi-lo)*i/4);
-  const ds=S.d||[],lbl=[0,Math.floor(n/2),n-1].map(i=>[i,ds[i]||""]).filter(z=>z[1]);
+  const ds=ds0,lbl=[0,Math.floor(n/2),n-1].map(i=>[i,ds[i]||""]).filter(z=>z[1]);
   return`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${E(x.name)} price, ${n} days">
    ${ticks.map(v=>`<line x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".5"/><text x="${W-r+4}" y="${Y(v)+3}" style="font-size:10px;fill:var(--mute)">${F(v,v>=1000?0:1)}</text>`).join("")}
    <path d="${path(c)}L${X(n-1)} ${H-b}L${X(0)} ${H-b}Z" fill="${col}" opacity=".08"/>
@@ -101,9 +102,36 @@ function chart(x,f){const S=closes(x);let c=S.c;if(!c.length)return`<p class="no
    <path d="${path(m50)}" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
    <path d="${path(c)}" fill="none" stroke="${col}" stroke-width="1.8"/>
    <circle cx="${X(n-1)}" cy="${Y(c[n-1])}" r="3" fill="${col}"/>
+   ${(()=>{const lv=levels(c,c[n-1]),z=[[lv.sup[0],"var(--up)","S"],[lv.res[0],"var(--down)","R"]].filter(q=>q[0]&&q[0].p>lo&&q[0].p<hi);return z.map(([q,cc,t])=>`<line x1="${l}" x2="${W-r}" y1="${Y(q.p)}" y2="${Y(q.p)}" stroke="${cc}" stroke-width=".8" stroke-dasharray="2 3"/><text x="${l+2}" y="${Y(q.p)-3}" style="font-size:10px;fill:${cc}">${t} ${F(q.p,q.p>=1000?0:1)}</text>`).join("")})()}
    ${lbl.map(([i,d])=>`<text x="${X(i)}" y="${H-6}" text-anchor="${i===0?"start":i===n-1?"end":"middle"}" style="font-size:10px;fill:var(--mute)">${E(d)}</text>`).join("")}
-  </svg><p class="note"><span style="color:${col}">━</span> price &nbsp;<span style="color:var(--accent)">━</span> 50-day average &nbsp;<span style="color:var(--mute)">┅</span> 200-day average · ${n} trading days</p>`}
+  </svg><p class="note"><span style="color:${col}">━</span> price &nbsp;<span style="color:var(--accent)">━</span> 50-day average &nbsp;<span style="color:var(--mute)">┅</span> 200-day average · <span style="color:var(--up)">┄</span> support <span style="color:var(--down)">┄</span> resistance · ${n} trading days</p>`}
 
+
+/* ---------- support / resistance and past falls (daily closes) ---------- */
+function levels(c,last){if(c.length<30||!last)return{sup:[],res:[]};const k=5,piv=[];
+  for(let i=k;i<c.length-k;i++){const w=c.slice(i-k,i+k+1),v=c[i];if(v===Math.min(...w))piv.push([v,"L"]);else if(v===Math.max(...w))piv.push([v,"H"])}
+  const cl=[];piv.sort((a,b)=>a[0]-b[0]).forEach(([v])=>{const z=cl[cl.length-1];if(z&&v/z.lo-1<=0.015){z.v.push(v);z.lo=Math.min(z.lo,v)}else cl.push({lo:v,v:[v]})});
+  const L=cl.map(z=>({p:z.v.reduce((a,b)=>a+b,0)/z.v.length,n:z.v.length,src:"swing"}));
+  const sup=L.filter(z=>z.p<last*0.997).sort((a,b)=>b.p-a.p).slice(0,2),res=L.filter(z=>z.p>last*1.003).sort((a,b)=>a.p-b.p).slice(0,2);
+  const m50=sma(c,50),m200=sma(c,200);[[m50,"50-day average"],[m200,"200-day average"]].forEach(([m,n])=>{if(m&&m<last)sup.push({p:m,n:0,src:n})});
+  if(!res.length&&c.length>=120){const h=Math.max(...c.slice(-252));if(h>last*1.003)res.push({p:h,n:1,src:"52-week high"})}
+  sup.sort((a,b)=>b.p-a.p);return{sup,res}}
+function falls(c,d){if(c.length<30)return{th:0.1,rows:[]};const run=th=>{const rows=[];let pk=0,tr=0,inF=false;
+  for(let i=1;i<c.length;i++){if(!inF){if(c[i]>=c[pk]){pk=i;continue}if(c[i]/c[pk]-1<=-th){inF=true;tr=i}}
+    else{if(c[i]<c[tr])tr=i;if(c[i]>=c[pk]){rows.push({pk,tr,rc:i});inF=false;pk=i}}}
+  if(inF)rows.push({pk,tr,rc:null});return rows};
+  let th=0.10,r=run(th);for(const t of [0.07,0.05]){if(r.filter(x=>x.rc!=null).length>=2)break;th=t;r=run(th)}
+  const D=i=>d&&d[i]?d[i]:i+" bars ago";
+  return{th,rows:r.map(x=>({peak:D(x.pk),trough:D(x.tr),fall:c[x.tr]/c[x.pk]-1,down:x.tr-x.pk,up:x.rc==null?null:x.rc-x.tr,rec:x.rc==null?null:D(x.rc),open:x.rc==null,now:x.rc==null?c[c.length-1]/c[x.pk]-1:null}))}}
+function levelsHtml(x,f){const S=closes(x);let c=S.c.filter(v=>v!=null&&isFinite(v));const last=f.last;if(c.length<30)return"";
+  const {sup,res}=levels(c,last),F=falls(c,S.d),R=F.rows,done=R.filter(r=>!r.open).map(r=>r.up).sort((a,b)=>a-b),med=done.length?done[Math.floor(done.length/2)]:null;
+  const row=(z,kind)=>`<tr><td>${kind}</td><td class="n">${x.kind==="Index"?"":"₹"}${F_(z.p)}</td><td class="n ${kind==="Support"?"bad":"good"}">${P(z.p/last-1)}</td><td>${z.src==="swing"?`turned here ${z.n} time${z.n>1?"s":""}`:E(z.src)}</td></tr>`;
+  return`<div class="azlv"><div><h3 style="font-size:14px;margin:12px 0 6px">Support and resistance</h3><div class="tw"><table><tr><th></th><th class="n">Level</th><th class="n">From price</th><th>Why</th></tr>
+   ${res.slice().reverse().map(z=>row(z,"Resistance")).join("")}${sup.map(z=>row(z,"Support")).join("")||'<tr><td colspan="4" class="note">No support below in this year\'s data (price is at its lows).</td></tr>'}</table></div></div>
+   <div><h3 style="font-size:14px;margin:12px 0 6px">Past falls of ${Math.round(F.th*100)}% or more, and how soon they recovered</h3>${R.length?`<div class="tw"><table><tr><th>Peak</th><th class="n">Fall</th><th>Bottom</th><th class="n">Days down</th><th class="n">Days to recover</th></tr>
+   ${R.map(r=>`<tr><td>${E(r.peak)}</td><td class="n bad">${P(r.fall)}</td><td>${E(r.trough)}</td><td class="n">${r.down}</td><td class="n">${r.open?`<span class="warn">not yet (${P(r.now)} from peak)</span>`:r.up}</td></tr>`).join("")}</table></div>
+   <p class="note">${med!=null?`Typical recovery: about ${med} trading days from the bottom back to the old peak. `:""}Based on ${c.length} trading days of closes${c.length>300?` (about ${Math.round(c.length/250)} years)`:""}.</p>`:`<p class="note">No fall of 5% or more in the last ${c.length} trading days.</p>`}</div></div>`}
+const F_=x=>F(x);
 /* ---------- tiles ---------- */
 const tile=(k,v,cl,sub)=>`<div class="azt ${cl||""}"><span>${E(k)}</span><b>${v}</b>${sub?`<small>${sub}</small>`:""}</div>`;
 function techTiles(x,f){const g=(v,a,b)=>v==null?"":v>a?"good":v<b?"bad":"warn";
@@ -142,7 +170,7 @@ function head(x,f){const L=f.live,ch=f.prev&&f.last?f.last/f.prev-1:null,H=horiz
    <div style="text-align:right"><b style="font-size:1.6rem">${x.kind==="Index"?"":"₹"}${F(f.last)}</b> <span class="${C(ch)}">${P(ch,2)}</span><br><span class="note">${L?`LIVE ${E(String(L.t||"").slice(11,19))} IST`:"last close"}</span></div></div>
    <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>`}
 function render(){const x=CUR;if(!x)return;const f=feats(x);LAST=Date.now();
-  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-time").innerHTML=timing(horizons(x,f));
+  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-time").innerHTML=timing(horizons(x,f));
   $("az-body").hidden=false;$("az-empty").hidden=true}
 function open(q){const x=find(q);if(!x){$("az-empty").hidden=false;$("az-empty").textContent=`Nothing found for "${q}". Pick from the list.`;return}
   CUR=x;$("az-q").value="";try{SHOWN=x.kind==="Stock"?x.k:SHOWN}catch(e){}try{localStorage.setItem("az-last",x.k)}catch(e){}
