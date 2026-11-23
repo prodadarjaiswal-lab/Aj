@@ -166,7 +166,7 @@ function timing(H){return`<div class="azh">${H.map(h=>`<div class="azhc"><span c
 /* ---------- probability and projection (Black-Scholes, lognormal) ---------- */
 const Nc=x=>{const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
 function proj(x,f){const S=f.last;if(!S)return null;const key=x.k==="Nifty 50"?"NIFTY":x.k==="Nifty Bank"?"BANKNIFTY":x.k,bs=((D.quant||{}).bs||{})[key],r=(D.quant||{}).rf||0.07;
-  let v=bs&&bs.iv,src="implied, from options";if(!v){const c=closes(x).c.filter(z=>z>0).slice(-253);if(c.length>60){const rr=c.slice(1).map((z,i)=>Math.log(z/c[i])),mu=rr.reduce((a,b)=>a+b,0)/rr.length;v=Math.sqrt(rr.reduce((a,b)=>a+(b-mu)**2,0)/rr.length*252);src="from the last year of prices"}}
+  let v=bs&&bs.iv,src="implied, from options";if(!v){const c=closes(x).c.filter(z=>z>0).slice(-127);if(c.length>60){const rr=c.slice(1).map((z,i)=>Math.log(z/c[i])),mu=rr.reduce((a,b)=>a+b,0)/rr.length;v=Math.sqrt(rr.reduce((a,b)=>a+(b-mu)**2,0)/rr.length*252);src="from the last 6 months of prices"}}
   if(!v)return null;const {sup,res}=levels(closes(x).c.filter(z=>z>0),S),sp=sup[0],rs=res[0];
   const H=[["3 months",0.25],["6 months",0.5],["1 year",1]].map(([lab,T])=>{const sd=v*Math.sqrt(T),m=S*Math.exp((r-v*v/2)*T);
     return{lab,T,up:Nc(((r-v*v/2)*T)/sd),lo:m*Math.exp(-sd),hi:m*Math.exp(sd),mid:m,
