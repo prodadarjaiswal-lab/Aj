@@ -135,6 +135,7 @@ AZ_HTML = r"""
     <div class="pnl"><h2>Chart · 1 year</h2><div id="az-chart"></div></div>
     <div class="pnl"><h2>Technical</h2><div id="az-tech"></div></div>
     <div class="pnl"><h2>Value</h2><div id="az-val"></div></div>
+    <div class="pnl"><h2>Risk and return</h2><div id="az-risk"></div></div>
     <div class="pnl"><h2>When is it good to buy?</h2><div id="az-time"></div></div>
     <div class="row"><button class="chip" id="az-proof">Show proof</button><span class="note">How the signals were tested</span></div>
   </div>
@@ -151,6 +152,8 @@ AZ_CSS = """
 .azhc{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
 .azhc b{font-size:1.35rem}.azhc small{color:var(--mute)}.azhc ul{margin:6px 0 0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:3px}
 .azm{color:var(--mute)}
+#az .pnl>h2,#az .pnl h3{font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;font-size:13px;border-left:3px solid var(--warn);padding-left:8px}
+.azt{border-left-width:3px}.azt b{font-family:var(--mono);font-variant-numeric:tabular-nums}.azhc b{font-family:var(--mono)}
 .azlv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
 #term .mute{background:none}
 #term tr.go{cursor:pointer}

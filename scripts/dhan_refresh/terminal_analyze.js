@@ -132,6 +132,29 @@ function levelsHtml(x,f){const S=closes(x);let c=S.c.filter(v=>v!=null&&isFinite
    ${R.map(r=>`<tr><td>${E(r.peak)}</td><td class="n bad">${P(r.fall)}</td><td>${E(r.trough)}</td><td class="n">${r.down}</td><td class="n">${r.open?`<span class="warn">not yet (${P(r.now)} from peak)</span>`:r.up}</td></tr>`).join("")}</table></div>
    <p class="note">${med!=null?`Typical recovery: about ${med} trading days from the bottom back to the old peak. `:""}Based on ${c.length} trading days of closes${c.length>300?` (about ${Math.round(c.length/250)} years)`:""}.</p>`:`<p class="note">No fall of 5% or more in the last ${c.length} trading days.</p>`}</div></div>`}
 const F_=x=>F(x);
+
+/* ---------- risk and return, momentum oscillators (daily closes) ---------- */
+function riskStats(x){const S=closes(x),c=S.c,d=S.d;if(c.length<120)return null;const n=Math.min(252,c.length-1),cc=c.slice(-n-1),r=cc.slice(1).map((v,i)=>v/cc[i]-1);
+  const rf=((D.quant||{}).rf||0.07)/252,mu=r.reduce((a,b)=>a+b,0)/r.length,sd=Math.sqrt(r.reduce((a,b)=>a+(b-mu)**2,0)/r.length),dn=Math.sqrt(r.reduce((a,b)=>a+Math.min(0,b-rf)**2,0)/r.length);
+  let pk=cc[0],mdd=0;cc.forEach(v=>{pk=Math.max(pk,v);mdd=Math.min(mdd,v/pk-1)});const ann=Math.pow(cc[cc.length-1]/cc[0],252/n)-1;
+  const q=r.slice().sort((a,b)=>a-b),k=Math.max(1,Math.floor(q.length*0.05)),var95=-q[k-1],cvar=-q.slice(0,k).reduce((a,b)=>a+b,0)/k;
+  let beta=null,corr=null;const N=INS["Nifty 50"];if(N&&x.k!=="Nifty 50"&&d){const ns=closes(N),m={};(ns.d||[]).forEach((dd,i)=>m[dd]=ns.c[i]);
+    const pr=[];for(let i=c.length-n;i<c.length;i++){const a=m[d[i]],b=m[d[i-1]];if(a&&b&&c[i-1])pr.push([c[i]/c[i-1]-1,a/b-1])}
+    if(pr.length>60){const ma=pr.reduce((s,z)=>s+z[0],0)/pr.length,mb=pr.reduce((s,z)=>s+z[1],0)/pr.length;let cv=0,vb=0,va=0;pr.forEach(([a,b])=>{cv+=(a-ma)*(b-mb);vb+=(b-mb)**2;va+=(a-ma)**2});beta=cv/vb;corr=cv/Math.sqrt(va*vb)}}
+  return{n,ann,vol:sd*Math.sqrt(252),sharpe:sd?(mu-rf)/sd*Math.sqrt(252):null,sortino:dn?(mu-rf)/dn*Math.sqrt(252):null,mdd,calmar:mdd<0?ann/-mdd:null,var95,cvar,beta,corr}}
+function momStats(c){if(c.length<60)return null;const last=c[c.length-1],w14=c.slice(-14),hi=Math.max(...w14),lo=Math.min(...w14),o={};
+  o.stoch=hi>lo?(last-lo)/(hi-lo)*100:null;o.willr=o.stoch==null?null:o.stoch-100;
+  const w20=c.slice(-20),m=w20.reduce((a,b)=>a+b,0)/20,md=w20.reduce((a,b)=>a+Math.abs(b-m),0)/20,sd=Math.sqrt(w20.reduce((a,b)=>a+(b-m)**2,0)/20);
+  o.cci=md?(last-m)/(0.015*md):null;o.z=sd?(last-m)/sd:null;
+  const w25=c.slice(-26),ih=w25.lastIndexOf(Math.max(...w25)),il=w25.lastIndexOf(Math.min(...w25));o.aup=ih/25*100;o.adn=il/25*100;
+  const w55=c.slice(-56,-1),dh=Math.max(...w55),dl=Math.min(...w55);o.don=dh>dl?(last-dl)/(dh-dl):null;o.roc12=c.length>252?last/c[c.length-253]-1:null;return o}
+function riskHtml(x){const R=riskStats(x);if(!R)return`<p class="note">Needs at least 6 months of prices.</p>`;
+  const T=[tile("Return, 1 year",P(R.ann),C(R.ann)),tile("Volatility",(R.vol*100).toFixed(1)+"%",""),tile("Sharpe ratio",F(R.sharpe,2),R.sharpe==null?"":R.sharpe>=1?"good":R.sharpe<0?"bad":"warn","return per unit of risk, above cash"),
+   tile("Sortino ratio",F(R.sortino,2),R.sortino==null?"":R.sortino>=1.5?"good":R.sortino<0?"bad":"warn","counts only downside swings"),tile("Max drawdown",P(R.mdd),R.mdd<-0.3?"bad":R.mdd<-0.15?"warn":"good","worst peak-to-bottom fall"),
+   tile("Calmar ratio",F(R.calmar,2),R.calmar==null?"":R.calmar>=1?"good":R.calmar<0?"bad":"warn","yearly return ÷ max drawdown"),
+   tile("1-day VaR (95%)",P(-R.var95),"","1 day in 20 is worse than this"),tile("CVaR (95%)",P(-R.cvar),"","average of those worst days"),
+   tile("Beta vs Nifty",R.beta==null?"–":F(R.beta,2),"",R.corr==null?"":"correlation "+F(R.corr,2))];
+  return`<div class="azg">${T.join("")}</div><p class="note" style="margin-top:6px">Last ${R.n} trading days of closes. Cash rate ${(((D.quant||{}).rf||0.07)*100).toFixed(1)}%.</p>`}
 /* ---------- tiles ---------- */
 const tile=(k,v,cl,sub)=>`<div class="azt ${cl||""}"><span>${E(k)}</span><b>${v}</b>${sub?`<small>${sub}</small>`:""}</div>`;
 function techTiles(x,f){const g=(v,a,b)=>v==null?"":v>a?"good":v<b?"bad":"warn";
@@ -144,6 +167,13 @@ function techTiles(x,f){const g=(v,a,b)=>v==null?"":v>a?"good":v<b?"bad":"warn";
    tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%","")];
   if(x.kind==="Stock")T.push(tile("ADX (trend strength)",F(f.adx,0),f.adx==null?"":f.adx>=25?"good":"",f.di?f.di+" in control":""),tile("Supertrend",f.st?f.st==="up"?"Up":"Down":"–",f.st?f.st==="up"?"good":"bad":""),
     tile("Volume vs normal",f.volx==null?"–":F(f.volx,2)+"×",f.volx>1.5?"good":""),tile("ATR (daily range)",f.atr?"₹"+F(f.atr,1):"–",""));
+  const M=momStats(closes(x).c.filter(v=>v>0).concat(f.live&&f.live.ltp?[f.live.ltp]:[]));if(M)T.push(
+    tile("Stochastic %K (14)",F(M.stoch,0),M.stoch>80?"warn":M.stoch<20?"warn":"",M.stoch>80?"near 2-week high":M.stoch<20?"near 2-week low":""),
+    tile("Williams %R (14)",F(M.willr,0),""),tile("CCI (20)",F(M.cci,0),M.cci>100?"good":M.cci<-100?"bad":"",M.cci>100?"strong up":M.cci<-100?"strong down":""),
+    tile("Z-score vs 20-day",F(M.z,2),Math.abs(M.z)>2?"warn":"",Math.abs(M.z)>2?"stretched":""),
+    tile("Aroon up / down (25)",F(M.aup,0)+" / "+F(M.adn,0),M.aup>70&&M.adn<30?"good":M.adn>70&&M.aup<30?"bad":""),
+    tile("55-day channel",M.don==null?"–":Math.round(M.don*100)+"%",M.don>0.9?"good":M.don<0.1?"bad":"",M.don>1?"breakout":"0% = 55-day low, 100% = high"),
+    tile("ROC, 12 months",P(M.roc12),C(M.roc12)));
   const S=[...f.sigs.map(s=>`<span class="tag good" title="${E(s.name)}">✓ ${E(s.name)}${s.o.hit10!=null?` · beat Nifty ${Math.round(s.o.hit10*100)}% of ${F(s.o.n,0)} times`:""}</span>`),
     ...f.setups.map(s=>`<span class="tag">${E(s)}</span>`),...f.warn.map(s=>`<span class="tag bad">${E(s)}</span>`)];
   return`<div class="azg">${T.join("")}</div>${S.length?`<div class="row" style="gap:6px;margin-top:10px">${S.join("")}</div>`:`<p class="note" style="margin-top:8px">No setup or tested signal on the last close.</p>`}`}
@@ -189,7 +219,7 @@ function head(x,f){const L=f.live,ch=f.prev&&f.last?f.last/f.prev-1:null,H=horiz
    <div style="text-align:right"><b style="font-size:1.6rem">${x.kind==="Index"?"":"₹"}${F(f.last)}</b> <span class="${C(ch)}">${P(ch,2)}</span><br><span class="note">${L?`LIVE ${E(String(L.t||"").slice(11,19))} IST`:"last close"}</span></div></div>
    <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>${summary(x,f)}`}
 function render(){const x=CUR;if(!x)return;const f=feats(x);LAST=Date.now();
-  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-time").innerHTML=timing(horizons(x,f));
+  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-risk").innerHTML=riskHtml(x);$("az-time").innerHTML=timing(horizons(x,f));
   $("az-body").hidden=false;$("az-empty").hidden=true}
 function open(q){const x=find(q);if(!x){$("az-empty").hidden=false;$("az-empty").textContent=`Nothing found for "${q}". Pick from the list.`;return}
   CUR=x;$("az-q").value="";try{SHOWN=x.kind==="Stock"?x.k:SHOWN}catch(e){}try{localStorage.setItem("az-last",x.k)}catch(e){}

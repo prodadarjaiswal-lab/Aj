@@ -59,6 +59,13 @@ td.hit{box-shadow:inset 3px 0 0 var(--up)}
 .note{font-size:13px;color:var(--mute);max-width:75ch}
 .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline}
 svg text{fill:var(--mute);font:10px var(--f-mono)}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.stile{all:unset;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;font-family:var(--f-mono)}
+.stile .sk{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stile b{font-size:17px;font-variant-numeric:tabular-nums}.stile span.up,.stile span.down{font-size:12px}
+.stile:hover{border-color:var(--amber)}
+td[id*="lc-"].up{background:color-mix(in srgb,var(--up) 16%,transparent)}td[id*="lc-"].down{background:color-mix(in srgb,var(--down) 16%,transparent)}
+.panel h2,.panel h3{font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.1em;font-size:13px;border-left:3px solid var(--amber);padding-left:8px}
 </style>
 
 <div class="wrap">
@@ -71,6 +78,7 @@ svg text{fill:var(--mute);font:10px var(--f-mono)}
   </header>
   <div class="bar" id="status"></div>
 
+  <div class="strip" id="strip"></div>
   <section class="panel">
     <div class="head"><h2>Markets</h2><span class="mute mono" id="mk-asof"></span></div>
     <div class="mk" id="mk" style="margin-top:12px"></div>
@@ -106,6 +114,10 @@ function status(){const s=[];
   s.push(`<span>Page built ${META.built} IST</span>`);
   $("status").innerHTML=s.join("")}
 
+const STRIP=["Nifty 50","Nifty Bank","India VIX","Nifty Midcap 100","Nifty IT","GOLD","SILVER","CRUDEOIL","NIFTYBEES","GOLDBEES"];
+function strip(){if(!MK)return;const all={};Object.values(MK.groups).forEach(rows=>rows.forEach(r=>all[r.k]=r));
+  $("strip").innerHTML=STRIP.filter(k=>all[k]).map(k=>{const r=all[k],c=r.chg*100;return`<button class="stile" data-mk="${r.k}"><span class="sk">${r.name.replace(/ \(.*$/,"")}</span>
+   <b id="sv-${r.seg}-${r.sid}">${fmt(r.last)}</b><span class="${cls(c)}" id="sc-${r.seg}-${r.sid}">${c>0?"▲":c<0?"▼":""} ${pct(c)}</span>${spark((r.hist&&r.hist.c||r.spark).slice(-20),150,22)}</button>`}).join("")}
 function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file yet.</p>';return}
   $("mk-asof").textContent="closes as of "+MK.asof+" IST";
   $("mk").innerHTML=Object.entries(MK.groups).map(([g,rows])=>`<div class="scroll"><h3 style="font-size:15px;margin-bottom:6px">${g}</h3><table>
@@ -114,7 +126,7 @@ function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file ye
    <td class="n ${cls(r.chg)}" id="lc-${r.seg}-${r.sid}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
    </table></div>`).join("")+(MK.missing&&MK.missing.length?`<p class="mute" style="grid-column:1/-1;font-size:12px">Not returned by Dhan: ${MK.missing.join("; ")}</p>`:"")}
 
-status();markets();
+status();strip();markets();
 document.addEventListener("click",e=>{const b=e.target.closest("[data-mk]");if(b&&window.azGo)azGo(b.dataset.mk)});
 /* Live prices: GitHub Actions streams Dhan prices every 5 s to the public repo prodadarjaiswal-lab/aj-live during
    market hours (one Dhan login a day). The page reads live.json through the GitHub connector. */
@@ -130,7 +142,8 @@ async function livePoll(mcp){if(LV.busy)return;LV.busy=true;
     const fresh=String(d.t).slice(0,10)===istNow().toISOString().slice(0,10);let n=0;
     if(fresh&&MK)for(const rows of Object.values(MK.groups))for(const r of rows){const a=((d.q[r.seg]||{})[String(r.sid)]);
       if(a&&a[0]){const base=a[4]||r.prev,el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
-        if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}n++}}
+        if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}
+        const sv=$(`sv-${r.seg}-${r.sid}`),sc=$(`sc-${r.seg}-${r.sid}`);if(sv)sv.textContent=fmt(a[0]);if(sc&&base){const c=(a[0]/base-1)*100;sc.textContent=(c>0?"▲ ":c<0?"▼ ":"")+pct(c);sc.className=cls(c)}n++}}
     window.TLIVE=fresh?d.q:null;window.TLIVE_T=d.t;try{document.dispatchEvent(new Event("tlive"))}catch(e){}
     LV.ok=true;LV.at=Date.now();LV.t=d.t;
     liveNote(fresh?`<b>LIVE</b> ${String(d.t).slice(11,19)} IST · ${n} board prices`:`Market closed · last live ${String(d.t).slice(0,16)} IST`,fresh)}
