@@ -162,13 +162,32 @@ function timing(H){return`<div class="azh">${H.map(h=>`<div class="azhc"><span c
    <ul>${h.cks.map(c=>`<li class="${c.ok==null?"azm":c.ok?"good":"bad"}">${c.ok==null?"·":c.ok?"✓":"✗"} ${E(c.label)}</li>`).join("")}</ul></div>`).join("")}</div>
    <p class="note">Rule checks on today's chart and accounts, not a forecast. ${WK.correction?"Market is in a correction, so the 3-month bar is higher. ":""}Research software, not advice.</p>`}
 
+
+/* ---------- probability and projection (Black-Scholes, lognormal) ---------- */
+const Nc=x=>{const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
+function proj(x,f){const S=f.last;if(!S)return null;const key=x.k==="Nifty 50"?"NIFTY":x.k==="Nifty Bank"?"BANKNIFTY":x.k,bs=((D.quant||{}).bs||{})[key],r=(D.quant||{}).rf||0.07;
+  let v=bs&&bs.iv,src="implied, from options";if(!v){const c=closes(x).c.filter(z=>z>0).slice(-253);if(c.length>60){const rr=c.slice(1).map((z,i)=>Math.log(z/c[i])),mu=rr.reduce((a,b)=>a+b,0)/rr.length;v=Math.sqrt(rr.reduce((a,b)=>a+(b-mu)**2,0)/rr.length*252);src="from the last year of prices"}}
+  if(!v)return null;const {sup,res}=levels(closes(x).c.filter(z=>z>0),S),sp=sup[0],rs=res[0];
+  const H=[["3 months",0.25],["6 months",0.5],["1 year",1]].map(([lab,T])=>{const sd=v*Math.sqrt(T),m=S*Math.exp((r-v*v/2)*T);
+    return{lab,T,up:Nc(((r-v*v/2)*T)/sd),lo:m*Math.exp(-sd),hi:m*Math.exp(sd),mid:m,
+      hitR:rs?Math.min(1,2*(1-Nc(Math.log(rs.p/S)/sd))):null,hitS:sp?Math.min(1,2*(1-Nc(Math.log(S/sp.p)/sd))):null}});
+  const mc=x.kind==="Stock"?((D.quant||{}).mc||{})[x.k]:null;return{v,src,sp,rs,H,mc:mc&&mc.p50!=null?mc:null}}
+function summary(x,f){const p=proj(x,f);if(!p)return"";const cur=x.kind==="Index"?"":"₹",h3=p.H[0];
+  const t=(k,v,sub,cl)=>`<div class="azt ${cl||""}"><span>${k}</span><b>${v}</b>${sub?`<small>${sub}</small>`:""}</div>`;
+  return`<div class="azg" style="margin-top:12px">
+   ${t("Next support",p.sp?cur+F(p.sp.p):"none below",p.sp?P(p.sp.p/f.last-1)+" away":"at its lows","")}
+   ${t("Next resistance",p.rs?cur+F(p.rs.p):"none above",p.rs?P(p.rs.p/f.last-1)+" away":"at its highs","")}
+   ${p.H.map(h=>t("Chance higher in "+h.lab,Math.round(h.up*100)+"%",`likely ${cur}${F(h.lo,0)} – ${cur}${F(h.hi,0)}`,h.up>=0.55?"good":h.up<0.45?"bad":"")).join("")}
+   ${p.rs?t("Reach resistance in 3 months",Math.round(h3.hitR*100)+"%","","" ):""}${p.sp?t("Break support in 3 months",Math.round(h3.hitS*100)+"%","",h3.hitS>0.5?"bad":""):""}
+   ${p.mc?t("Monte Carlo, 1 month",Math.round((p.mc.p_up||0)*100)+"% up",`${cur}${F(p.mc.p5,0)} – ${cur}${F(p.mc.p95,0)} (90%)`,""):""}
+  </div><p class="note" style="margin-top:6px">Chances use Black-Scholes with ${(p.v*100).toFixed(1)}% yearly volatility (${p.src}). "Likely" is the middle two-thirds of outcomes. These are model odds, not forecasts.</p>`}
 /* ---------- Analyze ---------- */
 let CUR=null,LAST=0;
 function head(x,f){const L=f.live,ch=f.prev&&f.last?f.last/f.prev-1:null,H=horizons(x,f);
   return`<div class="row" style="justify-content:space-between;align-items:flex-end;gap:12px"><div><span class="sub">${E(x.kind)}${x.mk&&x.mk.contract?" · "+E(x.mk.contract):""}${f.v&&f.v.ind?" · "+E(f.v.ind):""}</span>
    <h2 style="margin:2px 0 0;font-size:1.5rem">${E(x.k)} <span class="note" style="font-weight:400">${x.name!==x.k?E(x.name):""}</span></h2></div>
    <div style="text-align:right"><b style="font-size:1.6rem">${x.kind==="Index"?"":"₹"}${F(f.last)}</b> <span class="${C(ch)}">${P(ch,2)}</span><br><span class="note">${L?`LIVE ${E(String(L.t||"").slice(11,19))} IST`:"last close"}</span></div></div>
-   <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>`}
+   <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>${summary(x,f)}`}
 function render(){const x=CUR;if(!x)return;const f=feats(x);LAST=Date.now();
   $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-time").innerHTML=timing(horizons(x,f));
   $("az-body").hidden=false;$("az-empty").hidden=true}
