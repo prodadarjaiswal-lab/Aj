@@ -4,16 +4,27 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: one desk page. Price and three buy-timing verdicts first, then the chart, technicals, 20-year history and the proof. Dark bullion ground, gold accent. */
-:root{--bg:#100f0c;--panel:#18160f;--line:#2e2a20;--fg:#e4dfd2;--dim:#948c79;--bright:#f8f4ea;--acc:#d9a93f;--up:#41b883;--dn:#e5625a;--amb:#e3b341;
- --fd:"Chakra Petch","IBM Plex Sans",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;--fm:"IBM Plex Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;color-scheme:light}}
-:root[data-theme="light"]{--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;color-scheme:light}
-body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--fb);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
-.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+:root{--bg:#050505;--panel:#0d0d0d;--line:#242424;--fg:#d9d9d9;--dim:#8a8a8a;--bright:#f5f5f5;--acc:#ff9f1a;--up:#22c55e;--dn:#ef4444;--amb:#f5b83d;--upbg:rgba(34,197,94,.14);--dnbg:rgba(239,68,68,.14);
+ --fd:"IBM Plex Mono",ui-monospace,Menlo,monospace;--fb:"IBM Plex Mono",ui-monospace,Menlo,monospace;--fm:"IBM Plex Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;--upbg:rgba(29,138,90,.12);--dnbg:rgba(198,61,53,.12);color-scheme:light}}
+:root[data-theme="light"]{--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;--upbg:rgba(29,138,90,.12);--dnbg:rgba(198,61,53,.12);color-scheme:light}
+body{background:var(--bg);color:var(--fg);font:13px/1.5 var(--fb);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 header{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;border-bottom:1px solid var(--line);padding-block:12px}
-.brand{font:700 18px var(--fd);letter-spacing:.1em;color:var(--acc)}
+.brand{font:700 16px var(--fm);letter-spacing:.18em;color:var(--acc)}
 .chip{font:500 12px var(--fm);color:var(--dim)}.chip b{color:var(--bright);font-weight:600}
-h2{font:600 16px/1.3 var(--fd);letter-spacing:.03em;color:var(--bright);margin:0 0 10px;text-wrap:balance}
+h2{font:600 11.5px/1.3 var(--fm);letter-spacing:.14em;text-transform:uppercase;color:var(--bright);margin:0 0 10px;padding-left:9px;border-left:3px solid var(--acc);text-wrap:balance}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));border:1px solid var(--line);background:var(--panel)}
+.strip>div{padding:8px 12px 6px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.strip .k{font:500 10px var(--fm);letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
+.strip .v{font:600 17px var(--fm);color:var(--bright);font-variant-numeric:tabular-nums}
+.strip .s{font:11.5px var(--fm)}
+.pill{padding:1px 5px}.pill.good{background:var(--upbg)}.pill.bad{background:var(--dnbg)}
+.board{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
+.board>div:first-child svg{max-width:300px;margin:0 auto}
+@media (max-width:760px){.board{grid-template-columns:1fr}}
+.zbar{display:inline-block;width:90px;height:8px;background:var(--line);position:relative;vertical-align:middle}
+.zbar i{position:absolute;top:0;bottom:0}
 .dim{color:var(--dim)}.up{color:var(--up)}.dn{color:var(--dn)}.amb{color:var(--amb)}
 .note{font-size:12.5px;color:var(--dim);max-width:90ch;margin:6px 0 0}
 .hero{display:flex;flex-wrap:wrap;gap:14px 40px;align-items:flex-end}
@@ -56,12 +67,15 @@ svg{display:block;width:100%;height:auto}svg text{font:10.5px var(--fm);fill:var
 <div class="wrap">
 <header id="hdr"></header>
 <section id="hero" class="hero"></section>
+<section id="strip" class="strip"></section>
 <section id="glance" class="glance"></section>
+<section class="card"><h2>Gold signal board</h2><div id="board" class="board"></div></section>
 <section><h2>When to buy: 3 months, 6 months, 1 year</h2><div id="verdicts" class="vgrid"></div>
 <p class="note">Rule checks on the last close, the same rules the Trading Terminal uses for ETFs and MCX. Under each verdict: what gold did next on every past day that showed the same verdict. Days overlap, so the independent count is the "periods" figure. Research software, not advice.</p></section>
 <section class="card"><h2>Trend gauge: the value metric that caught the falls</h2><div id="tg"></div></section>
 <section class="card"><h2>Last two years with the 50-day and 200-day averages</h2><div id="chart"></div></section>
 <section><h2>Technicals</h2><div id="tech" class="tiles"></div></section>
+<section class="card"><h2>Risk and return</h2><div id="risk"></div></section>
 <section class="card macro"><h2 id="mac-h">Why gold fell</h2><div id="macro"></div></section>
 <section class="card"><h2>Projection: Black-Scholes odds from gold's own volatility</h2><div id="proj"></div></section>
 <section class="two">
@@ -214,4 +228,25 @@ $("method").innerHTML=`${L.ok?"":`<div class="warnbox"><b>Level check failed.</b
  <div class="scroll"><table><tr><th class="t">Back-test, weekly</th><th>Hold: per year</th><th>Hold: worst fall</th><th>Rule: per year</th><th>Rule: worst fall</th><th>Next 52 weeks when above</th><th>…when below</th><th>Switches a year</th></tr>${row("Rupee gold",R)}${row("Dollar gold",U)}</table></div>
  <div class="scroll" style="margin-top:8px"><table><tr><th class="t">Fall of 15% or more</th><th class="t">Peak → bottom</th><th>Gold fell</th><th>Following the rule</th></tr>${fl.map(([c,z])=>`<tr><td class="t">${c==="₹"?"Rupee":"Dollar"}</td><td class="t">${E(z.peak)} → ${E(z.bottom)}</td><td class="dn">${P(z.fall)}</td><td class="${z.rule<z.fall/2?"dn":"warn"}">${P(z.rule)}</td></tr>`).join("")}</table></div>
  <p class="note">Why this metric: a quick Roast Room (Buffett, Naval, Bezos and Musk seats) and a back-test compared the value channel, price vs the 200-week average, the gold/silver ratio, the real price and this trend rule on weekly gold since 2003 (rupees) and 2000 (dollars). The value metrics said "expensive" before gold's best years: when the channel flagged gold as dear, the next 52 weeks averaged more, not less. Only the trend rule pointed the right way in both currencies, and it needs no tuned threshold. It lags turns, gives back part of each fall before it switches, and can flip back and forth in flat years. It is a trend state, not a forecast. Hold-cash weeks earn 6.5% a year. Research, not advice.</p>`})();
+
+function spark(a,w=150,h=26,col){if(!a||a.length<2)return"";const lo=Math.min(...a),hi=Math.max(...a)||1,X=i=>i/(a.length-1)*w,Y=v=>h-2-(v-lo)/((hi-lo)||1)*(h-4);
+ const c=col||(a[a.length-1]>=a[0]?"var(--up)":"var(--dn)");return`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px" aria-hidden="true"><path d="${a.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join("")}" fill="none" stroke="${c}" stroke-width="1.3"/></svg>`}
+(function(){const S=G.strip||[];if(!S.length){$("strip").hidden=true;return}
+ $("strip").innerHTML=S.map(x=>`<div><div class="k">${E(x.name)}</div><div class="v">${x.unit}${F(x.last,x.last<1000?2:0)}</div><div class="s"><span class="pill ${C(x.pct)}">${x.pct>=0?"▲":"▼"} ${F(Math.abs(x.chg),x.last<1000?2:0)} ${P(x.pct,2)}</span> <span class="dim">${E(x.d.slice(5))}</span></div>${spark(x.spark)}</div>`).join("")})();
+(function(){const B=G.board;if(!B){$("board").closest("section").hidden=true;return}
+ const s=B.score,ang=Math.PI*(1-s/100),cx=150,cy=130,R=104,nx=cx+R*.86*Math.cos(ang),ny=cy-R*.86*Math.sin(ang),arc=(a0,a1,col)=>{const p=a=>[cx+R*Math.cos(Math.PI*(1-a/100)),cy-R*Math.sin(Math.PI*(1-a/100))];const[x0,y0]=p(a0),[x1,y1]=p(a1);return`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${col}" stroke-width="14"/>`};
+ const lab=s<25?"Weak":s<50?"Soft":s<75?"Firm":"Strong",cl=s<25?"bad":s<50?"warn":"good";
+ const zb=z=>{if(z==null)return"";const c=Math.max(-3,Math.min(3,z)),w=Math.abs(c)/3*45;return`<span class="zbar"><i style="left:${c<0?45-w:45}px;width:${w}px;background:var(--${c<0?"dn":"up"})"></i><i style="left:44.5px;width:1px;background:var(--dim)"></i></span>`};
+ $("board").innerHTML=`<div><svg viewBox="0 0 300 160" role="img" aria-label="Gold signal score ${s} out of 100">${arc(0,25,"var(--dn)")}${arc(25,50,"var(--amb)")}${arc(50,75,"#8bc34a")}${arc(75,100,"var(--up)")}
+ <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="var(--bright)" stroke-width="2.5"/><circle cx="${cx}" cy="${cy}" r="5" fill="var(--bright)"/>
+ <text x="${cx}" y="${cy-30}" text-anchor="middle" style="font:600 30px var(--fm);fill:var(--bright)">${Math.round(s)}</text><text x="18" y="150">0</text><text x="282" y="150" text-anchor="end">100</text></svg>
+ <p style="margin:0;text-align:center" class="${cl}"><b>${lab}</b> · score ${Math.round(s)} of 100</p>
+ <div class="scroll" style="margin-top:8px"><table><tr><th class="t">Score band (past weeks)</th><th>Weeks</th><th>Next 52 weeks</th><th>Up</th></tr>${B.bands.map(b=>`<tr><td class="t">${E(b.lab)}</td><td>${F(b.n)}</td><td class="${C(b.avg)}">${P(b.avg)}</td><td>${Math.round(b.up*100)}%</td></tr>`).join("")}</table></div></div>
+ <div class="scroll"><table><tr><th class="t">Signal</th><th class="t">Reading</th><th>Z (±3)</th><th></th><th>Next 52 wks z&gt;0 / z≤0</th></tr>
+ ${B.signals.map(x=>`<tr><td class="t">${E(x.name)}${x.scored?"":` <span class="dim">(shown, not scored)</span>`}</td><td class="t">${E(x.reading||"–")}</td><td>${zb(x.z)}</td><td class="${C(x.z)}">${x.z==null?"–":(x.z>0?"+":"")+x.z.toFixed(2)}</td><td>${x.hit?`${P(x.hit.pos)} / ${P(x.hit.neg)}`:"–"}</td></tr>`).join("")}</table>
+ <p class="note">Each signal is a z-score against its own history up to that week, turned so that positive is good for gold. The score is the average chance-equivalent of the four scored signals (0 = all at their worst, 100 = all at their best). They are scored because their sign lined up with the next 52 weeks on weekly rupee gold since ${E((B.from||"").slice(0,4))}; volatility and the gold/silver ratio did not, so they are shown only. The value channel uses today's fitted trend, so its history has some hindsight. Research, not advice.</p></div>`})();
+(function(){const R=G.risk||[];if(!R.length){$("risk").closest("section").hidden=true;return}const n2=x=>x==null?"–":x.toFixed(2);
+ $("risk").innerHTML=`<div class="scroll"><table><tr><th class="t">Period</th><th>Return / yr</th><th>Volatility</th><th>Sharpe</th><th>Sortino</th><th>Max drawdown</th><th>Calmar</th><th>1-day VaR 95%</th><th>1-day CVaR 95%</th><th>Ulcer index</th><th>Beta to Nifty</th><th>Corr. to Nifty</th></tr>
+ ${R.map(r=>`<tr><td class="t">${E(r.lab)}</td><td class="${C(r.cagr)}">${P(r.cagr)}</td><td>${P(r.vol).replace("+","")}</td><td class="${C(r.sharpe)}">${n2(r.sharpe)}</td><td>${n2(r.sortino)}</td><td class="dn">${P(r.mdd)}</td><td>${n2(r.calmar)}</td><td class="dn">${P(r.var95,2)}</td><td class="dn">${P(r.cvar95,2)}</td><td>${n2(r.ulcer)}</td><td>${n2(r.beta)}</td><td>${n2(r.corr)}</td></tr>`).join("")}</table></div>
+ <p class="note">From daily rupee gold closes. Sharpe and Sortino use a 6.5% risk-free rate. VaR: on 1 day in 20, gold fell at least this much; CVaR is the average of those days. Ulcer index measures how deep and long the drawdowns were (lower is calmer). A beta near 0 means gold moved on its own, which is what makes it a hedge for a Nifty portfolio.</p>`})();
 </script>

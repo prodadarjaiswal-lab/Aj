@@ -412,6 +412,101 @@ def trend_gauge(rows: list, k: int = 40, rf: float = 0.065, warm: int = 260) -> 
             "falls": eps, "flips": [[d[i], "above" if on[i] else "below", round(float(p[i]), 2)] for i in flips[-8:]]}
 
 
+def _N(z: float) -> float:
+    from math import erf, sqrt
+    return 0.5 * (1 + erf(z / sqrt(2)))
+
+
+def signal_board(long: list, V: dict, gsr: dict) -> dict:
+    """A 0-100 gold signal score, laid out like a risk-on/risk-off board. Each signal is a z-score against its own
+    history up to that week (no look-ahead), oriented so that positive is good for gold. Scored signals are the ones
+    whose sign lined up with the next 52 weeks on weekly rupee gold since 2003: trend vs the 40-week average,
+    12-month momentum, depth below the high, and the value channel. Volatility and the gold/silver ratio are shown
+    but not scored (they did not line up). Score = average of N(z) x 100. Back-test: next-52-week return by score band."""
+    d = [x for x, _ in long]
+    p = np.array([v for _, v in long], float)
+    n = len(p)
+    cs = np.cumsum(np.insert(p, 0, 0))
+    m40 = np.full(n, np.nan)
+    m40[39:] = (cs[40:] - cs[:-40]) / 40
+    lr = np.r_[np.nan, np.diff(np.log(p))]
+    rv = lambda k: np.array([np.nan if i < k else float(np.std(lr[i - k + 1:i + 1])) for i in range(n)])
+    t0 = dt.date.fromisoformat(V["t0"])
+    tt = np.array([(dt.date.fromisoformat(x) - t0).days / 365.25 for x in d])
+    raw = {"trend": p / m40 - 1, "mom": np.r_[[np.nan] * 52, p[52:] / p[:-52] - 1],
+           "dd": p / np.maximum.accumulate(p) - 1, "vol": rv(13) / rv(52),
+           "gsr": np.array([gsr.get(x[:7], np.nan) for x in d], float)}
+
+    def ez(x, sign=1):
+        o = np.full(n, np.nan)
+        for i in range(156, n):
+            h = x[:i + 1]
+            h = h[~np.isnan(h)]
+            if len(h) > 100 and not np.isnan(x[i]):
+                o[i] = sign * (x[i] - h.mean()) / h.std()
+        return o
+    Z = {"trend": ez(raw["trend"]), "mom": ez(raw["mom"]), "dd": ez(raw["dd"]), "vol": ez(raw["vol"], -1),
+         "gsr": ez(raw["gsr"]), "value": -(np.log(p) - (V["a"] + V["b"] * tt)) / V["sd"]}
+    fwd = np.full(n, np.nan)
+    fwd[:-52] = p[52:] / p[:-52] - 1
+    scored = ("trend", "mom", "dd", "value")
+    Nv = np.vectorize(lambda z: np.nan if np.isnan(z) else _N(z))
+    score = np.nanmean(np.vstack([Nv(Z[k]) for k in scored]), 0) * 100
+    bands = []
+    for lo, hi, lab in ((0, 25, "0-25 weak"), (25, 50, "25-50"), (50, 75, "50-75"), (75, 101, "75-100 strong")):
+        m = (score >= lo) & (score < hi) & ~np.isnan(fwd)
+        if m.any():
+            bands.append({"lab": lab, "n": int(m.sum()), "avg": round(float(fwd[m].mean()), 4), "up": round(float((fwd[m] > 0).mean()), 3)})
+    lab = {"trend": ("Trend", lambda v: f"{v:+.1%} vs 40-week avg"), "mom": ("Momentum", lambda v: f"{v:+.1%} in 12 months"),
+           "dd": ("Below the high", lambda v: f"{v:+.1%} from record"), "value": ("Value channel", lambda v: f"{-v:+.2f} sigma from trend"),
+           "vol": ("Volatility", lambda v: f"{v:.2f}x its 1-year normal"), "gsr": ("Gold / silver", lambda v: f"ratio {v:.1f}")}
+    rows = []
+    for k in ("trend", "mom", "dd", "value", "vol", "gsr"):
+        z = Z[k][-1]
+        rv_ = raw[k][-1] if k != "value" else -Z[k][-1]
+        m = ~np.isnan(Z[k]) & ~np.isnan(fwd)
+        hit = None
+        if m.sum() > 50:
+            hit = {"pos": round(float(fwd[m][Z[k][m] > 0].mean()), 4), "neg": round(float(fwd[m][Z[k][m] <= 0].mean()), 4)}
+        rows.append({"k": k, "name": lab[k][0], "reading": None if np.isnan(rv_) else lab[k][1](float(rv_)),
+                     "z": None if np.isnan(z) else round(float(z), 2), "scored": k in scored, "hit": hit})
+    sp = [[d[i], round(float(score[i]), 1)] for i in range(n) if not np.isnan(score[i])]
+    return {"score": round(float(score[-1]), 1), "signals": rows, "bands": bands, "from": sp[0][0] if sp else None,
+            "hist": sp[-260:]}
+
+
+def risk_stats(c: np.ndarray, nifty, rf: float = 0.065) -> list:
+    """Quantstats-style risk and return from daily closes, over 1 year, 3 years and all data."""
+    out = []
+    for lab, k in (("1 year", 252), ("3 years", 756), ("Since 2009", len(c) - 1)):
+        x = c[-(k + 1):]
+        r = np.diff(x) / x[:-1]
+        if len(r) < 200:
+            continue
+        yrs = len(r) / 252
+        cagr = float((x[-1] / x[0]) ** (1 / yrs) - 1)
+        ex = r - rf / 252
+        sd, dn = float(r.std()), float(np.sqrt(np.mean(np.minimum(r - rf / 252, 0) ** 2)))
+        eq = x / np.maximum.accumulate(x) - 1
+        mdd = float(eq.min())
+        q = float(np.quantile(r, 0.05))
+        row = {"lab": lab, "cagr": round(cagr, 4), "vol": round(float(sd * np.sqrt(252)), 4),
+               "sharpe": round(float(ex.mean() / sd * np.sqrt(252)), 2), "sortino": round(float(ex.mean() / dn * np.sqrt(252)), 2) if dn else None,
+               "mdd": round(mdd, 4), "calmar": round(cagr / -mdd, 2) if mdd < 0 else None,
+               "var95": round(q, 4), "cvar95": round(float(r[r <= q].mean()), 4),
+               "ulcer": round(float(np.sqrt(np.mean((eq * 100) ** 2))), 2), "beta": None, "corr": None}
+        if nifty is not None:
+            nf = nifty[-(k + 1):]
+            nr = np.diff(nf) / nf[:-1]
+            m = ~np.isnan(nr) & ~np.isnan(r)
+            if m.sum() > 100:
+                cv = np.cov(r[m], nr[m])
+                row["beta"] = round(float(cv[0, 1] / cv[1, 1]), 2)
+                row["corr"] = round(float(np.corrcoef(r[m], nr[m])[0, 1]), 2)
+        out.append(row)
+    return out
+
+
 def value(long: list, hist: dict, gold_last: float, mcx: dict, silver: dict) -> dict:
     """Value channel (log trend of the weekly rupee price since 2003, bands at 1 and 2 standard deviations), price vs
     its 200-week average, gold/silver ratio, and the old desk's real-price and real-yield figures."""
@@ -528,6 +623,23 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     if mx and mx["d"] == d[i]:
         LV["mcx_k"] = round(mx["c"] / float(c[i]), 5)
     FL = falls(c, d)
+    gs = {m: v for m, v in ((hist.get("value") or {}).get("gsr_series") or [])}
+    if V.get("gsr"):
+        gs[d[i][:7]] = V["gsr"]["now"]
+    SB = signal_board(long, V, gs)
+    RS = risk_stats(c, nifty)
+    sil = daily.get("silver") or {}
+    def tick(name, ser, unit="₹"):
+        ks = sorted(ser)[-60:]
+        if len(ks) < 2:
+            return None
+        a, b = ser[ks[-1]], ser[ks[-2]]
+        return {"name": name, "unit": unit, "last": round(a, 2), "chg": round(a - b, 2), "pct": round(a / b - 1, 4), "d": ks[-1], "spark": [round(ser[x], 2) for x in ks]}
+    strip = [tick("Gold ₹/10 g", {x: float(v) for x, v in zip(d, c)}), tick("MCX gold", mcx), tick("MCX silver ₹/kg", sil),
+             tick("GOLDBEES", bees), tick("Nifty 50", nf, "")]
+    if mcx and sil:
+        gk = {x: mcx[x] * 100 / sil[x] for x in mcx if x in sil}
+        strip.insert(3, tick("Gold / silver", gk, ""))
     TG = {"inr": trend_gauge(long), "usd": trend_gauge([[r[0], r[1]] for r in hist["w"] if r[1]])}
     PJ = projection(c, LV, float(ath))
     mpath = HERE.parents[1] / "docs/gold/macro.json"
@@ -535,7 +647,7 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     for row in FL["rows"]:
         fm = (MAC.get("falls") or {})
         row["why"] = fm.get(row["peak"][:7]) or fm.get(row["peak"][:4])
-    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "proj": PJ, "trend": TG, "macro": MAC.get("current"), "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
+    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "proj": PJ, "trend": TG, "board": SB, "risk": RS, "strip": [x for x in strip if x], "macro": MAC.get("current"), "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
             "long": long, "rets": rets, "daily_from": d[0], "daily_n": len(d),
             "studies": {k: hist.get(k) for k in ("gold_dd", "falls_nifty", "falls_nifty_big", "trend_strategy", "hedge")},
             "hist_source": hist.get("source"), "hist_asof": hist.get("asof"),

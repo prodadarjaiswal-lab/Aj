@@ -59,3 +59,10 @@ def test_trend_gauge_up_then_down():
     T = G.trend_gauge(rows)
     assert T["now"] == "below" and T["dist"] < 0
     assert T["rule"]["maxdd"] > T["hold"]["maxdd"]  # the rule side-steps part of the fall
+
+
+def test_risk_stats_shapes():
+    c = np.array([100 * 1.0004 ** i * (1 + 0.01 * np.sin(i / 7)) for i in range(900)])
+    R = G.risk_stats(c, None)
+    assert [r["lab"] for r in R] == ["1 year", "3 years", "Since 2009"]
+    assert all(r["mdd"] <= 0 and r["var95"] < 0 and r["cvar95"] <= r["var95"] for r in R)
