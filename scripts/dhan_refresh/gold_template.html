@@ -1,0 +1,147 @@
+<title>Gold Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one desk page. Price and three buy-timing verdicts first, then the chart, technicals, 20-year history and the proof. Dark bullion ground, gold accent. */
+:root{--bg:#100f0c;--panel:#18160f;--line:#2e2a20;--fg:#e4dfd2;--dim:#948c79;--bright:#f8f4ea;--acc:#d9a93f;--up:#41b883;--dn:#e5625a;--amb:#e3b341;
+ --fd:"Chakra Petch","IBM Plex Sans",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;--fm:"IBM Plex Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f5f4ef;--panel:#ffffff;--line:#dedad0;--fg:#22211c;--dim:#6b6656;--bright:#0e0d0a;--acc:#8f6508;--up:#1d8a5a;--dn:#c63d35;--amb:#946400;color-scheme:light}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--fb);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;border-bottom:1px solid var(--line);padding-block:12px}
+.brand{font:700 18px var(--fd);letter-spacing:.1em;color:var(--acc)}
+.chip{font:500 12px var(--fm);color:var(--dim)}.chip b{color:var(--bright);font-weight:600}
+h2{font:600 16px/1.3 var(--fd);letter-spacing:.03em;color:var(--bright);margin:0 0 10px;text-wrap:balance}
+.dim{color:var(--dim)}.up{color:var(--up)}.dn{color:var(--dn)}.amb{color:var(--amb)}
+.note{font-size:12.5px;color:var(--dim);max-width:90ch;margin:6px 0 0}
+.hero{display:flex;flex-wrap:wrap;gap:14px 40px;align-items:flex-end}
+.hero .k{font:500 11px var(--fm);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.hero .px{font:600 clamp(28px,6vw,40px)/1.1 var(--fm);color:var(--bright);font-variant-numeric:tabular-nums}
+.hero .px small{font-size:15px;margin-left:8px}
+.hero .sub{font:12.5px var(--fm);color:var(--dim)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.vc{background:var(--panel);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vc .h{font:500 11px var(--fm);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.vc .v{font:700 22px var(--fd);letter-spacing:.02em}
+.vc ul{margin:0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.vc .ev{font:12px/1.5 var(--fm);color:var(--dim);border-top:1px solid var(--line);padding-top:8px}
+.vc .ev b{color:var(--fg);font-weight:600}
+.good{color:var(--up)}.bad{color:var(--dn)}.warn{color:var(--amb)}.na{color:var(--dim)}
+.card{background:var(--panel);border:1px solid var(--line);padding:14px 16px;min-width:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.tile{padding:10px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.tile .k{font:500 10.5px var(--fm);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.tile .v{font:600 17px var(--fm);color:var(--bright);font-variant-numeric:tabular-nums}
+.tile .v.good{color:var(--up)}.tile .v.bad{color:var(--dn)}.tile .v.warn{color:var(--amb)}
+.tile .s{font:11.5px var(--fm);color:var(--dim)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:12.5px var(--fm);font-variant-numeric:tabular-nums}
+th{font:500 10.5px var(--fm);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th.t,td.t{text-align:left}
+td.w{white-space:normal;min-width:150px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px}
+svg{display:block;width:100%;height:auto}svg text{font:10.5px var(--fm);fill:var(--dim)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font:11px var(--fm);color:var(--dim);margin-top:6px}.legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:5px}
+.warnbox{border:1px solid var(--amb);padding:10px 12px;font-size:13px}.warnbox b{color:var(--amb)}
+</style>
+<div class="wrap">
+<header id="hdr"></header>
+<section id="hero" class="hero"></section>
+<section><h2>When to buy: 3 months, 6 months, 1 year</h2><div id="verdicts" class="vgrid"></div>
+<p class="note">Rule checks on the last close, the same rules the Trading Terminal uses for ETFs and MCX. Under each verdict: what gold did next on every past day that showed the same verdict. Days overlap, so the independent count is the "periods" figure. Research software, not advice.</p></section>
+<section class="card"><h2>Last two years with the 50-day and 200-day averages</h2><div id="chart"></div></section>
+<section><h2>Technicals</h2><div id="tech" class="tiles"></div></section>
+<section class="two">
+ <div class="card"><h2>Gold in rupees since 2003</h2><div id="long"></div><div id="rets"></div></div>
+ <div class="card"><h2>Falls from a record high</h2><div id="dd"></div></div>
+</section>
+<section class="two">
+ <div class="card"><h2>Gold when the Nifty fell</h2><div id="falls"></div></div>
+ <div class="card"><h2>Adding gold to a Nifty portfolio</h2><div id="hedge"></div></div>
+</section>
+<section class="card"><h2>Where the numbers come from</h2><div id="method"></div></section>
+</div>
+<script>
+const G=/*GOLD_DATA*/null;
+const $=id=>document.getElementById(id);
+const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const F=(x,d=0)=>x==null||!isFinite(x)?"–":Number(x).toLocaleString("en-IN",{maximumFractionDigits:d,minimumFractionDigits:d});
+const P=(x,d=1)=>x==null||!isFinite(x)?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%";
+const C=x=>x==null?"":x>0?"good":x<0?"bad":"";
+const VC={"Good to buy":"good","Wait":"warn","Avoid":"bad","Not enough data":"na"};
+const f=G.f,L=G.level;
+
+$("hdr").innerHTML=`<span class="brand">GOLD DESK</span><span class="chip">Close <b>${E(G.date)}</b></span><span class="chip">Built <b>${E(G.asof)} IST</b></span><span class="chip">Prices: Dhan daily close</span>`;
+
+const ch=f.last/f.prev-1,mx=G.mcx;
+$("hero").innerHTML=`<div><div class="k">Gold, ₹ per 10 g (spot equivalent)</div><div class="px">₹${F(f.last)}<small class="${C(ch)}">${P(ch,2)}</small></div>
+ <div class="sub">GOLDBEES ₹${F(f.bees,2)} × ${L.k} · ${P(f.from_ath)} from the record ₹${F(f.ath)} (${E(f.ath_d)})</div></div>
+ ${mx?`<div><div class="k">MCX future ${E(mx.contract||"")}</div><div class="px" style="font-size:24px">₹${F(mx.c)}${mx.prev?`<small class="${C(mx.c/mx.prev-1)}">${P(mx.c/mx.prev-1,2)}</small>`:""}</div><div class="sub">close ${E(mx.d)}${mx.gap!=null?` · ${P(mx.gap,2)} vs spot equivalent`:""}</div></div>`:""}`;
+
+$("verdicts").innerHTML=G.horizons.map(h=>{const p=G.proof[h.lab],me=p.by[h.v],all=p.all;
+ const ev=me&&all?`Past days with “${E(h.v)}”: gold was <b class="${C(me.avg)}">${P(me.avg)}</b> on average ${h.lab} later and up <b>${Math.round(me.up*100)}%</b> of the time (${F(me.n)} days, about ${F(me.periods,1)} periods, worst ${P(me.worst)}). All days: ${P(all.avg)}, up ${Math.round(all.up*100)}%.`:"No past days with this verdict to compare.";
+ const oth=Object.entries(p.by).filter(([k,v])=>k!==h.v&&v&&k!=="Not enough data").map(([k,v])=>`${E(k)} ${P(v.avg)} (up ${Math.round(v.up*100)}%)`).join(" · ");
+ return`<div class="vc"><span class="h">${E(h.lab)}</span><span class="v ${VC[h.v]}">${E(h.v)}</span><span class="dim" style="font-size:12px">${h.pass} of ${h.n} checks pass</span>
+ <ul>${h.checks.map(([l,ok])=>`<li class="${ok==null?"na":ok?"good":"bad"}">${ok==null?"·":ok?"✓":"✗"} <span style="color:var(--fg)">${E(l)}</span></li>`).join("")}</ul>
+ <div class="ev">${ev}${oth?`<br>Other verdicts: ${oth}`:""}</div></div>`}).join("");
+
+function line(pts,X,Y){let s="",pen=false;pts.forEach((v,i)=>{if(v==null){pen=false;return}s+=(pen?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1);pen=true});return s}
+(function(){const c=G.chart.c,n=c.length,W=760,H=280,l=6,r=64,t=10,b=24;
+ const all=[...c,...G.chart.m50,...G.chart.m200].filter(v=>v!=null);let lo=Math.min(...all),hi=Math.max(...all),pd=(hi-lo)*.05;lo-=pd;hi+=pd;
+ const X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b),ticks=[0,1,2,3,4].map(i=>lo+(hi-lo)*i/4);
+ const col=c[n-1]>=c[0]?"var(--up)":"var(--dn)";const ds=G.chart.d,ix=[0,Math.floor(n/4),Math.floor(n/2),Math.floor(3*n/4),n-1];
+ $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gold price in rupees per 10 grams, last ${n} trading days, with 50-day and 200-day averages">
+ ${ticks.map(v=>`<line x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".6"/><text x="${W-r+6}" y="${Y(v)+3}">₹${F(v)}</text>`).join("")}
+ <path d="${line(c,X,Y)}L${X(n-1)} ${H-b}L${X(0)} ${H-b}Z" fill="${col}" opacity=".08"/>
+ <path d="${line(G.chart.m200,X,Y)}" fill="none" stroke="var(--dim)" stroke-width="1.3" stroke-dasharray="5 3"/>
+ <path d="${line(G.chart.m50,X,Y)}" fill="none" stroke="var(--acc)" stroke-width="1.3"/>
+ <path d="${line(c,X,Y)}" fill="none" stroke="${col}" stroke-width="1.8"/>
+ <circle cx="${X(n-1)}" cy="${Y(c[n-1])}" r="3.5" fill="${col}"/>
+ ${ix.map((i,k)=>`<text x="${X(i)}" y="${H-6}" text-anchor="${k===0?"start":k===4?"end":"middle"}">${E(ds[i])}</text>`).join("")}</svg>
+ <div class="legend"><span><i style="background:${col}"></i>Price</span><span><i style="background:var(--acc)"></i>50-day average</span><span><i style="background:var(--dim)"></i>200-day average (dashed)</span><span>${n} trading days</span></div>`})();
+
+const tile=(k,v,cl,s)=>`<div class="tile"><div class="k">${E(k)}</div><div class="v ${cl||""}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+$("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day avg",P(f.vs200),C(f.vs200)),
+ tile("50-day vs 200-day",f.cross==null?"–":f.cross>0?"Above":"Below",C(f.cross),f.cross==null?"":f.cross>0?"golden cross side":"death cross side"),
+ tile("RSI (14)",F(f.rsi,0),f.rsi==null?"":f.rsi>70||f.rsi<30?"warn":f.rsi>=50?"good":"bad",f.rsi>70?"overbought":f.rsi<30?"oversold":""),
+ tile("MACD",f.macd_up==null?"–":f.macd_up?"Above signal":"Below signal",f.macd_up==null?"":f.macd_up?"good":"bad"),
+ tile("Bollinger position",f.bb==null?"–":Math.round(f.bb*100)+"%",f.bb>1||f.bb<0?"warn":"",f.bbw!=null?"band width "+(f.bbw*100).toFixed(1)+"%":""),
+ tile("1 month",P(f.r1m),C(f.r1m)),tile("3 months",P(f.r3m),C(f.r3m)),tile("6 months",P(f.r6m),C(f.r6m)),tile("1 year",P(f.r1y),C(f.r1y)),
+ tile("From 52-week high",P(f.hi52),f.hi52>-0.05?"good":f.hi52<-0.25?"bad":"warn","high ₹"+F(f.hi52_px)),tile("From 52-week low",P(f.lo52),"","low ₹"+F(f.lo52_px)),
+ tile("vs Nifty, 3 months",P(f.rs3),C(f.rs3)),tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%","")].join("");
+
+(function(){const w=G.long,n=w.length,W=520,H=230,l=6,r=58,t=10,b=22,lg=w.map(z=>Math.log(z[1]));
+ const lo=Math.min(...lg),hi=Math.max(...lg),X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b);
+ const tk=[5000,10000,20000,40000,80000,160000].filter(v=>Math.log(v)>=lo&&Math.log(v)<=hi);
+ const yrs=[];let py="";w.forEach((z,i)=>{const y=z[0].slice(0,4);if(y!==py&&+y%5===0){yrs.push([i,y])}py=y});
+ $("long").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly gold price in rupees since 2003, log scale">
+ ${tk.map(v=>`<line x1="${l}" x2="${W-r}" y1="${Y(Math.log(v))}" y2="${Y(Math.log(v))}" stroke="var(--line)" stroke-width=".6"/><text x="${W-r+6}" y="${Y(Math.log(v))+3}">₹${F(v)}</text>`).join("")}
+ <path d="${line(lg,X,Y)}" fill="none" stroke="var(--acc)" stroke-width="1.5"/>
+ ${yrs.map(([i,y])=>`<text x="${X(i)}" y="${H-6}" text-anchor="middle">${y}</text>`).join("")}</svg>
+ <p class="note">Weekly, log scale, so equal heights are equal percentage moves. ${E(w[0][0])} to ${E(w[n-1][0])}.</p>`;
+ $("rets").innerHTML=`<div class="scroll"><table><tr><th class="t">Held for</th><th>Total</th><th>Per year</th></tr>${Object.entries(G.rets).map(([k,v])=>`<tr><td class="t">${k}</td><td class="${C(v.total)}">${P(v.total,0)}</td><td>${P(v.cagr)}</td></tr>`).join("")}</table></div>`})();
+
+(function(){const S=G.studies||{},dd=S.gold_dd||[];
+ $("dd").innerHTML=`<div class="scroll"><table><tr><th class="t">Record ($)</th><th>Deepest fall</th><th class="t">Bottom</th><th class="t">Back to record</th><th>Next 12 m</th></tr>
+ ${dd.map(r=>`<tr><td class="t">${E(r.ath)}</td><td class="dn">${P(r.max_dd)}</td><td class="t">${E(r.low_date)}</td><td class="t">${r.recovered?E(r.recovered):"not yet"}</td><td class="${C(r.f12)}">${P(r.f12)}</td></tr>`).join("")}</table></div>
+ <p class="note">Every fall of 20% or more in dollar gold since 2000. "Next 12 m" is gold's return a year after it first hit −20%. The last row is the current fall, from the history up to ${E(G.hist_asof)}.</p>`;
+ const fn=S.falls_nifty||{},big=S.falls_nifty_big||{};
+ $("falls").innerHTML=`<p style="margin:0 0 8px">In ${fn.n} Nifty falls of 10% or more since 2008, gold in rupees rose in <b>${fn.gold_up}</b>, by ${P(fn.avg_gold)} on average while the Nifty fell ${P(fn.avg_idx)}. In the rebound that followed, gold made ${P(fn.reb_avg_gold)} and the Nifty ${P(fn.reb_avg_idx)}.</p>
+ <div class="scroll"><table><tr><th class="t">Big fall, peak to bottom</th><th>Nifty</th><th>Gold ₹</th><th>Rebound: Nifty</th><th>Gold</th></tr>
+ ${(big.rows||[]).map(r=>`<tr><td class="t">${E(r.peak)} → ${E(r.trough)}</td><td class="dn">${P(r.idx,0)}</td><td class="${C(r.gold)}">${P(r.gold,0)}</td><td class="${C(r.reb_idx)}">${P(r.reb_idx,0)}</td><td class="${C(r.reb_gold)}">${P(r.reb_gold,0)}</td></tr>`).join("")}</table></div>`;
+ const h=S.hedge||{},st=h.stats||{};
+ $("hedge").innerHTML=`<div class="scroll"><table><tr><th class="t">Mix</th><th>Per year</th><th>Volatility</th><th>Worst fall</th><th>Loss years</th></tr>
+ ${Object.entries(st).map(([k,v])=>`<tr><td class="t w">${E(k)}</td><td>${P(v.cagr)}</td><td>${P(v.vol,0).replace("+","")}</td><td class="dn">${P(v.maxdd,0)}</td><td>${Math.round(v.p_loss12*100)}%</td></tr>`).join("")}</table></div>
+ <p class="note">${E(h.period||"")}, rebalanced yearly. "Loss years" is the share of 12-month windows that lost money.</p>`})();
+
+$("method").innerHTML=`${L.ok?"":`<div class="warnbox"><b>Level check failed.</b> The ratio between the old history and GOLDBEES moved ${P(L.spread,1).replace("+","")} over the last year, more than the 3% allowed, so the joined series may be off.</div>`}
+ <ul class="note" style="padding-left:18px;display:flex;flex-direction:column;gap:4px">
+ <li>Daily prices: Dhan's daily close for GOLDBEES (NSE gold ETF, ${F(G.daily_n)} closes from ${E(G.daily_from)}), the nearest MCX GOLD future and the Nifty 50. Updated once a day by the morning refresh, no live ticks.</li>
+ <li>History before that: weekly gold in $ and ₹ from 2000, and the drawdown, Nifty-fall and portfolio studies, from the earlier Gold Desk (data to ${E(G.hist_asof)}).</li>
+ <li>Level check: GOLDBEES is in rupees per unit, so it is scaled to ₹ per 10 g by ${L.k}, the median ratio to the history over ${L.weeks} weeks (${E(L.from)} to ${E(L.to)}). The ratio ranged ${L.lo} to ${L.hi}, a ${P(L.spread,1).replace("+","")} spread (${L.ok?"within":"outside"} the 3% allowed). ${G.mcx&&G.mcx.gap!=null?`The MCX future sits ${P(G.mcx.gap,2)} from the scaled price, which is its carry to expiry plus the ETF's costs.`:""}</li>
+ <li>Verdict rules: Good to buy when 75% or more of the checks pass, Avoid at 40% or less, Wait in between. The proof works the same rules out for every past day and measures gold's return 63, 126 and 252 trading days later.</li>
+ <li>Research software, not advice. Past results do not promise future ones.</li></ul>`;
+</script>
