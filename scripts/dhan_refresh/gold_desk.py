@@ -337,6 +337,30 @@ def falls(c: np.ndarray, d: list, cut: float = 0.10) -> dict:
             "like_n": len(like), "like_med_total": med([r["down_days"] + r["up_days"] for r in like]), "current": cur}
 
 
+def projection(c: np.ndarray, LV: dict, ath: float, r: float = 0.065) -> dict:
+    """Black-Scholes style odds from the last year's daily volatility: price is lognormal with the risk-free drift r
+    (MCX carry is about r). For each horizon: 68% and 95% ranges, the chance of finishing above today (N(d2)) and the
+    chance of touching the next support, next resistance and the record at any point (reflection rule, no drift)."""
+    from math import erf, exp, log, sqrt
+    N = lambda x: 0.5 * (1 + erf(x / sqrt(2)))
+    sig = float(np.diff(np.log(c[-127:])).std() * sqrt(252))  # last 6 months of daily moves
+    sig3 = float(np.diff(np.log(c[-64:])).std() * sqrt(252))
+    S = float(c[-1])
+    sup = next((x["px"] for x in LV["support"] if x["what"] == "Swing level"), None)
+    res = next((x["px"] for x in LV["resistance"] if x["what"] in ("Swing level", "52-week high")), None)
+    out = {"sigma": round(sig, 4), "sigma3m": round(sig3, 4), "r": r, "S": round(S, 0), "sup": sup, "res": res, "ath": round(ath, 0), "h": []}
+    for lab, days in (("1 month", 21), ("3 months", 63), ("6 months", 126), ("1 year", 252)):
+        T = days / 252
+        m, v = (r - sig * sig / 2) * T, sig * sqrt(T)
+        touch = lambda K: None if K is None else min(1.0, 2 * N(-abs(log(K / S)) / v))
+        out["h"].append({"lab": lab, "p_up": round(N(m / v), 3), "mid": round(S * exp(m), 0),
+                         "lo68": round(S * exp(m - v), 0), "hi68": round(S * exp(m + v), 0),
+                         "lo95": round(S * exp(m - 1.96 * v), 0), "hi95": round(S * exp(m + 1.96 * v), 0),
+                         "p_sup": round(touch(sup), 3) if sup else None, "p_res": round(touch(res), 3) if res else None,
+                         "p_ath": round(touch(ath), 3)})
+    return out
+
+
 def value(long: list, hist: dict, gold_last: float, mcx: dict, silver: dict) -> dict:
     """Value channel (log trend of the weekly rupee price since 2003, bands at 1 and 2 standard deviations), price vs
     its 200-week average, gold/silver ratio, and the old desk's real-price and real-yield figures."""
@@ -453,7 +477,13 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     if mx and mx["d"] == d[i]:
         LV["mcx_k"] = round(mx["c"] / float(c[i]), 5)
     FL = falls(c, d)
-    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
+    PJ = projection(c, LV, float(ath))
+    mpath = HERE.parents[1] / "docs/gold/macro.json"
+    MAC = json.loads(mpath.read_text(encoding="utf-8")) if mpath.exists() else {}
+    for row in FL["rows"]:
+        fm = (MAC.get("falls") or {})
+        row["why"] = fm.get(row["peak"][:7]) or fm.get(row["peak"][:4])
+    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "proj": PJ, "macro": MAC.get("current"), "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
             "long": long, "rets": rets, "daily_from": d[0], "daily_n": len(d),
             "studies": {k: hist.get(k) for k in ("gold_dd", "falls_nifty", "falls_nifty_big", "trend_strategy", "hedge")},
             "hist_source": hist.get("source"), "hist_asof": hist.get("asof"),

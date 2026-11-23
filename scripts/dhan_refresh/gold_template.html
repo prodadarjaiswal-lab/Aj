@@ -45,15 +45,24 @@ td.w{white-space:normal;min-width:150px}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px}
 svg{display:block;width:100%;height:auto}svg text{font:10.5px var(--fm);fill:var(--dim)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font:11px var(--fm);color:var(--dim);margin-top:6px}.legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:5px}
+.glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,158px),1fr));gap:0;border:1px solid var(--acc);background:var(--panel)}
+.glance>div{padding:10px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0;display:flex;flex-direction:column;gap:2px}
+.glance .k{font:500 10.5px var(--fm);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.glance .v{font:600 16px var(--fm);color:var(--bright);font-variant-numeric:tabular-nums}
+.glance .s{font:12px var(--fm);color:var(--dim)}
+.macro ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;max-width:95ch}
 .warnbox{border:1px solid var(--amb);padding:10px 12px;font-size:13px}.warnbox b{color:var(--amb)}
 </style>
 <div class="wrap">
 <header id="hdr"></header>
 <section id="hero" class="hero"></section>
+<section id="glance" class="glance"></section>
 <section><h2>When to buy: 3 months, 6 months, 1 year</h2><div id="verdicts" class="vgrid"></div>
 <p class="note">Rule checks on the last close, the same rules the Trading Terminal uses for ETFs and MCX. Under each verdict: what gold did next on every past day that showed the same verdict. Days overlap, so the independent count is the "periods" figure. Research software, not advice.</p></section>
 <section class="card"><h2>Last two years with the 50-day and 200-day averages</h2><div id="chart"></div></section>
 <section><h2>Technicals</h2><div id="tech" class="tiles"></div></section>
+<section class="card macro"><h2 id="mac-h">Why gold fell</h2><div id="macro"></div></section>
+<section class="card"><h2>Projection: Black-Scholes odds from gold's own volatility</h2><div id="proj"></div></section>
 <section class="two">
  <div class="card"><h2>Next support and resistance</h2><div id="lv"></div></div>
  <div class="card"><h2>Falls of 10% or more and how soon gold recovered</h2><div id="rec"></div></div>
@@ -147,7 +156,7 @@ $("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day 
  const FL=G.falls,cur=FL.current,mo=d=>d==null?"–":d<42?d+" days":(d/21).toFixed(0)+" months";
  $("rec").innerHTML=`<p style="margin:0 0 8px">Since 2009, gold fell ${(FL.cut*100).toFixed(0)}% or more ${FL.rows.length-(cur?1:0)} times and got back to its old high every time. The middle case took ${mo(FL.med_down)} to bottom and ${mo(FL.med_up)} more to recover.${cur?` Now it is ${P(cur.depth)} from the ${E(cur.peak)} peak.${FL.like_n?` The ${FL.like_n} past falls of ${P(cur.depth*0.7,0).replace("-","")} or deeper took ${mo(FL.like_med_total)} from peak to recovery (middle case).`:""}`:""}</p>
  <div class="scroll"><table><tr><th class="t">Peak</th><th>Fall</th><th class="t">Bottom</th><th>To bottom</th><th>Bottom to recovery</th><th class="t">Back at peak</th></tr>
- ${FL.rows.slice().reverse().map(r=>`<tr><td class="t">${E(r.peak)}</td><td class="dn">${P(r.depth)}</td><td class="t">${E(r.trough)}${r.up_days==null?" so far":""}</td><td>${mo(r.down_days)}</td><td>${r.up_days==null?"not yet":mo(r.up_days)}</td><td class="t">${r.back?E(r.back):"not yet"}</td></tr>`).join("")}</table></div>
+ ${FL.rows.slice().reverse().map(r=>`<tr><td class="t">${E(r.peak)}</td><td class="dn">${P(r.depth)}</td><td class="t">${E(r.trough)}${r.up_days==null?" so far":""}</td><td>${mo(r.down_days)}</td><td>${r.up_days==null?"not yet":mo(r.up_days)}</td><td class="t">${r.back?E(r.back):"not yet"}</td></tr>${r.why?`<tr><td class="t w" colspan="6" style="color:var(--dim);font-size:12px;padding-top:0">Why: ${E(r.why.cause)} <b style="color:var(--fg)">Back:</b> ${E(r.why.back)}</td></tr>`:""}`).join("")}</table></div>
  <p class="note">Daily closes, trading days (21 a month). Rupee gold from GOLDBEES.</p>`;
  const V=G.value,g=V.gsr,R=V.real,Yr=V.ry;
  $("valt").innerHTML=[tile("Fair value (trend)","₹"+F(V.fair),"","channel ₹"+F(V.bands["-1"])+" – ₹"+F(V.bands["1"])),
@@ -179,4 +188,20 @@ $("method").innerHTML=`${L.ok?"":`<div class="warnbox"><b>Level check failed.</b
  <li>The old ₹ history is the world price converted at the exchange rate, with no import duty. Indian gold traded ${P(L.prem,1)} above it on the last shared week, so the long chart lifts the old history by that much to join smoothly. Duty has changed over the years (cut from 15% to 6% in July 2024), so older levels are approximate; the percentage moves are not affected.</li>
  <li>Verdict rules: Good to buy when 75% or more of the checks pass, Avoid at 40% or less, Wait in between. The proof works the same rules out for every past day and measures gold's return 63, 126 and 252 trading days later.</li>
  <li>Research software, not advice. Past results do not promise future ones.</li></ul>`;
+
+(function(){const LV=G.levels,PJ=G.proj,sup=LV.support.find(z=>z.what==="Swing level")||LV.support[0],res=LV.resistance.find(z=>z.what==="Swing level"||z.what==="52-week high")||LV.resistance[0];
+ const h3=PJ.h[1],h12=PJ.h[3],vd=G.horizons.map(h=>`<span class="${VC[h.v]}">${h.lab.replace(" months","m").replace("1 year","1y")} ${E(h.v)}</span>`).join(" · ");
+ const pv=G.proof["1 year"],me=pv.by[G.horizons[2].v];
+ const cell=(k,v,s,cl)=>`<div><span class="k">${k}</span><span class="v ${cl||""}">${v}</span><span class="s">${s}</span></div>`;
+ $("glance").innerHTML=[cell("Verdict",vd,"Terminal rules, 3 / 6 / 12 months",""),
+  sup?cell("Next support","₹"+F(sup.px),`${P(sup.dist)} · ${E(sup.what)}${sup.touches?", "+sup.touches+" touch"+(sup.touches>1?"es":""):""} · ${Math.round(PJ.h[0].p_sup*100)}% odds of a touch in 1 month`,"up"):"",
+  res?cell("Next resistance","₹"+F(res.px),`${P(res.dist)} · ${E(res.what)} · ${Math.round(PJ.h[0].p_res*100)}% odds of a touch in 1 month`,"dn"):"",
+  cell("Odds higher in 3 months",Math.round(h3.p_up*100)+"%",`likely range ₹${F(h3.lo68)} – ₹${F(h3.hi68)} (2 in 3 chance)`,""),
+  cell("Odds higher in 1 year",Math.round(h12.p_up*100)+"%",`range ₹${F(h12.lo68)} – ₹${F(h12.hi68)} · ${Math.round(h12.p_ath*100)}% odds of the record again`,""),
+  me?cell("Past days like today",Math.round(me.up*100)+"% up",`a year later, average ${P(me.avg)} (${F(me.n)} days with "${E(G.horizons[2].v)}")`,C(me.avg)):"",
+  cell("Value",P(G.value.vs_fair)+" vs fair",`fair ₹${F(G.value.fair)} · gold/silver ${G.value.gsr?F(G.value.gsr.now,1):"–"}`,G.value.vs_fair>0.25?"bad":"warn")].join("");
+ const M=G.macro;if(M){$("mac-h").textContent=M.title;$("macro").innerHTML=`<ul>${M.points.map(x=>`<li>${E(x)}</li>`).join("")}</ul><p style="margin:10px 0 0"><b>What is holding it up:</b> ${E(M.holding_up)}</p><p class="note">Sources: ${E(M.sources)} Past falls, what caused them and what brought gold back are in the falls table below.</p>`}else $("macro").closest("section").hidden=true;
+ $("proj").innerHTML=`<div class="scroll"><table><tr><th class="t">Horizon</th><th>Odds higher</th><th>Middle</th><th>Likely range (2 in 3)</th><th>Wide range (19 in 20)</th><th>Touch support ₹${F(PJ.sup)}</th><th>Touch resistance ₹${F(PJ.res)}</th><th>Back to record ₹${F(PJ.ath)}</th></tr>
+ ${PJ.h.map(h=>`<tr><td class="t">${h.lab}</td><td>${Math.round(h.p_up*100)}%</td><td>₹${F(h.mid)}</td><td>₹${F(h.lo68)} – ₹${F(h.hi68)}</td><td>₹${F(h.lo95)} – ₹${F(h.hi95)}</td><td>${h.p_sup==null?"–":Math.round(h.p_sup*100)+"%"}</td><td>${h.p_res==null?"–":Math.round(h.p_res*100)+"%"}</td><td>${Math.round(h.p_ath*100)}%</td></tr>`).join("")}</table></div>
+ <p class="note">Black-Scholes model: the price moves randomly with the volatility of the last 6 months (${(PJ.sigma*100).toFixed(0)}% a year; last 3 months ${(PJ.sigma3m*100).toFixed(0)}%) and drifts at the ${(PJ.r*100).toFixed(1)}% risk-free rate, which is about what the MCX future charges for carry. “Odds higher” is N(d2). Touch odds are the chance of reaching the level at any time before the date. This model knows nothing about trend or value; compare it with the verdict history above, which does. Not advice.</p>`})();
 </script>

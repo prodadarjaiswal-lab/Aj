@@ -1,5 +1,5 @@
 {
- "asof": "2026-11-23 13:31",
+ "asof": "2026-11-23 13:39",
  "date": "2026-11-23",
  "f": {
   "vs50": -0.1261,
@@ -2696,7 +2696,11 @@
     "trough": "2009-04-17",
     "down_days": 35,
     "up_days": 97,
-    "back": "2009-09-03"
+    "back": "2009-09-03",
+    "why": {
+     "cause": "Pause after the 2008-09 rebound; a firmer dollar and rupee.",
+     "back": "Euro debt worries and loose money revived buying."
+    }
    },
    {
     "peak": "2009-12-03",
@@ -2705,7 +2709,11 @@
     "trough": "2010-02-05",
     "down_days": 42,
     "up_days": 75,
-    "back": "2010-05-26"
+    "back": "2010-05-26",
+    "why": {
+     "cause": "Pause after the 2008-09 rebound; a firmer dollar and rupee.",
+     "back": "Euro debt worries and loose money revived buying."
+    }
    },
    {
     "peak": "2012-11-27",
@@ -2714,7 +2722,11 @@
     "trough": "2015-08-06",
     "down_days": 666,
     "up_days": 975,
-    "back": "2019-07-18"
+    "back": "2019-07-18",
+    "why": {
+     "cause": "Euro crisis eased, the US recovery firmed and the Fed signalled the end of QE (the 2013 taper scare); ETFs dumped gold in the April 2013 crash.",
+     "back": "Took until 2019: Fed rate cuts, negative bond yields abroad and steady central-bank buying."
+    }
    },
    {
     "peak": "2020-03-06",
@@ -2723,7 +2735,11 @@
     "trough": "2020-03-17",
     "down_days": 6,
     "up_days": 9,
-    "back": "2020-03-30"
+    "back": "2020-03-30",
+    "why": {
+     "cause": "COVID dash for cash: gold was sold with everything else.",
+     "back": "Unlimited Fed QE and zero rates; recovered within two weeks."
+    }
    },
    {
     "peak": "2020-08-07",
@@ -2732,7 +2748,11 @@
     "trough": "2021-03-31",
     "down_days": 162,
     "up_days": 457,
-    "back": "2023-02-01"
+    "back": "2023-02-01",
+    "why": {
+     "cause": "Vaccines and reopening lifted real yields from record lows and pulled money back into stocks.",
+     "back": "Record central-bank buying after the 2022 Russia sanctions, then the March 2023 US bank failures."
+    }
    },
    {
     "peak": "2025-10-17",
@@ -2741,7 +2761,11 @@
     "trough": "2025-10-28",
     "down_days": 6,
     "up_days": 32,
-    "back": "2025-12-12"
+    "back": "2025-12-12",
+    "why": {
+     "cause": "Profit-taking after a stretched record run.",
+     "back": "Central-bank and ETF buying resumed; new highs by December 2025."
+    }
    },
    {
     "peak": "2026-01-29",
@@ -2750,7 +2774,11 @@
     "trough": "2026-11-20",
     "down_days": 201,
     "up_days": null,
-    "back": null
+    "back": null,
+    "why": {
+     "cause": "See above: blow-off top, Fed hikes, 5% yields, firm dollar, AI-rout liquidation.",
+     "back": "Not yet recovered."
+    }
    }
   ],
   "cut": 0.1,
@@ -2766,8 +2794,83 @@
    "trough": "2026-11-20",
    "down_days": 201,
    "up_days": null,
-   "back": null
+   "back": null,
+   "why": {
+    "cause": "See above: blow-off top, Fed hikes, 5% yields, firm dollar, AI-rout liquidation.",
+    "back": "Not yet recovered."
+   }
   }
+ },
+ "proj": {
+  "sigma": 0.2012,
+  "sigma3m": 0.1979,
+  "r": 0.065,
+  "S": 126120.0,
+  "sup": 123226.0,
+  "res": 128673.0,
+  "ath": 178935.0,
+  "h": [
+   {
+    "lab": "1 month",
+    "p_up": 0.526,
+    "mid": 126592.0,
+    "lo68": 119448.0,
+    "hi68": 134162.0,
+    "lo95": 112970.0,
+    "hi95": 141856.0,
+    "p_sup": 0.689,
+    "p_res": 0.73,
+    "p_ath": 0.0
+   },
+   {
+    "lab": "3 months",
+    "p_up": 0.544,
+    "mid": 127540.0,
+    "lo68": 115333.0,
+    "hi68": 141038.0,
+    "lo95": 104715.0,
+    "hi95": 155339.0,
+    "p_sup": 0.817,
+    "p_res": 0.842,
+    "p_ath": 0.001
+   },
+   {
+    "lab": "6 months",
+    "p_up": 0.562,
+    "mid": 128975.0,
+    "lo68": 111870.0,
+    "hi68": 148694.0,
+    "lo95": 97588.0,
+    "hi95": 170456.0,
+    "p_sup": 0.87,
+    "p_res": 0.888,
+    "p_ath": 0.014
+   },
+   {
+    "lab": "1 year",
+    "p_up": 0.588,
+    "mid": 131893.0,
+    "lo68": 107855.0,
+    "hi68": 161290.0,
+    "lo95": 88910.0,
+    "hi95": 195657.0,
+    "p_sup": 0.908,
+    "p_res": 0.921,
+    "p_ath": 0.082
+   }
+  ]
+ },
+ "macro": {
+  "title": "Why gold fell about 30% from the January 2026 record",
+  "points": [
+   "A blow-off top: gold ran to a record on 29 January 2026 after a near-vertical rally, then fell about a quarter by mid-year as ETF investors sold.",
+   "Rates went the wrong way for gold: the Fed raised rates a quarter point in September, the US 10-year yield went above 5% in October, and Fed speakers in November kept a December hike on the table.",
+   "A firm dollar: a 1% rise in the dollar index has gone with roughly a 1% fall in dollar gold since 2001.",
+   "Liquidation in the 16-20 November sell-off: an AI-led stock rout pushed funds to sell gold with equities to raise cash; gold fell about 9% in the week, its worst in eight months, to a 14-month low near $3,515.",
+   "Central-bank buying slowed at the higher prices, removing part of the floor that had held since 2022."
+  ],
+  "holding_up": "Central banks still bought on dips (321 t in Jul-Sep 2026), the rupee kept weakening, which cushions gold in rupees, and Middle East tensions keep a safe-haven bid in the background.",
+  "sources": "Reuters and Kitco, 20 Nov 2026; Newsweek, 20 Nov 2026; World Gold Council Q3 2026; earlier Gold Desk pages (6-7 Nov 2026)."
  },
  "horizons": [
   {
