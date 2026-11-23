@@ -9,9 +9,10 @@ Data
             GOLDBEES (NSE gold ETF) daily closes back to 2009, the nearest MCX GOLD future's daily closes,
             and the Nifty 50's daily closes.
 Level check (before joining the two)
-  GOLDBEES is in rupees per unit, not per 10 g, so it is scaled: k = median of (history Rs/10 g / GOLDBEES close)
-  over the last 52 weeks both have. The spread of that ratio over the year and the MCX future's gap to the scaled
-  series are shown on the page; a spread above 3% marks the join as unreliable.
+  GOLDBEES is in rupees per unit, not per 10 g, so it is scaled by k = median of (MCX GOLD close / GOLDBEES close)
+  over the last 60 days both have. The typical daily gap from k must be 1.5% or less, else the page says the check
+  failed. The old weekly Rs history is the international price in rupees (no import duty), so for the long chart it
+  is multiplied by the domestic premium on the last week it shares with the daily series.
 Metrics (same rules as the Trading Terminal's Analyze tab, gold has no earnings so the 1-year view is trend only)
   50/200-day averages, RSI 14, MACD 12/26/9, Bollinger 20/2, returns, distance from the 52-week high and from the
   all-time high, yearly volatility.
@@ -205,31 +206,42 @@ def proof(c: np.ndarray, I: dict, start: int = 252) -> dict:
 
 
 # ---------------------------------------------------------------- build
-def level_check(hist_w: list, bees: dict) -> dict:
-    bd = sorted(bees)
+def level_check(mcx: dict, bees: dict, hist_w: list) -> dict:
+    """Scale GOLDBEES (Rs per unit) to Rs per 10 g using Dhan's own MCX GOLD closes on the same days.
+
+    NSE closes at 15:30 and MCX at 23:30, so the daily ratio wobbles with gold's evening move; the check is the
+    typical (median) gap of each day's ratio from k over the last 60 shared days, which must be 1.5% or less.
+    The old weekly Rs history is $ x USDINR without import duty, so it is only joined for the long chart, by the ratio
+    on the last week both have (reported as the domestic premium)."""
     import bisect
-    pairs = []
-    for row in hist_w:
-        d, inr = row[0], row[2]
-        if not inr:
-            continue
-        j = bisect.bisect_right(bd, d) - 1
-        if j >= 0 and (dt.date.fromisoformat(d) - dt.date.fromisoformat(bd[j])).days <= 4:
-            pairs.append((d, inr / bees[bd[j]]))
-    if len(pairs) < 20:
-        raise RuntimeError(f"only {len(pairs)} weeks where the history and GOLDBEES overlap; cannot join them")
-    last = [r for _, r in pairs[-52:]]
-    k = float(np.median(last))
-    return {"k": round(k, 3), "weeks": len(last), "from": pairs[-52:][0][0], "to": pairs[-1][0],
-            "lo": round(min(last), 3), "hi": round(max(last), 3), "spread": round(max(last) / min(last) - 1, 4),
-            "ok": max(last) / min(last) - 1 <= 0.03}
+    com = [d for d in sorted(mcx) if d in bees][-60:]
+    if len(com) >= 20:
+        r = np.array([mcx[d] / bees[d] for d in com])
+        k = float(np.median(r))
+        L = {"basis": "MCX GOLD future", "k": round(k, 2), "days": len(com), "from": com[0], "to": com[-1],
+             "lo": round(float(r.min()), 1), "hi": round(float(r.max()), 1), "typical": round(float(np.median(np.abs(r / k - 1))), 4)}
+        L["ok"] = L["typical"] <= 0.015
+    else:  # no MCX history yet: fall back to the old weekly history (international price, no duty)
+        bd, pairs = sorted(bees), []
+        for row in hist_w[-60:]:
+            j = bisect.bisect_right(bd, row[0]) - 1
+            if row[2] and j >= 0:
+                pairs.append(row[2] / bees[bd[j]])
+        if len(pairs) < 20:
+            raise RuntimeError("no MCX closes and too little overlap with the history to scale GOLDBEES")
+        r = np.array(pairs)
+        k = float(np.median(r))
+        L = {"basis": "old weekly history (no MCX yet)", "k": round(k, 2), "days": len(pairs), "from": hist_w[-60][0], "to": hist_w[-1][0],
+             "lo": round(float(r.min()), 1), "hi": round(float(r.max()), 1), "typical": round(float(np.median(np.abs(r / k - 1))), 4), "ok": False}
+    return L
 
 
 def build(hist: dict, daily: dict, asof: str) -> dict:
     bees = daily.get("bees") or {}
     if len(bees) < 300:
         raise RuntimeError(f"only {len(bees)} GOLDBEES closes; need 300+")
-    L = level_check(hist["w"], bees)
+    mcx = daily.get("mcx") or {}
+    L = level_check(mcx, bees, hist["w"])
     d = sorted(bees)
     c = np.array([bees[x] for x in d]) * L["k"]
     nf = daily.get("nifty") or {}
@@ -248,8 +260,12 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
     P = proof(c, I)
     # all-time high: weekly history and the scaled daily series together
     hw = [(r[0], r[2]) for r in hist["w"] if r[2]]
-    ath_d, ath = max(hw + list(zip(d, c.tolist())), key=lambda z: z[1])
-    mcx = daily.get("mcx") or {}
+    ath_d, ath = max(zip(d, c.tolist()), key=lambda z: z[1])
+    import bisect
+    j = bisect.bisect_right(d, hw[-1][0]) - 1
+    prem = float(c[j]) / hw[-1][1]  # domestic price over the old $ x USDINR price, on the join week
+    L["prem"] = round(prem - 1, 4)
+    hw = [(x, v * prem) for x, v in hw]
     md = sorted(mcx)
     mx = None
     if md:
@@ -316,8 +332,8 @@ def main() -> int:
     render(data, root / "docs/gold-desk.html")
     L, f = data["level"], data["f"]
     print(f"Gold desk {data['date']}: Rs {f['last']:,.0f}/10 g; " + "; ".join(f"{h['lab']} {h['v']}" for h in data["horizons"]))
-    print(f"level check: k={L['k']} over {L['weeks']} weeks, spread {L['spread']:.2%} ({'OK' if L['ok'] else 'TOO WIDE'}); "
-          f"MCX {data['mcx'] and data['mcx']['c']} gap {data['mcx'] and data['mcx']['gap']}")
+    print(f"level check vs {L['basis']}: k={L['k']} over {L['days']} days, typical gap {L['typical']:.2%} "
+          f"({'OK' if L['ok'] else 'FAILED'}); domestic premium over old history {L['prem']:.2%}")
     return 0
 
 

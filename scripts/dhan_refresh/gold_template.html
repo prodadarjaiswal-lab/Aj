@@ -77,9 +77,9 @@ const f=G.f,L=G.level;
 $("hdr").innerHTML=`<span class="brand">GOLD DESK</span><span class="chip">Close <b>${E(G.date)}</b></span><span class="chip">Built <b>${E(G.asof)} IST</b></span><span class="chip">Prices: Dhan daily close</span>`;
 
 const ch=f.last/f.prev-1,mx=G.mcx;
-$("hero").innerHTML=`<div><div class="k">Gold, ₹ per 10 g (spot equivalent)</div><div class="px">₹${F(f.last)}<small class="${C(ch)}">${P(ch,2)}</small></div>
+$("hero").innerHTML=`<div><div class="k">Gold, ₹ per 10 g (GOLDBEES at NSE close)</div><div class="px">₹${F(f.last)}<small class="${C(ch)}">${P(ch,2)}</small></div>
  <div class="sub">GOLDBEES ₹${F(f.bees,2)} × ${L.k} · ${P(f.from_ath)} from the record ₹${F(f.ath)} (${E(f.ath_d)})</div></div>
- ${mx?`<div><div class="k">MCX future ${E(mx.contract||"")}</div><div class="px" style="font-size:24px">₹${F(mx.c)}${mx.prev?`<small class="${C(mx.c/mx.prev-1)}">${P(mx.c/mx.prev-1,2)}</small>`:""}</div><div class="sub">close ${E(mx.d)}${mx.gap!=null?` · ${P(mx.gap,2)} vs spot equivalent`:""}</div></div>`:""}`;
+ ${mx?`<div><div class="k">MCX future ${E(mx.contract||"")}</div><div class="px" style="font-size:24px">₹${F(mx.c)}${mx.prev?`<small class="${C(mx.c/mx.prev-1)}">${P(mx.c/mx.prev-1,2)}</small>`:""}</div><div class="sub">close ${E(mx.d)}${mx.gap!=null?` · ${P(mx.gap,2)} vs the GOLDBEES level`:""}</div></div>`:""}`;
 
 $("verdicts").innerHTML=G.horizons.map(h=>{const p=G.proof[h.lab],me=p.by[h.v],all=p.all;
  const ev=me&&all?`Past days with “${E(h.v)}”: gold was <b class="${C(me.avg)}">${P(me.avg)}</b> on average ${h.lab} later and up <b>${Math.round(me.up*100)}%</b> of the time (${F(me.n)} days, about ${F(me.periods,1)} periods, worst ${P(me.worst)}). All days: ${P(all.avg)}, up ${Math.round(all.up*100)}%.`:"No past days with this verdict to compare.";
@@ -113,7 +113,7 @@ $("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day 
  tile("From 52-week high",P(f.hi52),f.hi52>-0.05?"good":f.hi52<-0.25?"bad":"warn","high ₹"+F(f.hi52_px)),tile("From 52-week low",P(f.lo52),"","low ₹"+F(f.lo52_px)),
  tile("vs Nifty, 3 months",P(f.rs3),C(f.rs3)),tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%","")].join("");
 
-(function(){const w=G.long,n=w.length,W=520,H=230,l=6,r=58,t=10,b=22,lg=w.map(z=>Math.log(z[1]));
+(function(){const w=G.long,n=w.length,W=520,H=230,l=6,r=72,t=10,b=22,lg=w.map(z=>Math.log(z[1]));
  const lo=Math.min(...lg),hi=Math.max(...lg),X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b);
  const tk=[5000,10000,20000,40000,80000,160000].filter(v=>Math.log(v)>=lo&&Math.log(v)<=hi);
  const yrs=[];let py="";w.forEach((z,i)=>{const y=z[0].slice(0,4);if(y!==py&&+y%5===0){yrs.push([i,y])}py=y});
@@ -137,11 +137,12 @@ $("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day 
  ${Object.entries(st).map(([k,v])=>`<tr><td class="t w">${E(k)}</td><td>${P(v.cagr)}</td><td>${P(v.vol,0).replace("+","")}</td><td class="dn">${P(v.maxdd,0)}</td><td>${Math.round(v.p_loss12*100)}%</td></tr>`).join("")}</table></div>
  <p class="note">${E(h.period||"")}, rebalanced yearly. "Loss years" is the share of 12-month windows that lost money.</p>`})();
 
-$("method").innerHTML=`${L.ok?"":`<div class="warnbox"><b>Level check failed.</b> The ratio between the old history and GOLDBEES moved ${P(L.spread,1).replace("+","")} over the last year, more than the 3% allowed, so the joined series may be off.</div>`}
+$("method").innerHTML=`${L.ok?"":`<div class="warnbox"><b>Level check failed.</b> GOLDBEES and the MCX future have drifted apart (typical daily gap ${P(L.typical,1).replace("+","")}, more than the 1.5% allowed), so the ₹ per 10 g figures may be off. Treat the trend checks as fine and the rupee levels as rough.</div>`}
  <ul class="note" style="padding-left:18px;display:flex;flex-direction:column;gap:4px">
  <li>Daily prices: Dhan's daily close for GOLDBEES (NSE gold ETF, ${F(G.daily_n)} closes from ${E(G.daily_from)}), the nearest MCX GOLD future and the Nifty 50. Updated once a day by the morning refresh, no live ticks.</li>
  <li>History before that: weekly gold in $ and ₹ from 2000, and the drawdown, Nifty-fall and portfolio studies, from the earlier Gold Desk (data to ${E(G.hist_asof)}).</li>
- <li>Level check: GOLDBEES is in rupees per unit, so it is scaled to ₹ per 10 g by ${L.k}, the median ratio to the history over ${L.weeks} weeks (${E(L.from)} to ${E(L.to)}). The ratio ranged ${L.lo} to ${L.hi}, a ${P(L.spread,1).replace("+","")} spread (${L.ok?"within":"outside"} the 3% allowed). ${G.mcx&&G.mcx.gap!=null?`The MCX future sits ${P(G.mcx.gap,2)} from the scaled price, which is its carry to expiry plus the ETF's costs.`:""}</li>
+ <li>Level check: GOLDBEES is in rupees per unit, so it is scaled to ₹ per 10 g by ${L.k}, the median ratio to the ${E(L.basis)} over ${L.days} shared days (${E(L.from)} to ${E(L.to)}). The ratio ranged ${L.lo} to ${L.hi} because NSE closes at 3:30 PM and MCX at 11:30 PM; the typical daily gap is ${P(L.typical,2).replace("+","")} (${L.ok?"within":"outside"} the 1.5% allowed).</li>
+ <li>The old ₹ history is the world price converted at the exchange rate, with no import duty. Indian gold traded ${P(L.prem,1)} above it on the last shared week, so the long chart lifts the old history by that much to join smoothly. Duty has changed over the years (cut from 15% to 6% in July 2024), so older levels are approximate; the percentage moves are not affected.</li>
  <li>Verdict rules: Good to buy when 75% or more of the checks pass, Avoid at 40% or less, Wait in between. The proof works the same rules out for every past day and measures gold's return 63, 126 and 252 trading days later.</li>
  <li>Research software, not advice. Past results do not promise future ones.</li></ul>`;
 </script>

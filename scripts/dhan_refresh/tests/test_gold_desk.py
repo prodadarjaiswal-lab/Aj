@@ -35,9 +35,11 @@ def test_level_check_and_build_on_steady_uptrend():
     bees = {d.isoformat(): float(v) for d, v in zip(days, c)}
     w = [[d.isoformat(), None, float(v) * 1200, None, None] for d, v in zip(days, c) if d.weekday() == 4]
     hist = {"w": w}
-    L = G.level_check(w, bees)
-    assert abs(L["k"] - 1200) < 1e-6 and L["ok"]
-    out = G.build(hist, {"bees": bees, "nifty": {k: 1.0 for k in bees}}, "x")
+    mcx = {k: v * 1200 for k, v in list(bees.items())[-100:]}
+    L = G.level_check(mcx, bees, w)
+    assert abs(L["k"] - 1200) < 1e-6 and L["ok"] and L["days"] == 60
+    out = G.build(hist, {"bees": bees, "mcx": mcx, "nifty": {k: 1.0 for k in bees}}, "x")
+    assert abs(out["level"]["prem"]) < 1e-6 and abs(out["mcx"]["gap"]) < 1e-6
     assert [h["v"] for h in out["horizons"]] == ["Good to buy"] * 3  # RSI 100 fails, 4 of 5 still pass on 3 months
     assert out["proof"]["1 year"]["all"]["up"] == 1.0
     assert out["f"]["vs200"] > 0 and out["f"]["cross"] > 0
