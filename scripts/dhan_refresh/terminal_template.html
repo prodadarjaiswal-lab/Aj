@@ -55,6 +55,7 @@ tr:last-child td{border-bottom:0}
 .cell{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25}
 .cell small{color:var(--mute);font-size:11px}
 td.hit{box-shadow:inset 3px 0 0 var(--up)}
+.lnk{font:600 13px var(--f-body);color:var(--amber);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
 .note{font-size:13px;color:var(--mute);max-width:75ch}
 .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline}
 svg text{fill:var(--mute);font:10px var(--f-mono)}
@@ -75,47 +76,20 @@ svg text{fill:var(--mute);font:10px var(--f-mono)}
     <div class="mk" id="mk" style="margin-top:12px"></div>
   </section>
 
-  <section style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Did the desk's picks make money? Last month, bought at three times of day</h2><span class="mute mono" id="bt-asof"></span></div>
-    <p class="note" id="bt-lede"></p>
-    <div class="grid3" id="cks"></div>
+  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2>What's working now</h2><span class="pill" id="regime"></span></div>
+    <p class="note" id="wk-lede"></p>
+    <div class="scroll"><table id="wk-sig"></table></div>
   </section>
 
   <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Screener rules tested</h2>
-      <div class="controls">
-        <div class="seg" role="group" aria-label="Which stocks"><button id="pop-picks" aria-pressed="true">Desk picks</button><button id="pop-all" aria-pressed="false">All Nifty 500</button></div>
-        <div class="seg" role="group" aria-label="Exit"><button id="ex-plan" aria-pressed="true">Stop / target</button><button id="ex-day" aria-pressed="false">Hold to 3:25</button><button id="ex-next" aria-pressed="false">Next close</button></div>
-      </div>
-    </div>
-    <p class="note">Each cell: average return after costs minus the Nifty's move over the same time, and the number of trades. A green edge means the rule passed the one-month test (30+ trades, positive in both halves of the month, t of 2 or more).</p>
-    <div class="scroll"><table id="grid"></table></div>
-  </section>
-
-  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Rules that passed</h2><span class="pill" id="pass-n"></span></div>
-    <div class="scroll"><table id="passing"></table></div>
-  </section>
-
-  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Next session's desk picks</h2><span class="mute mono" id="wl-asof"></span></div>
-    <p class="note">Stocks with a new tested daily signal. Levels use the same rule as the back-test: stop 0.5 ATR below the entry, target 1 ATR above, shares sized so the stop loses at most your max loss per trade. Shown from yesterday's close; recompute from the actual entry price.</p>
-    <div class="scroll"><table id="wl"></table></div>
-  </section>
-
-  <section class="panel" style="display:flex;flex-direction:column;gap:12px">
-    <div class="head"><h2>Back-test trades</h2><span class="mute mono">latest 80</span></div>
-    <div class="scroll"><table id="trades"></table></div>
-  </section>
-
-  <section class="panel">
-    <h2>How this was tested</h2>
-    <pre class="note mono" id="method" style="white-space:pre-wrap;margin:10px 0 0"></pre>
+    <div class="head"><h2>Stocks with a working signal</h2><span class="mute mono" id="wk-asof"></span></div>
+    <div class="scroll"><table id="wk-stk"></table></div>
   </section>
 </div>
 
 <script>
-const BT=/*BT*/null, MK=/*MK*/null, WL=/*WL*/null, META=/*META*/null;
+const BT=/*BT*/null, MK=/*MK*/null, WL=/*WL*/null, WK=/*WK*/null, META=/*META*/null;
 const $=id=>document.getElementById(id);
 const pct=(x,d=2)=>x==null?"–":(x>0?"+":"")+x.toFixed(d)+"%";
 const cls=x=>x==null?"":x>0?"up":x<0?"down":"";
@@ -135,7 +109,7 @@ function spark(a,w=110,h=28){if(!a||a.length<2)return"";const lo=Math.min(...a),
 
 function status(){const s=[];
   s.push(`<span><span class="dot ${MK?"ok":"warn"}"></span>Markets ${MK?MK.asof+" IST":"missing"}</span>`);
-  s.push(`<span><span class="dot ${BT?"ok":"warn"}"></span>Back-test ${BT?BT.asof+" IST":"missing"}</span>`);
+
   s.push(`<span id="livenote"><span class="dot warn"></span>Live: connecting…</span>`);
   s.push(`<span>Page built ${META.built} IST</span>`);
   $("status").innerHTML=s.join("")}
@@ -148,55 +122,20 @@ function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file ye
    <td class="n ${cls(r.chg)}" id="lc-${r.seg}-${r.sid}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
    </table></div>`).join("")+(MK.missing&&MK.missing.length?`<p class="mute" style="grid-column:1/-1;font-size:12px">Not returned by Dhan: ${MK.missing.join("; ")}</p>`:"")}
 
-function equity(a){if(!a||!a.length)return"";const w=300,h=70,lo=Math.min(0,...a),hi=Math.max(0,...a),r=hi-lo||1;
-  const y=v=>h-6-((v-lo)/r)*(h-14),x=i=>a.length===1?w/2:4+i*(w-8)/(a.length-1);
-  const d="M"+a.map((v,i)=>x(i).toFixed(1)+" "+y(v).toFixed(1)).join("L");const col=a[a.length-1]>=0?"var(--up)":"var(--down)";
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-label="Cumulative rupee result"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`}
-
-function checkpoints(){if(!BT){$("cks").innerHTML='<p class="mute">The back-test has not run yet.</p>';return}
-  $("bt-asof").textContent=`${BT.days[0]} to ${BT.days[BT.days.length-1]} · ${BT.days.length} sessions · ${BT.stocks} stocks`;
-  const tot=Object.values(BT.picks_per_day).reduce((a,b)=>a+b,0);
-  $("bt-lede").textContent=`The desk flagged ${tot} stock-days with a new tested signal. Each was bought at 9:30, 12:30 and 3:00 PM with a stop 0.5 ATR below and a target 1 ATR above, closed by 3:25 PM, sized to lose at most ${inr(BT.cfg.max_loss)} at the stop on ${inr(BT.cfg.capital)} capital, after charges.`;
-  $("cks").innerHTML=BT.checks.map(ck=>{const g=BT.grid.picks[ck].any,p=g.plan||{},dy=g.day||{},nx=g.next||{};const eq=BT.equity[ck]||[];const tot=eq.length?eq[eq.length-1]:0;
-    return `<div class="panel ck"><div class="head"><h3 style="font-size:17px">Bought at ${ck}</h3><span class="pill ${p.pass?"pass":p.n?"fail":""}">${p.pass?"passes":p.n?"not proven":"no trades"}</span></div>
-    <div><div class="big ${cls(tot)}">${inr(tot)}</div><div class="mute" style="font-size:12px">total, stop / target exit, ${p.n||0} trades</div></div>
-    ${equity(eq)}
-    <dl class="kv"><dt>Avg vs Nifty, stop/target</dt><dd class="${cls(p.ex)}">${pct(p.ex)}</dd>
-    <dt>Win rate</dt><dd>${p.hit==null?"–":(p.hit*100).toFixed(0)+"%"}</dd>
-    <dt>t-stat</dt><dd>${p.t??"–"}</dd>
-    <dt>First half / second half</dt><dd><span class="${cls(p.h1)}">${pct(p.h1)}</span> / <span class="${cls(p.h2)}">${pct(p.h2)}</span></dd>
-    <dt>Hold to 3:25 PM, vs Nifty</dt><dd class="${cls(dy.ex)}">${pct(dy.ex)}</dd>
-    <dt>Hold to next close, vs Nifty</dt><dd class="${cls(nx.ex)}">${pct(nx.ex)}</dd></dl></div>`}).join("")}
-
-let POP="picks",EX="plan";
-function grid(){if(!BT)return;const F=BT.filters;
-  $("grid").innerHTML=`<tr><th>Rule at the time of entry</th>${BT.checks.map(c=>`<th class="n">${c}</th>`).join("")}</tr>`+
-   Object.keys(F).map(k=>`<tr><td>${F[k]}</td>${BT.checks.map(c=>{const s=(BT.grid[POP][c][k]||{})[EX]||{n:0};
-     return `<td class="n ${s.pass?"hit":""}"><div class="cell"><span class="${cls(s.ex)}">${s.n?pct(s.ex):"–"}</span><small>${s.n} trades${s.n?` · win ${(s.hit*100).toFixed(0)}%`:""}</small></div></td>`}).join("")}</tr>`).join("");
-  ["picks","all"].forEach(k=>$("pop-"+k).setAttribute("aria-pressed",String(k===POP)));["plan","day","next"].forEach(k=>$("ex-"+k).setAttribute("aria-pressed",String(k===EX)))}
-["picks","all"].forEach(k=>$("pop-"+k).onclick=()=>{POP=k;grid()});["plan","day","next"].forEach(k=>$("ex-"+k).onclick=()=>{EX=k;grid()});
-
-function passing(){if(!BT)return;const P=BT.passing||[];$("pass-n").textContent=P.length+" of "+(2*3*Object.keys(BT.filters).length*3);
-  $("pass-n").className="pill "+(P.length?"pass":"fail");
-  const EXN={plan:"stop / target",day:"hold to 3:25",next:"next close"};
-  $("passing").innerHTML=P.length?`<tr><th>Stocks</th><th>Time</th><th>Rule</th><th>Exit</th><th class="n">Trades</th><th class="n">Avg vs Nifty</th><th class="n">Win</th><th class="n">t</th><th class="n">Halves</th></tr>`+
-   P.slice(0,15).map(b=>`<tr><td>${b.pop==="picks"?"Desk picks":"All Nifty 500"}</td><td class="mono">${b.ck}</td><td>${BT.filters[b.f]}</td><td>${EXN[b.exit]}</td><td class="n">${b.n}</td><td class="n ${cls(b.ex)}">${pct(b.ex)}</td><td class="n">${(b.hit*100).toFixed(0)}%</td><td class="n">${b.t}</td><td class="n">${pct(b.h1)} / ${pct(b.h2)}</td></tr>`).join("")
-   :`<tr><td class="mute">No rule passed this month. Nothing here is a tested setup yet, so the terminal will not alert on any of them.</td></tr>`}
-
-function watch(){if(!WL){$("wl").innerHTML='<tr><td class="mute">No watchlist file yet.</td></tr>';return}
-  $("wl-asof").textContent=(WL.rows.length>30?"top 30 of "+WL.rows.length+", ":"")+"from the "+WL.asof+" close";const N=(BT&&BT.signal_names)||{};
-  $("wl").innerHTML=WL.rows.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">ATR</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Shares</th></tr>`+
-   WL.rows.slice(0,30).map(r=>`<tr><td><b>${r.s}</b></td><td style="white-space:normal;min-width:220px">${r.sig.map(s=>N[s]||s).join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n">${fmt(r.atr)}</td>
-   <td class="n down">${fmt(r.c-r.stop_atr*r.atr)}</td><td class="n up">${fmt(r.c+r.tgt_atr*r.atr)}</td><td class="n">${r.qty_rule}</td></tr>`).join("")
-   :`<tr><td class="mute">No stock has a new tested signal for the next session.</td></tr>`}
-
-function trades(){if(!BT)return;const T=(BT.trades||[]).slice(-80).reverse();
-  $("trades").innerHTML=T.length?`<tr><th>Day</th><th>Time</th><th>Stock</th><th class="n">Entry</th><th class="n">Exit</th><th>How</th><th class="n">Shares</th><th class="n">P&amp;L</th><th>Intraday state</th></tr>`+
-   T.map(t=>`<tr><td class="mono">${t.d.slice(5)}</td><td class="mono">${t.ck}</td><td>${t.s}</td><td class="n">${fmt(t.e)}</td><td class="n">${fmt(t.x)}</td><td>${t.why}</td><td class="n">${t.qty}</td><td class="n ${cls(t.pnl)}">${inr(t.pnl)}</td><td class="mute" style="font-size:12px">${t.f.join(", ")||"–"}</td></tr>`).join("")
-   :`<tr><td class="mute">No desk picks in this month.</td></tr>`}
-
-status();markets();checkpoints();grid();passing();watch();trades();
-$("method").textContent=BT?BT.method:"";
+function regime(){const W=WK||{};const el=$("regime");el.textContent=W.label||"–";el.className="pill "+(W.correction?"fail":"pass");
+  $("wk-lede").textContent=W.why||"";}
+function sigs(){const W=WK||{},S=W.signals||[];
+  $("wk-sig").innerHTML=S.length?`<tr><th>Signal</th><th class="n">Cases</th><th class="n">Beat Nifty in 10 days</th><th class="n">Avg vs Nifty, 10 days</th><th class="n">Last month, bought 9:30</th></tr>`+
+   S.map(s=>`<tr><td style="white-space:normal;min-width:240px">${s.name}</td><td class="n">${(s.n||0).toLocaleString("en-IN")}</td><td class="n">${s.hit10==null?"–":Math.round(s.hit10*100)+"%"}</td>
+   <td class="n ${cls(s.x10)}">${s.x10==null?"–":pct(s.x10*100)}</td><td class="n ${cls(s.m1)}">${s.m1==null?"–":pct(s.m1)+` <small class="mute">${s.m1n}</small>`}</td></tr>`).join("")
+   :`<tr><td class="mute">No signal passes the back-test for this kind of market. The terminal shows no picks until one does.</td></tr>`}
+function stocks(){const W=WK||{},R=W.stocks||[];$("wk-asof").textContent=W.asof?"from the "+W.asof+" close · tap a name to analyze":"";
+  $("wk-stk").innerHTML=R.length?`<tr><th>Stock</th><th>Signal</th><th class="n">Close</th><th class="n">Live</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Shares</th><th>vs Nifty 500</th></tr>`+
+   R.map(r=>`<tr><td><button class="lnk" data-s="${r.s}">${r.s}</button></td><td style="white-space:normal;min-width:200px">${r.sig.join("; ")}</td><td class="n">${fmt(r.c)}</td><td class="n" data-live="${r.s}">–</td>
+   <td class="n down">${fmt(r.stop)}</td><td class="n up">${fmt(r.tgt)}</td><td class="n">${r.qty}</td><td class="mute">${r.status||"–"}</td></tr>`).join("")
+   :`<tr><td class="mute">No stock has a working signal from the last close.</td></tr>`;
+  document.querySelectorAll("#tm-wk-stk .lnk,#wk-stk .lnk").forEach(b=>b.onclick=()=>{try{tab("analyze");show(b.dataset.s);window.scrollTo(0,0)}catch(e){}})}
+status();markets();regime();sigs();stocks();
 /* Live prices: GitHub Actions streams Dhan prices every 5 s to the public repo prodadarjaiswal-lab/aj-live during
    market hours (one Dhan login a day). The page reads live.json through the GitHub connector. */
 const LV={ok:false,at:0,t:null,busy:false};
@@ -212,6 +151,8 @@ async function livePoll(mcp){if(LV.busy)return;LV.busy=true;
     if(fresh&&MK)for(const rows of Object.values(MK.groups))for(const r of rows){const a=((d.q[r.seg]||{})[String(r.sid)]);
       if(a&&a[0]){const base=a[4]||r.prev,el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
         if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}n++}}
+    if(fresh&&WK)for(const r of (WK.stocks||[])){const a=(d.q.NSE_EQ||{})[String(r.sid)],el=document.querySelector(`[data-live="${r.s}"]`);
+      if(a&&a[0]&&el){const c=a[4]?(a[0]/a[4]-1)*100:null;el.innerHTML=`${fmt(a[0])} <small class="${cls(c)}">${c==null?"":pct(c)}</small>`}}
     LV.ok=true;LV.at=Date.now();LV.t=d.t;
     liveNote(fresh?`<b>LIVE</b> ${String(d.t).slice(11,19)} IST · ${n} board prices`:`Market closed · last live ${String(d.t).slice(0,16)} IST`,fresh)}
   catch(e){const c=e&&e.code;const why=c==="server_not_connected"?"add the GitHub connector in Claude settings":c==="needs_reauth"?"reconnect GitHub in Claude settings":c==="not_granted"||c==="consent_required"?"allow GitHub for this page":"feed not running, retrying";
