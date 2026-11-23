@@ -137,7 +137,7 @@ function spark(a,w=110,h=28){if(!a||a.length<2)return"";const lo=Math.min(...a),
 function status(){const s=[];
   s.push(`<span><span class="dot ${MK?"ok":"warn"}"></span>Markets ${MK?MK.asof+" IST":"missing"}</span>`);
   s.push(`<span><span class="dot ${BT?"ok":"warn"}"></span>Back-test ${BT?BT.asof+" IST":"missing"}</span>`);
-  s.push(`<span><span class="dot warn"></span>Live ticks: not wired yet (next build step)</span>`);
+  s.push(`<span id="livenote"><span class="dot warn"></span>Live: connecting…</span>`);
   s.push(`<span>Page built ${META.built} IST</span>`);
   $("status").innerHTML=s.join("")}
 
@@ -145,8 +145,8 @@ function markets(){if(!MK){$("mk").innerHTML='<p class="mute">No markets file ye
   $("mk-asof").textContent="closes as of "+MK.asof+" IST";
   $("mk").innerHTML=Object.entries(MK.groups).map(([g,rows])=>`<div class="scroll"><h3 style="font-size:15px;margin-bottom:6px">${g}</h3><table>
    <tr><th>Name</th><th class="n">Last</th><th class="n">Day</th><th class="n">1M</th><th>60D</th></tr>
-   ${rows.map(r=>`<tr title="${r.contract||""}"><td>${r.name}${r.expiry?` <small class="mute">${r.expiry.slice(5)}</small>`:""}</td><td class="n">${fmt(r.last)}</td>
-   <td class="n ${cls(r.chg)}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
+   ${rows.map(r=>`<tr title="${r.contract||""}"><td>${r.name}${r.expiry?` <small class="mute">${r.expiry.slice(5)}</small>`:""}</td><td class="n" id="lv-${r.seg}-${r.sid}">${fmt(r.last)}</td>
+   <td class="n ${cls(r.chg)}" id="lc-${r.seg}-${r.sid}">${pct(r.chg*100)}</td><td class="n ${cls(r.r21)}">${r.r21==null?"–":pct(r.r21*100,1)}</td><td>${spark(r.spark,90,24)}</td></tr>`).join("")}
    </table></div>`).join("")+(MK.missing&&MK.missing.length?`<p class="mute" style="grid-column:1/-1;font-size:12px">Not returned by Dhan: ${MK.missing.join("; ")}</p>`:"")}
 
 function equity(a){if(!a||!a.length)return"";const w=300,h=70,lo=Math.min(0,...a),hi=Math.max(0,...a),r=hi-lo||1;
@@ -198,4 +198,27 @@ function trades(){if(!BT)return;const T=(BT.trades||[]).slice(-80).reverse();
 
 status();markets();checkpoints();grid();passing();watch();trades();
 $("method").textContent=BT?BT.method:"";
+/* Live prices: GitHub Actions streams Dhan prices every 5 s to the public repo prodadarjaiswal-lab/aj-live during
+   market hours (one Dhan login a day). The page reads live.json through the GitHub connector. */
+const LV={ok:false,at:0,t:null,busy:false};
+const istNow=()=>new Date(Date.now()+5.5*3600e3);
+const mktOpen=()=>{const d=istNow(),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>0&&w<6&&m>=540&&m<=1415};
+function liveText(r){for(const b of (r&&r.content)||[]){const x=b&&b.resource;if(x&&typeof x.text==="string")return x.text;
+  if(b&&b.type==="text"&&typeof b.text==="string"){const i=b.text.indexOf('{"t"');if(i>=0)return b.text.slice(i)}}return null}
+function liveNote(h,ok){const el=$("livenote");if(el)el.innerHTML=`<span class="dot ${ok?"ok":"warn"}"></span>${h}`}
+async function livePoll(mcp){if(LV.busy)return;LV.busy=true;
+  try{const r=await mcp.callTool("GitHub","get_file_contents",{owner:"prodadarjaiswal-lab",repo:"aj-live",path:"live.json"},{cache:false});
+    const t=liveText(r);if(!t)throw{code:"empty"};const d=JSON.parse(t);if(!d.q||!d.t)throw{code:"empty"};
+    const fresh=String(d.t).slice(0,10)===istNow().toISOString().slice(0,10);let n=0;
+    if(fresh&&MK)for(const rows of Object.values(MK.groups))for(const r of rows){const a=((d.q[r.seg]||{})[String(r.sid)]);
+      if(a&&a[0]){const base=a[4]||r.prev,el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
+        if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}n++}}
+    LV.ok=true;LV.at=Date.now();LV.t=d.t;
+    liveNote(fresh?`<b>LIVE</b> ${String(d.t).slice(11,19)} IST · ${n} board prices`:`Market closed · last live ${String(d.t).slice(0,16)} IST`,fresh)}
+  catch(e){const c=e&&e.code;const why=c==="server_not_connected"?"add the GitHub connector in Claude settings":c==="needs_reauth"?"reconnect GitHub in Claude settings":c==="not_granted"||c==="consent_required"?"allow GitHub for this page":"feed not running, retrying";
+    if(!LV.ok||Date.now()-LV.at>120000)liveNote(`Live off (${why}) · showing closing prices`,false)}
+  finally{LV.busy=false}}
+(async()=>{let mcp=null;try{mcp=window.claude&&window.claude.use?await window.claude.use("mcp"):null}catch(e){mcp=null}
+  if(!mcp){liveNote("Live off (open this page on claude.ai) · showing closing prices",false);return}
+  const loop=async()=>{if(!document.hidden)await livePoll(mcp);setTimeout(loop,mktOpen()?5000:60000)};loop()})();
 </script>
