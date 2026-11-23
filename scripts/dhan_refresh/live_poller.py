@@ -47,6 +47,15 @@ def universe() -> tuple[list[int], dict]:
     return sorted(eq), idx
 
 
+def terminal_ids() -> dict:
+    """{segment: [security ids]} from docs/terminal/markets.json (written nightly by terminal_bt.py)."""
+    try:
+        live = json.loads((ROOT / "docs/terminal/markets.json").read_text(encoding="utf-8")).get("live_ids") or {}
+        return {seg: sorted(int(k) for k in ids) for seg, ids in live.items() if ids}
+    except Exception:
+        return {}
+
+
 def parse(resp: dict) -> dict:
     """{'NSE_EQ': {sid: [ltp, o, h, l, c]}, 'IDX_I': {...}} from Dhan's ohlc reply."""
     data = resp.get("data", resp)
@@ -176,6 +185,17 @@ def main() -> int:
     dhan = R.Dhan(cid, R.login(cid, pin, sec))
     setup_branch()
     body = {"NSE_EQ": eq[:990], "IDX_I": [int(k) for k in idx]}
+    for seg, ids in terminal_ids().items():                    # Trading Terminal board: ETFs, extra indices, MCX futures
+        have = set(body.get(seg, []))
+        body[seg] = body.get(seg, []) + [i for i in ids if i not in have]
+    print(f"terminal board adds: { {k: len(v) for k, v in terminal_ids().items()} }")
+    try:                                                       # never let the board's extras break the stock feed
+        dhan._post("/marketfeed/ohlc", body)
+    except Exception as e:
+        if not any(c in str(e) for c in ("401", "807", "808", "809", "DH-901")):
+            print(f"  board extras refused ({str(e)[:100]}); streaming stocks and indices only")
+            body = {"NSE_EQ": eq[:990], "IDX_I": [int(k) for k in idx]}
+        time.sleep(1.1)
     day = dt.datetime.now(R.IST).date().isoformat()
     al = AL.Alerts(idx, prior_state(day)["sent"])
     print(f"telegram: {'on' if T.enabled() else 'off'}; {len(al.sent)} alerts already sent today")
