@@ -55,7 +55,12 @@ svg{display:block;width:100%;height:auto}svg text{font:10.5px var(--fm);fill:var
 <section class="card"><h2>Last two years with the 50-day and 200-day averages</h2><div id="chart"></div></section>
 <section><h2>Technicals</h2><div id="tech" class="tiles"></div></section>
 <section class="two">
- <div class="card"><h2>Gold in rupees since 2003</h2><div id="long"></div><div id="rets"></div></div>
+ <div class="card"><h2>Next support and resistance</h2><div id="lv"></div></div>
+ <div class="card"><h2>Falls of 10% or more and how soon gold recovered</h2><div id="rec"></div></div>
+</section>
+<section><h2>Value</h2><div id="valt" class="tiles"></div><p class="note" id="valn"></p></section>
+<section class="two">
+ <div class="card"><h2>Value channel since 2003</h2><div id="long"></div><div id="rets"></div></div>
  <div class="card"><h2>Falls from a record high</h2><div id="dd"></div></div>
 </section>
 <section class="two">
@@ -91,6 +96,7 @@ $("verdicts").innerHTML=G.horizons.map(h=>{const p=G.proof[h.lab],me=p.by[h.v],a
 function line(pts,X,Y){let s="",pen=false;pts.forEach((v,i)=>{if(v==null){pen=false;return}s+=(pen?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1);pen=true});return s}
 (function(){const c=G.chart.c,n=c.length,W=760,H=280,l=6,r=64,t=10,b=24;
  const all=[...c,...G.chart.m50,...G.chart.m200].filter(v=>v!=null);let lo=Math.min(...all),hi=Math.max(...all),pd=(hi-lo)*.05;lo-=pd;hi+=pd;
+ const sw=a=>a.filter(z=>z.what==="Swing level"||z.what==="52-week high"),LVL=[...sw(G.levels.support).slice(0,1).map(z=>({px:z.px,s:1})),...sw(G.levels.resistance).slice(0,1).map(z=>({px:z.px,s:0}))].filter(z=>z.px>lo&&z.px<hi);
  const X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b),ticks=[0,1,2,3,4].map(i=>lo+(hi-lo)*i/4);
  const col=c[n-1]>=c[0]?"var(--up)":"var(--dn)";const ds=G.chart.d,ix=[0,Math.floor(n/4),Math.floor(n/2),Math.floor(3*n/4),n-1];
  $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gold price in rupees per 10 grams, last ${n} trading days, with 50-day and 200-day averages">
@@ -99,9 +105,10 @@ function line(pts,X,Y){let s="",pen=false;pts.forEach((v,i)=>{if(v==null){pen=fa
  <path d="${line(G.chart.m200,X,Y)}" fill="none" stroke="var(--dim)" stroke-width="1.3" stroke-dasharray="5 3"/>
  <path d="${line(G.chart.m50,X,Y)}" fill="none" stroke="var(--acc)" stroke-width="1.3"/>
  <path d="${line(c,X,Y)}" fill="none" stroke="${col}" stroke-width="1.8"/>
+ ${LVL.map(z=>`<line x1="${l}" x2="${W-r}" y1="${Y(z.px)}" y2="${Y(z.px)}" stroke="${z.s?"var(--up)":"var(--dn)"}" stroke-width="1" stroke-dasharray="2 3"/><text x="${l+4}" y="${Y(z.px)-3}" style="fill:${z.s?"var(--up)":"var(--dn)"}">${z.s?"support":"resistance"} ₹${F(z.px)}</text>`).join("")}
  <circle cx="${X(n-1)}" cy="${Y(c[n-1])}" r="3.5" fill="${col}"/>
  ${ix.map((i,k)=>`<text x="${X(i)}" y="${H-6}" text-anchor="${k===0?"start":k===4?"end":"middle"}">${E(ds[i])}</text>`).join("")}</svg>
- <div class="legend"><span><i style="background:${col}"></i>Price</span><span><i style="background:var(--acc)"></i>50-day average</span><span><i style="background:var(--dim)"></i>200-day average (dashed)</span><span>${n} trading days</span></div>`})();
+ <div class="legend"><span><i style="background:${col}"></i>Price</span><span><i style="background:var(--acc)"></i>50-day average</span><span><i style="background:var(--dim)"></i>200-day average (dashed)</span><span><i style="background:var(--up)"></i>next supports and <i style="background:var(--dn)"></i>resistance (dotted)</span><span>${n} trading days</span></div>`})();
 
 const tile=(k,v,cl,s)=>`<div class="tile"><div class="k">${E(k)}</div><div class="v ${cl||""}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
 $("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day avg",P(f.vs200),C(f.vs200)),
@@ -113,16 +120,43 @@ $("tech").innerHTML=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day 
  tile("From 52-week high",P(f.hi52),f.hi52>-0.05?"good":f.hi52<-0.25?"bad":"warn","high ₹"+F(f.hi52_px)),tile("From 52-week low",P(f.lo52),"","low ₹"+F(f.lo52_px)),
  tile("vs Nifty, 3 months",P(f.rs3),C(f.rs3)),tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%","")].join("");
 
-(function(){const w=G.long,n=w.length,W=520,H=230,l=6,r=72,t=10,b=22,lg=w.map(z=>Math.log(z[1]));
- const lo=Math.min(...lg),hi=Math.max(...lg),X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b);
- const tk=[5000,10000,20000,40000,80000,160000].filter(v=>Math.log(v)>=lo&&Math.log(v)<=hi);
+(function(){const w=G.long,n=w.length,W=520,H=240,l=6,r=72,t=10,b=22,V=G.value,lg=w.map(z=>Math.log(z[1]));
+ const t0=new Date(V.t0).getTime(),fit=z=>V.a+V.b*((new Date(z[0]).getTime()-t0)/31557600000),band=m=>w.map(z=>fit(z)+m*V.sd);
+ const B={"-2":band(-2),"-1":band(-1),"0":band(0),"1":band(1),"2":band(2)},allv=[...lg,...B["-2"],...B["2"]];
+ const lo=Math.min(...allv),hi=Math.max(...allv),X=i=>l+i/(n-1)*(W-l-r),Y=v=>t+(1-(v-lo)/(hi-lo))*(H-t-b);
+ const tk=[5000,10000,20000,40000,80000,160000,320000].filter(v=>Math.log(v)>=lo&&Math.log(v)<=hi);
  const yrs=[];let py="";w.forEach((z,i)=>{const y=z[0].slice(0,4);if(y!==py&&+y%5===0){yrs.push([i,y])}py=y});
- $("long").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly gold price in rupees since 2003, log scale">
+ const area=(a,b2)=>a.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join("")+b2.map((v,i)=>"L"+X(n-1-i).toFixed(1)+" "+Y(v).toFixed(1)).join("")+"Z";
+ $("long").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly gold price in rupees since 2003 on a log scale, with its long-run trend and bands at one and two standard deviations">
  ${tk.map(v=>`<line x1="${l}" x2="${W-r}" y1="${Y(Math.log(v))}" y2="${Y(Math.log(v))}" stroke="var(--line)" stroke-width=".6"/><text x="${W-r+6}" y="${Y(Math.log(v))+3}">₹${F(v)}</text>`).join("")}
- <path d="${line(lg,X,Y)}" fill="none" stroke="var(--acc)" stroke-width="1.5"/>
+ <path d="${area(B["-2"],B["2"].slice().reverse())}" fill="var(--acc)" opacity=".07"/>
+ <path d="${area(B["-1"],B["1"].slice().reverse())}" fill="var(--acc)" opacity=".10"/>
+ <path d="${line(B["0"],X,Y)}" fill="none" stroke="var(--dim)" stroke-width="1" stroke-dasharray="5 3"/>
+ <path d="${line(lg,X,Y)}" fill="none" stroke="var(--acc)" stroke-width="1.6"/>
  ${yrs.map(([i,y])=>`<text x="${X(i)}" y="${H-6}" text-anchor="middle">${y}</text>`).join("")}</svg>
- <p class="note">Weekly, log scale, so equal heights are equal percentage moves. ${E(w[0][0])} to ${E(w[n-1][0])}.</p>`;
+ <div class="legend"><span><i style="background:var(--acc)"></i>Price, weekly</span><span><i style="background:var(--dim)"></i>Trend, +${(V.growth*100).toFixed(1)}% a year (dashed)</span><span>Shaded: 1σ and 2σ bands</span></div>
+ <div class="scroll" style="margin-top:8px"><table><tr><th class="t">Where gold sat in the channel</th><th>Weeks</th><th>Next 52 weeks, avg</th><th>Up</th></tr>
+ ${Object.entries(V.zones).map(([k,z])=>`<tr><td class="t">${E(k)}</td><td>${F(z.n)}</td><td class="${C(z.avg)}">${P(z.avg)}</td><td>${z.up==null?"–":Math.round(z.up*100)+"%"}</td></tr>`).join("")}</table></div>
+ <p class="note">Log scale. Weekly rupee price ${E(w[0][0])} to ${E(w[n-1][0])}. The trend is a straight-line fit to the log price, so it grows at a fixed rate. Gold sits ${V.z>0?"+":""}${V.z}σ from trend now.</p>`;
  $("rets").innerHTML=`<div class="scroll"><table><tr><th class="t">Held for</th><th>Total</th><th>Per year</th></tr>${Object.entries(G.rets).map(([k,v])=>`<tr><td class="t">${k}</td><td class="${C(v.total)}">${P(v.total,0)}</td><td>${P(v.cagr)}</td></tr>`).join("")}</table></div>`})();
+
+(function(){const LV=G.levels,k=LV.mcx_k,row=(z,s)=>`<tr><td class="t ${s?"up":"dn"}">${s?"Support":"Resistance"}</td><td>₹${F(z.px)}</td>${k?`<td>₹${F(z.px*k)}</td>`:""}<td class="${s?"dn":"up"}">${P(z.dist)}</td><td class="t w">${E(z.what)}${z.touches?` · ${z.touches} touch${z.touches>1?"es":""}, last ${E(z.last)}`:""}</td></tr>`;
+ $("lv").innerHTML=`<div class="scroll"><table><tr><th class="t"></th><th>₹ / 10 g</th>${k?"<th>≈ MCX</th>":""}<th>Away</th><th class="t">What it is</th></tr>
+ ${LV.resistance.slice().reverse().map(z=>row(z,0)).join("")}<tr><td class="t"><b>Now</b></td><td><b>₹${F(f.last)}</b></td>${k?`<td><b>₹${F(f.last*k)}</b></td>`:""}<td></td><td></td></tr>${LV.support.map(z=>row(z,1)).join("")}</table></div>
+ <p class="note">Swing levels are closes that were the lowest or highest within 5 days on each side, over the last 2 years. Levels within 1.5% are merged and their touches counted. This is the same method as the Trading Terminal's Analyze tab, plus the value-channel and 200-week levels. ${k?"“≈ MCX” converts each level to the MCX future at today's gap.":""}</p>`;
+ const FL=G.falls,cur=FL.current,mo=d=>d==null?"–":d<42?d+" days":(d/21).toFixed(0)+" months";
+ $("rec").innerHTML=`<p style="margin:0 0 8px">Since 2009, gold fell ${(FL.cut*100).toFixed(0)}% or more ${FL.rows.length-(cur?1:0)} times and got back to its old high every time. The middle case took ${mo(FL.med_down)} to bottom and ${mo(FL.med_up)} more to recover.${cur?` Now it is ${P(cur.depth)} from the ${E(cur.peak)} peak.${FL.like_n?` The ${FL.like_n} past falls of ${P(cur.depth*0.7,0).replace("-","")} or deeper took ${mo(FL.like_med_total)} from peak to recovery (middle case).`:""}`:""}</p>
+ <div class="scroll"><table><tr><th class="t">Peak</th><th>Fall</th><th class="t">Bottom</th><th>To bottom</th><th>Bottom to recovery</th><th class="t">Back at peak</th></tr>
+ ${FL.rows.slice().reverse().map(r=>`<tr><td class="t">${E(r.peak)}</td><td class="dn">${P(r.depth)}</td><td class="t">${E(r.trough)}${r.up_days==null?" so far":""}</td><td>${mo(r.down_days)}</td><td>${r.up_days==null?"not yet":mo(r.up_days)}</td><td class="t">${r.back?E(r.back):"not yet"}</td></tr>`).join("")}</table></div>
+ <p class="note">Daily closes, trading days (21 a month). Rupee gold from GOLDBEES.</p>`;
+ const V=G.value,g=V.gsr,R=V.real,Yr=V.ry;
+ $("valt").innerHTML=[tile("Fair value (trend)","₹"+F(V.fair),"","channel ₹"+F(V.bands["-1"])+" – ₹"+F(V.bands["1"])),
+  tile("Price vs fair value",P(V.vs_fair),V.vs_fair>0.25?"bad":V.vs_fair<-0.1?"good":"warn",(V.z>0?"+":"")+V.z+"σ in the channel"),
+  tile("vs 200-week average",P(V.vs200w),V.vs200w>0.4?"bad":V.vs200w<0?"good":"warn","higher than "+Math.round(V.vs200w_pct*100)+"% of past weeks"),
+  g?tile("Gold / silver ratio",F(g.now,1),g.pct>0.8?"good":g.pct<0.2?"bad":"",`avg ${F(g.avg,1)} · higher than ${Math.round(g.pct*100)}% of months`):"",
+  R?tile("Real price (US$, today's money)","$"+F(R.now),R.pct>0.9?"bad":"",`record $${F(R.ath)} (${E(R.ath_d)}) · avg $${F(R.avg)}`):"",
+  Yr?tile("Real-yield model says","$"+F(Yr.fit_now),"bad",`real yield ${F(Yr.real_yield,2)}% · model broke after 2022`):""].join("");
+ $("valn").innerHTML=`Gold has no earnings, so value is judged against its own history. Gold/silver ratio from ${E(g&&g.src)} (${E(g&&g.d)}): a high ratio means gold is dear next to silver. The real price and the real-yield model come from the earlier Gold Desk (to ${E(G.hist_asof)}) and are not updated daily. The table under the value channel shows that cheaper zones were followed by higher 52-week returns, and every zone was up more often than not.`})();
 
 (function(){const S=G.studies||{},dd=S.gold_dd||[];
  $("dd").innerHTML=`<div class="scroll"><table><tr><th class="t">Record ($)</th><th>Deepest fall</th><th class="t">Bottom</th><th class="t">Back to record</th><th>Next 12 m</th></tr>

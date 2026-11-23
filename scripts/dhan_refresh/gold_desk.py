@@ -71,16 +71,21 @@ def fetch(dhan, scrip_csv: str, today: dt.date) -> dict:
         seg, sid, sym, _ = fut["GOLD"]
         out["mcx"] = closes(sid, seg, "FUTCOM", today - dt.timedelta(days=400))
         out["mcx_contract"] = sym
+    if "SILVER" in fut:  # for the gold/silver ratio
+        sseg, ssid, _, _ = fut["SILVER"]
+        out["silver"] = closes(ssid, sseg, "FUTCOM", today - dt.timedelta(days=400))
     # today's price while the market is open: Dhan's last traded price, saved under today's date until the
     # next run replaces it with the real close
     body = {"NSE_EQ": [int(ids["GOLDBEES"])], "IDX_I": [13]}
     if "mcx" in out:
         body[seg] = [int(sid)]
+    if "silver" in out:
+        body[sseg] = body.get(sseg, []) + [int(ssid)]
     try:
         q = dhan.post("/marketfeed/ohlc", body).get("data") or {}
         now = dt.datetime.now(R.IST)
         got = {}
-        for key, sg, i in (("bees", "NSE_EQ", ids["GOLDBEES"]), ("nifty", "IDX_I", 13)) + ((("mcx", seg, sid),) if "mcx" in out else ()):
+        for key, sg, i in (("bees", "NSE_EQ", ids["GOLDBEES"]), ("nifty", "IDX_I", 13)) + ((("mcx", seg, sid),) if "mcx" in out else ()) + ((("silver", sseg, ssid),) if "silver" in out else ()):
             v = (q.get(sg) or {}).get(str(i)) or {}
             if float(v.get("last_price") or 0) > 0:
                 got[key] = float(v["last_price"])
@@ -96,8 +101,8 @@ def fetch(dhan, scrip_csv: str, today: dt.date) -> dict:
 
 def merge(old: dict, new: dict) -> dict:
     """Keep every close ever saved; new values win. MCX closes keep the contract they came from."""
-    m = {k: dict(old.get(k) or {}) for k in ("bees", "nifty", "mcx", "mcx_contract")}
-    for k in ("bees", "nifty"):
+    m = {k: dict(old.get(k) or {}) for k in ("bees", "nifty", "silver", "mcx", "mcx_contract")}
+    for k in ("bees", "nifty", "silver"):
         m[k].update(new.get(k) or {})
     sym = new.get("mcx_contract")
     for d, c in (new.get("mcx") or {}).items():
@@ -258,6 +263,126 @@ def level_check(mcx: dict, bees: dict, hist_w: list) -> dict:
     return L
 
 
+def levels(c: np.ndarray, d: list, I: dict, extra: list, look: int = 500, k: int = 5, tol: float = 0.015) -> dict:
+    """Support and resistance from daily closes, the same method as the Terminal's Analyze tab: a swing low/high is
+    the lowest/highest close within k bars each side; swings within 1.5% merge into one level (touches counted).
+    The 50/200-day averages and any extra levels (value channel) are added; the 52-week high is resistance when no
+    swing high is above the price."""
+    n, px = len(c), float(c[-1])
+    s0 = max(0, n - look)
+    sw = []
+    for j in range(s0 + k, n - k):
+        w = c[j - k:j + k + 1]
+        if c[j] == w.min():
+            sw.append((float(c[j]), d[j], "low"))
+        elif c[j] == w.max():
+            sw.append((float(c[j]), d[j], "high"))
+    groups = []
+    for v, day, kind in sorted(sw):
+        if groups and v <= groups[-1]["mean"] * (1 + tol):
+            g = groups[-1]
+            g["vals"].append(v)
+            g["mean"] = sum(g["vals"]) / len(g["vals"])
+            g["last"] = max(g["last"], day)
+        else:
+            groups.append({"vals": [v], "mean": v, "last": day})
+    lv = [{"px": round(g["mean"], 0), "what": "Swing level", "touches": len(g["vals"]), "last": g["last"]} for g in groups]
+    for lab, key in (("50-day average", "m50"), ("200-day average", "m200")):
+        if not np.isnan(I[key][-1]):
+            lv.append({"px": round(float(I[key][-1]), 0), "what": lab, "touches": None, "last": None})
+    lv += extra
+    for x in lv:
+        x["dist"] = round(x["px"] / px - 1, 4)
+    sup = sorted([x for x in lv if x["px"] < px], key=lambda x: -x["px"])[:5]
+    res = sorted([x for x in lv if x["px"] > px], key=lambda x: x["px"])[:4]
+    if not any(x["what"] == "Swing level" for x in res):
+        hi = float(c[-252:].max())
+        if hi > px:
+            res.append({"px": round(hi, 0), "what": "52-week high", "touches": None, "last": None, "dist": round(hi / px - 1, 4)})
+    return {"support": sup, "resistance": res}
+
+
+def falls(c: np.ndarray, d: list, cut: float = 0.10) -> dict:
+    """Falls of 10% or more from a closing peak (5% if none): trading days peak to trough and trough back to the peak."""
+    def scan(cut):
+        out, pk, pi, i = [], c[0], 0, 1
+        while i < len(c):
+            if c[i] >= pk:
+                pk, pi = c[i], i
+                i += 1
+                continue
+            if c[i] / pk - 1 <= -cut:
+                j, ti = i, i
+                while j < len(c) and c[j] < pk:
+                    if c[j] < c[ti]:
+                        ti = j
+                    j += 1
+                rec = j if j < len(c) else None
+                out.append({"peak": d[pi], "peak_px": round(float(pk), 0), "depth": round(float(c[ti] / pk - 1), 4), "trough": d[ti],
+                            "down_days": ti - pi, "up_days": (rec - ti) if rec else None, "back": d[rec] if rec else None})
+                if rec is None:
+                    break
+                pk, pi, i = c[rec], rec, rec + 1
+                continue
+            i += 1
+        return out
+    rows = scan(cut) or scan(0.05)
+    done = [r for r in rows if r["up_days"] is not None]
+    cur = rows[-1] if rows and rows[-1]["up_days"] is None else None
+    like = [r for r in done if cur and r["depth"] <= cur["depth"] * 0.7]
+    med = lambda xs: int(np.median(xs)) if xs else None
+    return {"rows": rows, "cut": cut if rows and rows[0]["depth"] <= -cut else 0.05,
+            "med_up": med([r["up_days"] for r in done]), "med_down": med([r["down_days"] for r in done]),
+            "med_total": med([r["down_days"] + r["up_days"] for r in done]),
+            "like_n": len(like), "like_med_total": med([r["down_days"] + r["up_days"] for r in like]), "current": cur}
+
+
+def value(long: list, hist: dict, gold_last: float, mcx: dict, silver: dict) -> dict:
+    """Value channel (log trend of the weekly rupee price since 2003, bands at 1 and 2 standard deviations), price vs
+    its 200-week average, gold/silver ratio, and the old desk's real-price and real-yield figures."""
+    t0 = dt.date.fromisoformat(long[0][0])
+    t = np.array([(dt.date.fromisoformat(x) - t0).days / 365.25 for x, _ in long])
+    y = np.log(np.array([v for _, v in long]))
+    b, a = np.polyfit(t, y, 1)
+    res = y - (a + b * t)
+    sd = float(res.std())
+    z = res / sd
+    fair_now = float(np.exp(a + b * t[-1]))
+    # what happened next (52 weeks) from each zone of the channel
+    zones = {}
+    for lab, lo, hi in (("Below −1σ (cheap)", -9, -1), ("−1σ to trend", -1, 0), ("Trend to +1σ", 0, 1), ("Above +1σ (dear)", 1, 9)):
+        f = [float(np.exp(y[i + 52] - y[i]) - 1) for i in range(len(y) - 52) if lo <= z[i] < hi]
+        zones[lab] = {"n": len(f), "avg": round(float(np.mean(f)), 4) if f else None, "up": round(float(np.mean(np.array(f) > 0)), 3) if f else None}
+    w = np.array([v for _, v in long])
+    ma200 = sma(w, 200)
+    vs = w / ma200 - 1
+    ok = ~np.isnan(vs)
+    V = {"t0": long[0][0], "a": round(float(a), 6), "b": round(float(b), 6), "sd": round(sd, 6), "growth": round(float(np.exp(b) - 1), 4),
+         "fair": round(fair_now, 0), "z": round(float(z[-1]), 2), "vs_fair": round(gold_last / fair_now - 1, 4),
+         "bands": {k: round(fair_now * float(np.exp(m * sd)), 0) for k, m in (("-2", -2), ("-1", -1), ("0", 0), ("1", 1), ("2", 2))},
+         "zones": zones, "vs200w": round(float(vs[-1]), 4), "vs200w_pct": round(float((vs[ok] < vs[-1]).mean()), 3),
+         "ma200w": round(float(ma200[-1]), 0)}
+    hv = hist.get("value") or {}
+    gs = hv.get("gsr_series") or []
+    com = [x for x in sorted(mcx) if x in silver]
+    if com:
+        g = mcx[com[-1]] * 100 / silver[com[-1]]
+        V["gsr"] = {"now": round(g, 1), "d": com[-1], "src": "MCX gold ÷ MCX silver (Dhan)"}
+    elif gs:
+        V["gsr"] = {"now": gs[-1][1], "d": gs[-1][0], "src": "old desk"}
+    if gs and "gsr" in V:
+        arr = np.array([r[1] for r in gs])
+        V["gsr"].update({"avg": round(float(arr.mean()), 1), "pct": round(float((arr < V["gsr"]["now"]).mean()), 3), "series": gs})
+    rs = hv.get("real_series") or []
+    if rs:
+        arr = np.array([r[1] for r in rs])
+        V["real"] = {"now": rs[-1][1], "d": rs[-1][0], "ath": hv.get("real_ath"), "ath_d": hv.get("real_ath_date"),
+                     "avg": round(float(arr.mean()), 0), "pct": round(float((arr < rs[-1][1]).mean()), 3), "series": rs}
+    if hv.get("ry_model"):
+        V["ry"] = {**hv["ry_model"], "real_yield": hv.get("real_yield_now"), "infl": hv.get("infl_now")}
+    return V
+
+
 def build(hist: dict, daily: dict, asof: str) -> dict:
     bees = daily.get("bees") or {}
     if len(bees) < 300:
@@ -318,7 +443,15 @@ def build(hist: dict, daily: dict, asof: str) -> dict:
         if past:
             tot = long[-1][1] / past[-1] - 1
             rets[lab] = {"total": round(tot, 4), "cagr": round((1 + tot) ** (1 / yrs) - 1, 4)}
-    return {"asof": asof, "date": d[i], "f": f, "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
+    V = value(long, hist, float(c[i]), mcx, daily.get("silver") or {})
+    extra = [{"px": V["bands"][k], "what": lab, "touches": None, "last": None}
+             for k, lab in (("0", "Value channel trend"), ("-1", "Value channel −1σ"), ("-2", "Value channel −2σ"))]
+    extra.append({"px": V["ma200w"], "what": "200-week average", "touches": None, "last": None})
+    LV = levels(c, d, I, extra)
+    if mx and mx["d"] == d[i]:
+        LV["mcx_k"] = round(mx["c"] / float(c[i]), 5)
+    FL = falls(c, d)
+    return {"asof": asof, "date": d[i], "f": f, "value": V, "levels": LV, "falls": FL, "horizons": H, "proof": P, "level": L, "mcx": mx, "chart": chart,
             "long": long, "rets": rets, "daily_from": d[0], "daily_n": len(d),
             "studies": {k: hist.get(k) for k in ("gold_dd", "falls_nifty", "falls_nifty_big", "trend_strategy", "hedge")},
             "hist_source": hist.get("source"), "hist_asof": hist.get("asof"),
