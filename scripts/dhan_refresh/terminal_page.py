@@ -132,7 +132,7 @@ AZ_HTML = r"""
     <p class="note" id="az-empty">Pick something to analyze.</p></div>
   <div id="az-body" hidden style="display:flex;flex-direction:column;gap:14px">
     <div class="pnl" id="az-head"></div>
-    <div class="pnl"><h2>Chart · 1 year</h2><div id="az-chart"></div></div>
+    <div class="pnl"><h2>Chart</h2><div id="az-chart"></div></div>
     <div class="pnl"><h2>Technical</h2><div id="az-tech"></div></div>
     <div class="pnl"><h2>Value</h2><div id="az-val"></div></div>
     <div class="pnl"><h2>Risk and return</h2><div id="az-risk"></div></div>
@@ -156,6 +156,10 @@ AZ_CSS = """
 .azt{border-left-width:3px}.azt b{font-family:var(--mono);font-variant-numeric:tabular-nums}.azhc b{font-family:var(--mono)}
 .azlv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
 #term .mute{background:none}
+.azsg{margin-top:10px}.azsg:first-child{margin-top:0}.azsg h4{margin:0 0 6px;font-size:11.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.azwhy{margin-top:10px;font-size:13.5px;line-height:1.45}.azwhy p{margin:2px 0}.azwhy b.good{color:var(--up)}.azwhy b.bad{color:var(--down)}
+#az .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#az-svg{cursor:crosshair}
 #term tr.go{cursor:pointer}
 """
 

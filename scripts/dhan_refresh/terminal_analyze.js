@@ -87,24 +87,36 @@ function horizons(x,f){
 window.azHorizons=sym=>{const x=find(sym);return x?horizons(x,feats(x)):null};
 
 /* ---------- chart ---------- */
+let RNG=252,CH=null;const RNGS=[["3M",63],["6M",126],["1Y",252],["3Y",760]];
 function chart(x,f){const S=closes(x);let c=S.c;if(!c.length)return`<p class="note">No price history for this one yet.</p>`;
-  const L=f.live;if(L&&Math.abs(L.ltp/c[c.length-1]-1)>1e-6)c=c.concat([L.ltp]);
-  let m50=c.map((_,i)=>sma(c,50,i)),m200=c.map((_,i)=>sma(c,200,i));const cut=Math.max(0,c.length-252),ds0=(S.d||[]).slice(cut);c=c.slice(cut);m50=m50.slice(cut);m200=m200.slice(cut);
+  const L=f.live,dd=(S.d||[]).slice();if(L&&Math.abs(L.ltp/c[c.length-1]-1)>1e-6){c=c.concat([L.ltp]);dd.push("live")}
+  const avail=RNGS.filter((z,i)=>i<3||c.length>300),rn=Math.min(RNG,c.length);
+  let m50=c.map((_,i)=>sma(c,50,i)),m200=c.map((_,i)=>sma(c,200,i));const cut=Math.max(0,c.length-rn),ds0=dd.slice(cut);c=c.slice(cut);m50=m50.slice(cut);m200=m200.slice(cut);
   const n=c.length,W=640,H=240,l=8,r=56,tp=10,b=22;
   const all=[...c,...m50.filter(v=>v),...m200.filter(v=>v)];let lo=Math.min(...all),hi=Math.max(...all);const pd=(hi-lo)*0.05||1;lo-=pd;hi+=pd;
   const X=i=>l+i/(n-1)*(W-l-r),Y=v=>tp+(1-(v-lo)/(hi-lo))*(H-tp-b),path=a=>a.map((v,i)=>v==null?null:[X(i),Y(v)]).filter(Boolean).map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join("");
   const up=c[n-1]>=c[0],col=up?"var(--up)":"var(--down)",ticks=[0,1,2,3,4].map(i=>lo+(hi-lo)*i/4);
   const ds=ds0,lbl=[0,Math.floor(n/2),n-1].map(i=>[i,ds[i]||""]).filter(z=>z[1]);
-  return`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${E(x.name)} price, ${n} days">
+  CH={X,Y,c,ds:ds0,n,l,r,W,H,tp,b,cur:x.kind==="Index"?"":"₹"};
+  return`<div class="row" style="gap:6px;margin-bottom:6px">${avail.map(([t,k])=>`<button class="chip${k===RNG?" on":""}" data-rng="${k}">${t}</button>`).join("")}<span class="note" id="az-hov" style="margin-left:auto"></span></div>
+  <svg id="az-svg" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${E(x.name)} price, ${n} days" style="touch-action:pan-y">
    ${ticks.map(v=>`<line x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".5"/><text x="${W-r+4}" y="${Y(v)+3}" style="font-size:10px;fill:var(--mute)">${F(v,v>=1000?0:1)}</text>`).join("")}
    <path d="${path(c)}L${X(n-1)} ${H-b}L${X(0)} ${H-b}Z" fill="${col}" opacity=".08"/>
    <path d="${path(m200)}" fill="none" stroke="var(--mute)" stroke-width="1.2" stroke-dasharray="4 3"/>
    <path d="${path(m50)}" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
    <path d="${path(c)}" fill="none" stroke="${col}" stroke-width="1.8"/>
    <circle cx="${X(n-1)}" cy="${Y(c[n-1])}" r="3" fill="${col}"/>
-   ${(()=>{const lv=levels(c,c[n-1]),z=[[lv.sup[0],"var(--up)","S"],[lv.res[0],"var(--down)","R"]].filter(q=>q[0]&&q[0].p>lo&&q[0].p<hi);return z.map(([q,cc,t])=>`<line x1="${l}" x2="${W-r}" y1="${Y(q.p)}" y2="${Y(q.p)}" stroke="${cc}" stroke-width=".8" stroke-dasharray="2 3"/><text x="${l+2}" y="${Y(q.p)-3}" style="font-size:10px;fill:${cc}">${t} ${F(q.p,q.p>=1000?0:1)}</text>`).join("")})()}
+   ${(()=>{const lv=levels(c,c[n-1]),z=[[lv.sup[0],"var(--up)","S"],[lv.res[0],"var(--down)","R"]].filter(q=>q[0]&&q[0].p>lo&&q[0].p<hi);return z.map(([q,cc,t])=>`<line x1="${l}" x2="${W-r}" y1="${Y(q.p)}" y2="${Y(q.p)}" stroke="${cc}" stroke-width=".8" stroke-dasharray="2 3"/><text x="${l+2}" y="${t==="S"?Y(q.p)+11:Y(q.p)-3}" style="font-size:10px;fill:${cc}">${t} ${F(q.p,q.p>=1000?0:1)}</text>`).join("")})()}
+   <line id="az-x" x1="0" x2="0" y1="${tp}" y2="${H-b}" stroke="var(--ink)" stroke-width=".6" opacity="0"/><circle id="az-dot" r="3.5" fill="var(--ink)" opacity="0"/>
    ${lbl.map(([i,d])=>`<text x="${X(i)}" y="${H-6}" text-anchor="${i===0?"start":i===n-1?"end":"middle"}" style="font-size:10px;fill:var(--mute)">${E(d)}</text>`).join("")}
-  </svg><p class="note"><span style="color:${col}">━</span> price &nbsp;<span style="color:var(--accent)">━</span> 50-day average &nbsp;<span style="color:var(--mute)">┅</span> 200-day average · <span style="color:var(--up)">┄</span> support <span style="color:var(--down)">┄</span> resistance · ${n} trading days</p>`}
+  </svg><p class="note"><span style="color:${col}">━</span> price &nbsp;<span style="color:var(--accent)">━</span> 50-day average &nbsp;<span style="color:var(--mute)">┅</span> 200-day average · <span style="color:var(--up)">┄</span> support <span style="color:var(--down)">┄</span> resistance · ${n} trading days. Hover or tap the chart for a day’s price.</p>`}
+function hover(e){const sv=$("az-svg");if(!sv||!CH)return;const bx=sv.getBoundingClientRect(),px=(e.touches?e.touches[0].clientX:e.clientX)-bx.left,vx=px/bx.width*CH.W;
+  const i=Math.max(0,Math.min(CH.n-1,Math.round((vx-CH.l)/(CH.W-CH.l-CH.r)*(CH.n-1)))),v=CH.c[i],x0=CH.X(i),ch=CH.c[CH.n-1]/v-1;
+  const ln=$("az-x"),dt=$("az-dot");ln.setAttribute("x1",x0);ln.setAttribute("x2",x0);ln.setAttribute("opacity",".5");dt.setAttribute("cx",x0);dt.setAttribute("cy",CH.Y(v));dt.setAttribute("opacity","1");
+  $("az-hov").innerHTML=`${E(CH.ds[i]||"")} · <b>${CH.cur}${F(v)}</b> · <span class="${C(ch)}">${P(ch)} since</span>`}
+function bindChart(){const sv=$("az-svg");if(!sv)return;sv.addEventListener("mousemove",hover);sv.addEventListener("touchstart",hover,{passive:true});sv.addEventListener("touchmove",hover,{passive:true});
+  sv.addEventListener("mouseleave",()=>{$("az-x").setAttribute("opacity","0");$("az-dot").setAttribute("opacity","0");$("az-hov").textContent=""})}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rng]");if(b&&CUR){RNG=+b.dataset.rng;$("az-chart").innerHTML=chart(CUR,feats(CUR));bindChart()}});
 
 
 /* ---------- support / resistance and past falls (daily closes) ---------- */
@@ -158,25 +170,24 @@ function riskHtml(x){const R=riskStats(x);if(!R)return`<p class="note">Needs at 
 /* ---------- tiles ---------- */
 const tile=(k,v,cl,sub)=>`<div class="azt ${cl||""}"><span>${E(k)}</span><b>${v}</b>${sub?`<small>${sub}</small>`:""}</div>`;
 function techTiles(x,f){const g=(v,a,b)=>v==null?"":v>a?"good":v<b?"bad":"warn";
-  const T=[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day avg",P(f.vs200),f.vs200!=null&&Math.abs(f.vs200)<0.0005?"":C(f.vs200)),tile("50-day vs 200-day",f.cross==null?"–":f.cross>0?"Above":"Below",C(f.cross),f.cross==null?"":f.cross>0?"golden cross side":"death cross side"),
-   tile("RSI (14)",F(f.rsi,0),f.rsi==null?"":f.rsi>75||f.rsi<30?"warn":f.rsi>=50?"good":"bad",f.rsi>70?"overbought":f.rsi<30?"oversold":""),
-   tile("MACD",f.macdUp==null?"–":f.macdUp?"Above signal":"Below signal",f.macdUp==null?"":f.macdUp?"good":"bad"),
-   tile("Bollinger position",f.bbPos==null?"–":Math.round(f.bbPos*100)+"%",f.bbPos==null?"":f.bbPos>1||f.bbPos<0?"warn":"",f.bbW!=null?"band width "+P(f.bbW,1).replace("+",""):""),
-   tile("1 month",P(f.r1m),C(f.r1m)),tile("3 months",P(f.r3m),C(f.r3m)),tile("6 months",P(f.r6m),C(f.r6m)),tile("1 year",P(f.r1y),C(f.r1y)),
-   tile("From 52-week high",P(f.hi52),f.hi52==null?"":f.hi52>-0.05?"good":f.hi52<-0.25?"bad":"warn"),tile("vs Nifty, 3 months",P(f.rs3),C(f.rs3)),
-   tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%","")];
-  if(x.kind==="Stock")T.push(tile("ADX (trend strength)",F(f.adx,0),f.adx==null?"":f.adx>=25?"good":"",f.di?f.di+" in control":""),tile("Supertrend",f.st?f.st==="up"?"Up":"Down":"–",f.st?f.st==="up"?"good":"bad":""),
-    tile("Volume vs normal",f.volx==null?"–":F(f.volx,2)+"×",f.volx>1.5?"good":""),tile("ATR (daily range)",f.atr?"₹"+F(f.atr,1):"–",""));
-  const M=momStats(closes(x).c.filter(v=>v>0).concat(f.live&&f.live.ltp?[f.live.ltp]:[]));if(M)T.push(
-    tile("Stochastic %K (14)",F(M.stoch,0),M.stoch>80?"warn":M.stoch<20?"warn":"",M.stoch>80?"near 2-week high":M.stoch<20?"near 2-week low":""),
-    tile("Williams %R (14)",F(M.willr,0),""),tile("CCI (20)",F(M.cci,0),M.cci>100?"good":M.cci<-100?"bad":"",M.cci>100?"strong up":M.cci<-100?"strong down":""),
-    tile("Z-score vs 20-day",F(M.z,2),Math.abs(M.z)>2?"warn":"",Math.abs(M.z)>2?"stretched":""),
-    tile("Aroon up / down (25)",F(M.aup,0)+" / "+F(M.adn,0),M.aup>70&&M.adn<30?"good":M.adn>70&&M.aup<30?"bad":""),
-    tile("55-day channel",M.don==null?"–":Math.round(M.don*100)+"%",M.don>0.9?"good":M.don<0.1?"bad":"",M.don>1?"breakout":"0% = 55-day low, 100% = high"),
-    tile("ROC, 12 months",P(M.roc12),C(M.roc12)));
+  const M=momStats(closes(x).c.filter(v=>v>0).concat(f.live&&f.live.ltp?[f.live.ltp]:[]))||{},st=x.kind==="Stock";
+  const G=[["Trend",[tile("vs 50-day avg",P(f.vs50),C(f.vs50)),tile("vs 200-day avg",P(f.vs200),f.vs200!=null&&Math.abs(f.vs200)<0.0005?"":C(f.vs200)),tile("50-day vs 200-day",f.cross==null?"–":f.cross>0?"Above":"Below",C(f.cross),f.cross==null?"":f.cross>0?"golden cross side":"death cross side"),
+     st&&tile("ADX (trend strength)",F(f.adx,0),f.adx==null?"":f.adx>=25?"good":"",f.di?f.di+" in control":""),st&&tile("Supertrend",f.st?f.st==="up"?"Up":"Down":"–",f.st?f.st==="up"?"good":"bad":""),
+     M.aup!=null&&tile("Aroon up / down (25)",F(M.aup,0)+" / "+F(M.adn,0),M.aup>70&&M.adn<30?"good":M.adn>70&&M.aup<30?"bad":""),
+     M.don!=null&&tile("55-day channel",Math.round(M.don*100)+"%",M.don>0.9?"good":M.don<0.1?"bad":"",M.don>1?"breakout":"0% = 55-day low, 100% = high")]],
+   ["Momentum",[tile("RSI (14)",F(f.rsi,0),f.rsi==null?"":f.rsi>75||f.rsi<30?"warn":f.rsi>=50?"good":"bad",f.rsi>70?"overbought":f.rsi<30?"oversold":""),
+     tile("MACD",f.macdUp==null?"–":f.macdUp?"Above signal":"Below signal",f.macdUp==null?"":f.macdUp?"good":"bad"),
+     M.stoch!=null&&tile("Stochastic %K (14)",F(M.stoch,0),M.stoch>80?"warn":M.stoch<20?"warn":"",M.stoch>80?"near 2-week high":M.stoch<20?"near 2-week low":""),
+     M.cci!=null&&tile("CCI (20)",F(M.cci,0),M.cci>100?"good":M.cci<-100?"bad":"",M.cci>100?"strong up":M.cci<-100?"strong down":""),
+     M.z!=null&&tile("Z-score vs 20-day",F(M.z,2),Math.abs(M.z)>2?"warn":"",Math.abs(M.z)>2?"stretched":""),
+     tile("Bollinger position",f.bbPos==null?"–":Math.round(f.bbPos*100)+"%",f.bbPos==null?"":f.bbPos>1||f.bbPos<0?"warn":"",f.bbW!=null?"band width "+P(f.bbW,1).replace("+",""):"")]],
+   ["Returns",[tile("1 month",P(f.r1m),C(f.r1m)),tile("3 months",P(f.r3m),C(f.r3m)),tile("6 months",P(f.r6m),C(f.r6m)),tile("1 year",P(f.r1y!=null?f.r1y:M.roc12),C(f.r1y!=null?f.r1y:M.roc12)),
+     tile("From 52-week high",P(f.hi52),f.hi52==null?"":f.hi52>-0.05?"good":f.hi52<-0.25?"bad":"warn"),tile("vs Nifty, 3 months",P(f.rs3),C(f.rs3))]],
+   ["Volatility and volume",[tile("Volatility (yearly)",f.vol==null?"–":(f.vol*100).toFixed(0)+"%",""),st&&tile("ATR (daily range)",f.atr?"₹"+F(f.atr,1):"–",""),st&&tile("Volume vs normal",f.volx==null?"–":F(f.volx,2)+"×",f.volx>1.5?"good":"")]]];
+  const T=G.map(([h,ts])=>{ts=ts.filter(t=>t&&!/<b>–<\/b>/.test(t));return ts.length?`<div class="azsg"><h4>${h}</h4><div class="azg">${ts.join("")}</div></div>`:""}).join("");
   const S=[...f.sigs.map(s=>`<span class="tag good" title="${E(s.name)}">✓ ${E(s.name)}${s.o.hit10!=null?` · beat Nifty ${Math.round(s.o.hit10*100)}% of ${F(s.o.n,0)} times`:""}</span>`),
     ...f.setups.map(s=>`<span class="tag">${E(s)}</span>`),...f.warn.map(s=>`<span class="tag bad">${E(s)}</span>`)];
-  return`<div class="azg">${T.join("")}</div>${S.length?`<div class="row" style="gap:6px;margin-top:10px">${S.join("")}</div>`:`<p class="note" style="margin-top:8px">No setup or tested signal on the last close.</p>`}`}
+  return`${T}${S.length?`<div class="row" style="gap:6px;margin-top:10px">${S.join("")}</div>`:`<p class="note" style="margin-top:8px">No setup or tested signal on the last close.</p>`}`}
 function valTiles(x,f){if(x.kind!=="Stock")return`<p class="note">${x.kind==="MCX"?"A commodity has no earnings, so there is no value check. The 1-year view uses trend only.":x.kind==="ETF"?"An ETF holds a basket, so value checks on one company do not apply. The 1-year view uses trend only.":"An index has no single company value. The 1-year view uses trend only."}</p>`;
   const v=f.v||{};if(v.pe==null&&v.roce==null&&v.gap==null)return`<p class="note">No fundamentals for this stock yet.</p>`;
   const T=[tile("P/E",v.loss?"Loss-making":F(v.pe,1),v.loss?"bad":""),tile("P/E vs sector",v.pes==null?"–":F(v.pes,2)+"×",v.pes==null?"":v.pes<=0.8?"good":v.pes>1.3?"bad":"warn",v.pes==null?"":v.pes<1?"cheaper than peers":"dearer than peers"),
@@ -217,9 +228,11 @@ function head(x,f){const L=f.live,ch=f.prev&&f.last?f.last/f.prev-1:null,H=horiz
   return`<div class="row" style="justify-content:space-between;align-items:flex-end;gap:12px"><div><span class="sub">${E(x.kind)}${x.mk&&x.mk.contract?" · "+E(x.mk.contract):""}${f.v&&f.v.ind?" · "+E(f.v.ind):""}</span>
    <h2 style="margin:2px 0 0;font-size:1.5rem">${E(x.k)} <span class="note" style="font-weight:400">${x.name!==x.k?E(x.name):""}</span></h2></div>
    <div style="text-align:right"><b style="font-size:1.6rem">${x.kind==="Index"?"":"₹"}${F(f.last)}</b> <span class="${C(ch)}">${P(ch,2)}</span><br><span class="note">${L?`LIVE ${E(String(L.t||"").slice(11,19))} IST`:"last close"}</span></div></div>
-   <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>${summary(x,f)}`}
+   <div class="row" style="gap:8px;margin-top:10px">${H.map(h=>`<span class="tag ${h.v[1]}">${h.lab}: ${h.v[0]}</span>`).join("")}</div>${why(H)}${summary(x,f)}`}
+function why(H){const no=[];H.forEach(h=>h.cks.forEach(c=>{if(c.ok===false&&!no.includes(c.label))no.push(c.label)}));const yes=[];H.forEach(h=>h.cks.forEach(c=>{if(c.ok&&!yes.includes(c.label))yes.push(c.label)}));
+  return no.length||yes.length?`<div class="azwhy">${yes.length?`<p><b class="good">Going for it:</b> ${yes.slice(0,4).map(z=>"✓ "+E(z)).join(" &nbsp; ")}</p>`:""}${no.length?`<p><b class="bad">Holding it back:</b> ${no.slice(0,4).map(z=>"✗ "+E(z)).join(" &nbsp; ")}</p>`:""}</div>`:""}
 function render(){const x=CUR;if(!x)return;const f=feats(x);LAST=Date.now();
-  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-risk").innerHTML=riskHtml(x);$("az-time").innerHTML=timing(horizons(x,f));
+  $("az-head").innerHTML=head(x,f);$("az-chart").innerHTML=chart(x,f);bindChart();$("az-tech").innerHTML=techTiles(x,f)+levelsHtml(x,f);$("az-val").innerHTML=valTiles(x,f);$("az-risk").innerHTML=riskHtml(x);$("az-time").innerHTML=timing(horizons(x,f));
   $("az-body").hidden=false;$("az-empty").hidden=true}
 function open(q){const x=find(q);if(!x){$("az-empty").hidden=false;$("az-empty").textContent=`Nothing found for "${q}". Pick from the list.`;return}
   CUR=x;$("az-q").value="";try{SHOWN=x.kind==="Stock"?x.k:SHOWN}catch(e){}try{localStorage.setItem("az-last",x.k)}catch(e){}
