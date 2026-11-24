@@ -21,12 +21,15 @@ def run_day(monkeypatch, newer):
     logins = []
     monkeypatch.setattr(R, "login", lambda *a: logins.append(1) or f"tok{len(logins)}")
     calls = {"n": 0}
+    # /marketfeed/ohlc call 1 is the start-up probe of the Trading Terminal board extras (added in PR 17),
+    # call 2 is the first poll (pushed), call 3 is the second poll: that one loses the login.
+    lose_login_on = 3
 
     def post(self, path, body):
         if path == "/marketfeed/quote":
             return {"data": {}}
         calls["n"] += 1
-        if calls["n"] == 2:
+        if calls["n"] == lose_login_on:
             raise R.RefreshError("Dhan error 807: token expired")
         return {"data": {"NSE_EQ": {"1": {"last_price": 100, "ohlc": {"open": 99, "high": 101, "low": 98, "close": 99}}}}}
     monkeypatch.setattr(R.Dhan, "_post", post)
