@@ -1,61 +1,61 @@
 {
- "asof": "2026-11-24 09:32",
+ "asof": "2026-11-24 23:59",
  "source": "Dhan",
  "futures": {
   "GOLD": {
    "name": "Gold (MCX, Rs/10 g)",
    "contract": "GOLD-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 125996.0,
-   "prev": 125996.0,
-   "chg": 0.0,
-   "oi": 9476,
-   "high": 0,
-   "low": 0
+   "ltp": 122101.0,
+   "prev": 122329.0,
+   "chg": -0.00186,
+   "oi": 9173,
+   "high": 122120,
+   "low": 121841
   },
   "SILVER": {
    "name": "Silver (MCX, Rs/kg)",
    "contract": "SILVER-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 154217.0,
-   "prev": 154217.0,
-   "chg": 0.0,
-   "oi": 12733,
-   "high": 0,
-   "low": 0
-  },
-  "NATURALGAS": {
-   "name": "Natural gas (MCX, Rs/mmBtu)",
-   "contract": "NATURALGAS-24NOV2026-FUT",
-   "expiry": "2026-11-24",
-   "ltp": 294.7,
-   "prev": 294.7,
-   "chg": 0.0,
-   "oi": 6832,
-   "high": 0,
-   "low": 0
+   "ltp": 145182.0,
+   "prev": 145438.0,
+   "chg": -0.00176,
+   "oi": 12191,
+   "high": 145386,
+   "low": 144862
   },
   "CRUDEOIL": {
    "name": "Crude oil (MCX, Rs/bbl)",
    "contract": "CRUDEOIL-18DEC2026-FUT",
    "expiry": "2026-12-18",
-   "ltp": 7570.0,
-   "prev": 7570.0,
-   "chg": 0.0,
-   "oi": 8584,
-   "high": 0,
-   "low": 0
+   "ltp": 7531.0,
+   "prev": 7581.0,
+   "chg": -0.0066,
+   "oi": 8388,
+   "high": 7531,
+   "low": 7523
+  },
+  "NATURALGAS": {
+   "name": "Natural gas (MCX, Rs/mmBtu)",
+   "contract": "NATURALGAS-28DEC2026-FUT",
+   "expiry": "2026-12-28",
+   "ltp": 342.5,
+   "prev": 345.9,
+   "chg": -0.00983,
+   "oi": 20399,
+   "high": 342.9,
+   "low": 341.8
   },
   "COPPER": {
    "name": "Copper (MCX, Rs/kg)",
    "contract": "COPPER-30NOV2026-FUT",
    "expiry": "2026-11-30",
-   "ltp": 1193.9,
-   "prev": 1193.9,
-   "chg": 0.0,
-   "oi": 3674,
-   "high": 0,
-   "low": 0
+   "ltp": 1133.95,
+   "prev": 1132.95,
+   "chg": 0.00088,
+   "oi": 3115,
+   "high": 1135.1,
+   "low": 1131.4
   }
  },
  "news": {},
