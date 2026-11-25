@@ -251,16 +251,36 @@ document.addEventListener("tlive",()=>{if(CUR&&!$("az").hidden&&Date.now()-LAST>
 
 /* ---------- Terminal summary: what worked, in one place ---------- */
 const vchip=h=>h?h.map(z=>`<td class="${z.v[1]}">${z.v[0]==="Good to buy"?"Buy":z.v[0]==="Not enough data"?"–":z.v[0]}</td>`).join(""):"<td></td><td></td><td></td>";
-function sum(){const el=$("tm-sum");if(!el)return;const S=WK.signals||[],R=WK.stocks||[];
+const SL={brk20:"20-day breakout",flag:"Bull flag",reclaim20:"Back above 20-day",os14:"Oversold",os_bounce:"Oversold bounce",st_up:"Supertrend up",trend:"Trend template",vcp:"Tight base",adx:"ADX trend start",rsi2:"RSI(2) dip",accum:"Accumulation",gap:"Gap that holds",bbsq:"Squeeze breakout",dip3:"3 down days",ibs:"Weak close in uptrend",reclaim200:"Back above 200-day",pullback:"Pullback",don55:"55-day breakout",hi52v:"52-week high on volume",volbreak:"Volume breakout",nr7:"Tight inside day",rsnew:"RS line new high",qdrop10:"Dip in a proven stock",qdrop:"Dip in a proven stock",qdd:"Dip in a proven stock",macd0:"MACD turns up"};
+const STK=Object.keys(RS).filter(k=>INS[k]);
+function dayChg(s){const x=INS[s],L=x&&live(x);const r=RS[s]||{},t=TODAY[s]||{},pc=(L&&L.pc)||r.last||t.c;if(L&&pc)return{ltp:L.ltp,c:L.ltp/pc-1,live:true};return{ltp:r.last||t.c||null,c:null,live:false}}
+function picks(){return STK.map(s=>({s,r:RS[s]})).filter(z=>(z.r.setups||[]).length&&(z.r.turnover_cr||0)>=10&&!(z.r.warn||[]).length)
+  .sort((a,b)=>(b.r.score||0)-(a.r.score||0)||(b.r.rs3||0)-(a.r.rs3||0)).slice(0,15)}
+const lvc=(s)=>`<td class="n" data-lv="${E(s)}"></td><td class="n" data-lc="${E(s)}"></td>`;
+function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks();
   const lt=Object.keys(VMT).map(s=>{const on=(VMT[s].on||[]).filter(k=>VTEST.includes(k));if(on.length<2||!INS[s])return null;const h=window.azHorizons(s);return h&&h[2].v[1]==="good"?{s,on,h,r:RS[s]||{}}:null})
     .filter(Boolean).sort((a,b)=>b.on.length-a.on.length||((a.r.pe_sec||9)-(b.r.pe_sec||9))).slice(0,12);
-  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span><span class="note">Tap any name to analyze</span></div>
-   <div><h3 style="font-size:15px;margin-bottom:6px">Signals that worked</h3><div class="scroll"><table><tr><th>Signal</th><th class="n">Won</th><th class="n">Avg vs Nifty, 10 days</th></tr>
-    ${S.length?S.map(s=>`<tr><td style="white-space:normal">${E(s.name)}</td><td class="n">${s.hit10==null?"–":Math.round(s.hit10*100)+"%"}</td><td class="n ${s.x10>0?"up":"down"}">${s.x10==null?"–":P(s.x10,2)}</td></tr>`).join(""):`<tr><td class="note">None passes for this market. No trades.</td></tr>`}</table></div></div>
-   <div><h3 style="font-size:15px;margin-bottom:6px">Buy now (short term)</h3><div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Qty</th><th>3M</th><th>6M</th><th>1Y</th></tr>
-    ${R.length?R.map(r=>`<tr class="go" data-mk="${E(r.s)}"><td><button class="lnk" data-mk="${E(r.s)}">${E(r.s)}</button></td><td class="n" data-lv="${E(r.s)}">${F(r.c)}</td><td class="n down">${F(r.stop)}</td><td class="n up">${F(r.tgt)}</td><td class="n">${r.qty}</td>${vchip(window.azHorizons(r.s))}</tr>`).join(""):`<tr><td class="note">No stock has a working signal today.</td></tr>`}</table></div></div>
-   <div><h3 style="font-size:15px;margin-bottom:6px">Hold 6 to 12 months</h3><div class="scroll"><table><tr><th>Stock</th><th>Tested rules on</th><th class="n">P/E vs sector</th><th class="n">ROCE</th><th>3M</th><th>6M</th><th>1Y</th></tr>
-    ${lt.length?lt.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td><td style="white-space:normal">${z.on.map(k=>E(SHORT[k]||k)).join(", ")}</td><td class="n">${z.r.pe_sec==null?"–":z.r.pe_sec<=0?"loss":F(z.r.pe_sec,2)+"×"}</td><td class="n">${z.r.roce==null?"–":F(z.r.roce,0)+"%"}</td>${vchip(z.h)}</tr>`).join(""):`<tr><td class="note">No stock passes both the tested rules and the 1-year checks today.</td></tr>`}</table></div></div>`}
-function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const x=INS[td.dataset.lv],L=x&&live(x);if(L){const c=L.pc?L.ltp/L.pc-1:null;td.innerHTML=`${F(L.ltp)} <small class="${c>0?"up":c<0?"down":""}">${c==null?"":P(c,2)}</small>`}})}
+  const up200=STK.filter(k=>RS[k].vs200>0).length;
+  el.innerHTML=`<div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
+   <div class="sumbar" id="tm-breadth"><span><b>${PK.length}</b> setups today</span><span><b>${R.length}</b> buy now</span><span><b>${lt.length}</b> to hold</span><span><b>${up200}</b> of ${STK.length} above 200-day</span><span id="tm-adv"></span></div>
+   <div class="sgrid">
+   <div class="spnl wide"><h3>Screener picks</h3><div class="scroll"><table><tr><th>Stock</th><th>Setup</th><th class="n">Live</th><th class="n">Day</th><th class="n">3M vs Nifty</th><th class="n">RSI</th><th>Value</th><th>3M</th><th>6M</th><th>1Y</th></tr>
+    ${PK.length?PK.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td><td class="sm">${[...new Set(z.r.setups.map(k=>SL[k]).filter(Boolean))].slice(0,2).map(E).join(", ")}</td>${lvc(z.s)}<td class="n ${z.r.rs3>0?"up":"down"}">${z.r.rs3==null?"–":P(z.r.rs3,0)}</td><td class="n">${z.r.rsi==null?"–":F(z.r.rsi,0)}</td><td class="sm">${E(z.r.value||"–")}</td>${vchip(window.azHorizons(z.s))}</tr>`).join(""):`<tr><td class="note">No setup on the last close.</td></tr>`}</table></div></div>
+   <div class="spnl"><h3>Buy now</h3><div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Qty</th></tr>
+    ${R.length?R.map(r=>`<tr class="go" data-mk="${E(r.s)}"><td><button class="lnk" data-mk="${E(r.s)}">${E(r.s)}</button></td>${lvc(r.s)}<td class="n down">${F(r.stop)}</td><td class="n up">${F(r.tgt)}</td><td class="n">${r.qty}</td></tr>`).join(""):`<tr><td class="note">No stock has a working signal today.</td></tr>`}</table></div></div>
+   <div class="spnl"><h3>Hold 6 to 12 months</h3><div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">P/E vs sector</th><th class="n">ROCE</th></tr>
+    ${lt.length?lt.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td>${lvc(z.s)}<td class="n">${z.r.pe_sec==null?"–":z.r.pe_sec<=0?"loss":F(z.r.pe_sec,2)+"×"}</td><td class="n">${z.r.roce==null?"–":F(z.r.roce,0)+"%"}</td></tr>`).join(""):`<tr><td class="note">Nothing passes the tested rules and the 1-year checks today.</td></tr>`}</table></div></div>
+   <div class="spnl"><h3>Top gainers, live</h3><div class="scroll"><table id="tm-gain"></table></div></div>
+   <div class="spnl"><h3>Top losers, live</h3><div class="scroll"><table id="tm-lose"></table></div></div>
+   </div>
+   <p class="note">Tap any name to analyze. <button class="lnk" id="tm-proof">How the picks were tested</button></p>`;
+  const pb=$("tm-proof");if(pb)pb.onclick=()=>{try{tab("analyze")}catch(e){}const p=$("proof");if(p){p.hidden=false;const b=$("az-proof");if(b)b.textContent="Hide proof";p.scrollIntoView()}};
+  sumLive()}
+function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
+  document.querySelectorAll("#tm-sum [data-lc]").forEach(td=>{const d=dayChg(td.dataset.lc);td.textContent=d.c==null?"–":P(d.c,2);td.className="n "+(d.c>0?"up":d.c<0?"down":"")});
+  const L=STK.map(s=>({s,...dayChg(s)})).filter(z=>z.c!=null);const g=$("tm-gain"),l=$("tm-lose"),ad=$("tm-adv");
+  if(ad)ad.innerHTML=L.length?`<b class="up">${L.filter(z=>z.c>0).length}</b> up · <b class="down">${L.filter(z=>z.c<0).length}</b> down, live`:"";
+  const rows=a=>a.length?`<tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th>Setup</th></tr>`+a.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td><td class="n">${F(z.ltp)}</td><td class="n ${z.c>0?"up":"down"}">${P(z.c,2)}</td><td class="sm">${E(((RS[z.s]||{}).setups||[]).slice(0,1).map(k=>SL[k]||k).join("")||"")}</td></tr>`).join(""):`<tr><td class="note">Waiting for live prices (market hours).</td></tr>`;
+  L.sort((a,b)=>b.c-a.c);if(g)g.innerHTML=rows(L.slice(0,6));if(l)l.innerHTML=rows(L.slice(-6).reverse().filter(z=>z.c<0))}
 try{sum()}catch(e){console.error("sum",e)}
 })();

@@ -155,6 +155,17 @@ AZ_CSS = """
 #az .pnl>h2,#az .pnl h3{font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;font-size:13px;border-left:3px solid var(--warn);padding-left:8px}
 .azt{border-left-width:3px}.azt b{font-family:var(--mono);font-variant-numeric:tabular-nums}.azhc b{font-family:var(--mono)}
 .azlv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+#term .sumbar{display:flex;flex-wrap:wrap;gap:6px 18px;font:12.5px var(--mono);color:var(--mute);border-block:1px solid var(--line);padding:6px 0}
+#term .sumbar b{color:var(--ink);font-weight:600}#term .sumbar b.up{color:var(--up)}#term .sumbar b.down{color:var(--down)}
+#term .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px}
+#term .spnl{border:1px solid var(--line);border-radius:4px;padding:10px;min-width:0;background:var(--panel)}
+#term .spnl.wide{grid-column:1/-1}
+#term .spnl h3{margin:0 0 6px;font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;border-left:3px solid var(--warn);padding-left:8px;color:var(--ink)}
+#term td.sm,#term .sm{font-size:12px;color:var(--mute);white-space:normal}
+#term td,#term th{padding:4px 6px}
+#term .twrap{gap:12px}
+#term section.panel{padding:12px}
+#thbtn{min-width:40px;padding-inline:10px}
 #term .mute{background:none}
 .azsg{margin-top:10px}.azsg:first-child{margin-top:0}.azsg h4{margin:0 0 6px;font-size:11.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 .azwhy{margin-top:10px;font-size:13.5px;line-height:1.45}.azwhy p{margin:2px 0}.azwhy b.good{color:var(--up)}.azwhy b.bad{color:var(--down)}
@@ -262,6 +273,15 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     j = html.rfind("</body>")
     j = j if j >= 0 else len(html)
     html = html[:j] + "<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
+    html = html.replace('<div class="tabs" role="tablist">',
+                        '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)
+    theme = ("<script>(function(){const r=document.documentElement;let t='dark';try{t=localStorage.getItem('aj-th')||'dark'}catch(e){}"
+             "r.setAttribute('data-theme',t);const b=document.getElementById('thbtn');const lb=()=>{if(b)b.textContent=t==='dark'?'Light':'Dark'};lb();if(b)b.onclick=()=>{t=t==='dark'?'light':'dark';"
+             "r.setAttribute('data-theme',t);lb();try{localStorage.setItem('aj-th',t)}catch(e){}}})();</script>\n")
+    k = html.rfind("</body>")
+    k = k if k >= 0 else len(html)
+    html = html[:k] + theme + html[k:]
     for must in ('data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
         if must not in html:
             raise RuntimeError(f"desk page changed shape; could not insert the Terminal tab ({must})")
