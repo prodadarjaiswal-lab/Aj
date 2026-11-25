@@ -79,12 +79,13 @@
    "downtrend"
   ],
   "weak": [
-   "gap"
+   "gap",
+   "qdd_hold",
+   "os14"
   ],
   "changes": [
-   "no longer passes in rising markets: Volume breakout above the 20-day high (existing setup)",
-   "no longer passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)",
-   "now passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
+   "now passes in weak markets: Proven stock 25% below its 52-week high, first close back above its 20-day average",
+   "now passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)"
   ]
  }
 ]

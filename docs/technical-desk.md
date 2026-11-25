@@ -1,19 +1,21 @@
 # Technical desk · data to 2026-11-23
 
-Back-test: 497 Nifty 500 stocks from 2015-10-28; first years in-sample, from 2024-11-23 out-of-sample. A signal is used only if it beat the average stock in both periods (t >= 2, 100+ cases, better ATR-trade result). Excess = return minus Nifty 50 over 10 trading days after the signal first appears. Re-tested daily.
+Back-test: 497 Nifty 500 stocks from 2015-10-29; first years in-sample, from 2024-11-23 out-of-sample. A signal is used only if it beat the average stock in both periods (t >= 2, 100+ cases, better ATR-trade result). Excess = return minus Nifty 50 over 10 trading days after the signal first appears. Re-tested daily.
 
 ## Signals that passed
 
 | Signal | Market | Cases (last 2y) | Beat Nifty | Avg excess 10d | Typical stock |
 |---|---|---|---|---|---|
-| New 52-week closing high on 1.5x average volume | rising | 1,043 | 55% | +1.56% | +0.31% |
-| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,238 | 52% | +0.72% | +0.31% |
-| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,535 | 51% | +0.81% | +0.31% |
-| Relative strength line at a 1-year high before the price is | rising | 274 | 55% | +1.76% | +0.31% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | rising | 732 | 54% | +0.95% | +0.31% |
-| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 158 | 56% | +1.34% | +0.31% |
-| Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner) | rising | 2,067 | 52% | +1.13% | +0.31% |
-| Gap up of 3% or more that holds into the close on 2x volume | weak | 274 | 52% | +1.37% | +0.15% |
+| New 52-week closing high on 1.5x average volume | rising | 1,043 | 55% | +1.56% | +0.30% |
+| Tightest range in 7 days, inside the prior bar, in an uptrend | rising | 3,238 | 52% | +0.72% | +0.30% |
+| Donchian breakout: close above the 55-day high (turtle rule) | rising | 2,535 | 51% | +0.81% | +0.30% |
+| Relative strength line at a 1-year high before the price is | rising | 274 | 55% | +1.76% | +0.30% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | rising | 732 | 54% | +0.95% | +0.30% |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | rising | 158 | 56% | +1.34% | +0.30% |
+| Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner) | rising | 2,067 | 52% | +1.13% | +0.30% |
+| Gap up of 3% or more that holds into the close on 2x volume | weak | 274 | 52% | +1.37% | +0.11% |
+| Proven stock 25% below its 52-week high, first close back above its 20-day average | weak | 895 | 48% | +0.14% | +0.11% |
+| Oversold: RSI(14) under 30 (trader-scanner) | weak | 2,187 | 51% | +0.42% | +0.11% |
 
 ## Signals that failed (do not use for a verdict)
 
@@ -32,10 +34,8 @@ Back-test: 497 Nifty 500 stocks from 2015-10-28; first years in-sample, from 202
 - Closes back above the 200-day average after 20+ days below
 - Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days
 - Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high
-- Proven stock 25% below its 52-week high, first close back above its 20-day average
 - 20-day closing-high breakout with turnover of Rs 10 crore or more (nse-day-trader / trader-scanner)
 - Closes back above the 20-day average after 5+ days below, in an uptrend (trader-scanner)
-- Oversold: RSI(14) under 30 (trader-scanner)
 - Oversold bounce: RSI(14) under 30 yesterday, closes up today (trader-scanner)
 - Overextended: RSI(14) over 80 and 25% above the 50-day average (warning)
 
