@@ -198,6 +198,7 @@ CLEAN_CSS = """
 #term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
 #term .eye p.sm{margin:6px 0 0}
 details.sec{margin:14px 0 4px}details.sec>summary{cursor:pointer;list-style:none}details.sec>summary h2{display:inline}details.sec>summary::after{content:" ▸ tap for every detail";font-size:12px;color:var(--mute,#8b949e)}details.sec[open]>summary::after{content:" ▾"}#newsx .ni{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;margin:8px 0;color:inherit;cursor:pointer}#newsx .ni b{margin-right:8px}#newsx .eff{font-size:12px;margin-top:4px}
+.pc .odds{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line);margin:6px 0 2px}.pc .odds i{display:block;background:var(--line)}.pc .odds i.gd{background:#22a06b}.pc .odds i.bd{background:#e5484d}
 .pcg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:8px 0}.pc{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;color:inherit;cursor:pointer}.pc .pct{display:flex;justify-content:space-between;align-items:baseline}.pc .spk{display:block;width:100%;height:34px;margin:6px 0}.pc .pl{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;margin-top:4px}.pcw h4{margin:0 0 4px}#tm-move h4{margin:10px 0 4px}
 #term:not(.stk) .tm-stk,#term:not(.ide) .tm-ide,#term.stk .tm-idx,#term.ide .tm-idx{display:none!important}
 #screener>*:not(#newsx){display:none!important}
@@ -539,9 +540,9 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
     play_js = json.dumps(play_summary(root), separators=(",", ":")).replace("</", "<\\/")
     mv_js = json.dumps(mview_summary(root), separators=(",", ":")).replace("</", "<\\/")
-    try:                                            # 60-day closes per stock for the Terminal's sparklines and swing stops, scaled to last = 1000
+    try:                                            # 120-day closes per stock for the Terminal's sparklines and swing stops, scaled to last = 1000
         _cd = _load(root / "docs/chart-data.json") or {}
-        spk = {k: [round(x / v["c"][-1] * 1000) for x in v["c"][-60:]] for k, v in (_cd.get("s") or {}).items() if v.get("c") and v["c"][-1] and None not in v["c"][-60:]}
+        spk = {k: [round(x / v["c"][-1] * 1000) for x in v["c"][-120:]] for k, v in (_cd.get("s") or {}).items() if v.get("c") and v["c"][-1] and None not in v["c"][-120:]}
     except Exception:
         spk = {}
     spk_js = json.dumps(spk, separators=(",", ":"))
