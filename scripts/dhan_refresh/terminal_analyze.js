@@ -304,6 +304,13 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
   const idc=(V.ideas||[]).map(o=>`<div class="spnl idea"><h3>${E(o.t)} <span class="pill ${tag[o.v]||""}">${E(o.v==="HOLDS"?"Tested: holds":o.v==="FAILS"?"Tested: fails":"Watch, not proven")}</span></h3>
     <p class="sm">${E(o.p)} ${E(o.hedge||"")}</p>${o.v==="HOLDS"?`<p><b>${idv(o)}</b></p>`:`<p class="sm">${o.v==="FAILS"?"Fired today, not traded (failed the test)":"Fired today, watch only (not proven)"}: ${idv(o).replace(/^(Active now|Today): /,"")}</p>`}
     <p class="sm">Back-test since ${E(D_(V.oos_from))}: ${pc(o.oos.raw_mean,2)} a trade${o.k==="nifty_condor"?" on the capped loss":""}, right ${sh(o.oos.hit)} of ${o.oos.n} trades (before: ${pc(o.is.raw_mean,2)}, right ${sh(o.is.hit)} of ${o.is.n}). ${E(o.sizing||"")} ${E(o.note||"")}</p></div>`).join("");
+  const TM=V.timing||[],rules=[...new Set(TM.map(o=>o.rule))];
+  const tcell=o=>!o?"<td>–</td>":`<td class="sm"><span class="pill ${o.v==="HOLDS"?"pass":o.safer?"warn":o.v==="FAILS"?"fail":""}">${o.v==="HOLDS"?"Holds":o.safer?"Safer":o.v==="FAILS"?"Fails":"Unproven"}</span> ${pc(o.s&&o.s.ret,0)} vs ${pc(o.h&&o.h.ret,0)}/yr · worst ${pc(o.s&&o.s.maxdd,0)} vs ${pc(o.h&&o.h.maxdd,0)}${o.on?" · <b>in now</b>":""}</td>`;
+  const tm=TM.length?`<div class="spnl wide"><h3>Classic index rules, tested since ${E(D_(V.oos_from))}</h3>
+    <div class="scroll"><table><tr><th>Rule</th>${[...new Set(TM.map(o=>o.idx))].map(i=>`<th>${E(i)}</th>`).join("")}</tr>
+    ${rules.map(r=>{const xs=TM.filter(o=>o.rule===r);return`<tr><td class="sm"><b>${E(xs[0].t)}</b><br><small>${E(xs[0].src||"")}</small></td>${[...new Set(TM.map(o=>o.idx))].map(i=>tcell(xs.find(o=>o.idx===i))).join("")}</tr>`}).join("")}</table></div>
+    <p class="note">Rule vs simply holding the same index, last 3 years: return a year and worst fall. Holds = beat holding after the many-ideas correction; Safer = smaller worst fall with at least the same Sharpe, before and after the cut, without being proven to earn more. Out of the market = T-bill rate.</p></div>`:"";
+  const pp=V.paper,ppl=pp?["nifty_condor","nifty_condor_tight"].filter(k=>pp[k]).map(k=>`${k==="nifty_condor"?"Wide":"Narrow"} condor: ${pp[k].closed} closed, ${pp[k].won} won, ${F(pp[k].pts,0)} pts${pp[k].open?`, open since ${E(D_(pp[k].open.d))}`:""}`).join(" · "):"";
   const rk=V.risk.length?`<details class="spnl wide"><summary><b>Risk and return, last 3 years</b> <span class="sm">Sharpe, worst fall, beta and correlation to the Nifty for every index and NSE factor index</span></summary>
     <div class="scroll"><table><tr><th>Index</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Beta</th><th class="n">Corr</th></tr>
     ${V.risk.map(r=>`<tr><td>${E(r.k)}</td><td class="n ${r.ret>0?"up":"down"}">${pc(r.ret)}</td><td class="n">${sh(r.vol)}</td><td class="n"><b>${r.sharpe==null?"–":F(r.sharpe,2)}</b></td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td><td class="n">${r.corr==null?"–":F(r.corr,2)}</td></tr>`).join("")}</table></div>
@@ -312,7 +319,8 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
    <div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · close of ${E(D_(V.asof))}</span></div>
    ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}
    ${idc?`<div class="head"><h2>Trading ideas</h2><span class="sm">hedged, index legs only, tested on data they were never fitted on</span></div><div class="sgrid">${idc}</div>`:""}
-   <div class="sgrid">
+   ${ppl?`<p class="sm">Paper record since ${E(D_(pp.since))} (no hindsight): ${ppl}</p>`:""}
+   <div class="sgrid">${tm}
    <details class="spnl wide"><summary><b>Popular beliefs, tested</b> <span class="sm">${held} of ${V.beliefs.length} proven</span></summary><h3>Popular beliefs, tested on data since ${E(D_(V.oos_from))} they were never fitted on</h3><ul class="wk">${bl}</ul></details>
    ${rk}</div>`}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */

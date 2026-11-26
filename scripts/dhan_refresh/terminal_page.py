@@ -361,6 +361,11 @@ def mview_summary(root: Path) -> dict | None:
                        "note": o.get("note"), "v": o.get("verdict"), "live": o.get("live") or [], "pts": o.get("pts"),
                        "is": {x: o["is"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")},
                        "oos": {x: o["oos"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")}} for o in v.get("ideas") or []],
+            "timing": [{"k": o["key"], "rule": o["rule"], "idx": o["index"], "t": o["plain"], "src": o.get("src"), "v": o["verdict"],
+                        "safer": o.get("safer"), "on": o.get("on_today"), "m": o["oos"].get("raw_mean"), "hit": o["oos"].get("hit"),
+                        "s": o["oos"].get("strat"), "h": o["oos"].get("hold"), "in": o["oos"].get("in_mkt"),
+                        "s_is": o["is"].get("strat"), "h_is": o["is"].get("hold")} for o in v.get("timing") or []],
+            "paper": v.get("paper"),
             "risk": [{"k": r["k"], **r["oos"]} for r in v.get("risk") or []][:24], "sectors": (v.get("sectors_today") or [])[:6]}
 
 
