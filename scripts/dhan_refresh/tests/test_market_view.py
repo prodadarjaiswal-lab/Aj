@@ -145,3 +145,14 @@ def test_timing_rules():
     v = MV.build(series, cap)
     assert {o["rule"] for o in v["timing"]} == set(MV.RULES)
     assert all(o["oos"]["strat"] and o["oos"]["hold"] for o in v["timing"])
+
+
+def test_desk_sizes_from_the_loss_limit():
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0 + (i % 50) for i in range(2600)]}
+    v = MV.build(series, cap)
+    d = v["desk"]
+    assert d["stance"].startswith(("TRADE", "NO TRADE"))
+    for m in d["memos"]:
+        assert m["risk_rs"] <= MV.SIZE["max_loss"] + 1 and m["notional"] <= MV.SIZE["capital"] * MV.MAX_POSITION + 100
+        assert m["stop"] < m["px"]
