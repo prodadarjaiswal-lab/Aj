@@ -80,3 +80,16 @@ def test_walk_rotation_uses_only_past():
     X2 = {k: v[:i0 + MV.H + 1] + [x * 3 if x else x for x in v[i0 + MV.H + 1:]] for k, v in X.items()}
     b = MV.walk_rotation(days, X2, reg)
     assert b["record"][0] == rot["record"][0]
+
+
+def test_risk_vix_and_screen():
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0] * 2600}
+    stocks = {f"S{i}": _series(2600, 200 + i, drift=0.0002 * (i % 5)) for i in range(50)}
+    v = MV.build(series, cap, {"Low Vol 30": _series(2600, 300)}, stocks)
+    assert {"calm_strong", "low_vol", "factor:Low Vol 30"} <= {b["key"] for b in v["beliefs"]}
+    nifty = next(r for r in v["risk"] if r["k"] == "Nifty 50")["oos"]
+    assert nifty["beta"] == 1.0 and nifty["corr"] == 1.0
+    vx = v["vix"]
+    assert 0.6 < vx["hit1"] < 0.8 and vx["day_pts"] > 0      # 1% daily noise vs VIX 16 (1.0%/day) ~ calibrated
+    assert len(v["screen"]) == 15 and all(r["vol"] > 0 for r in v["screen"])
