@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
-REPO, BRANCH = ("prodadarjaiswal-lab", "aj-live"), "page"
+REPO, BRANCH = ("prodadarjaiswal-lab", "aj-live"), "refs/heads/page"   # the GitHub connector wants a full ref
 PIECE = 600_000                       # characters per piece; the connector handles files well under 1 MB
 HEAD, TAIL = "AJP1:", ":AJP1END"      # sentinels so a piece can be cut cleanly out of any connector reply
 BLOB = re.compile(r"/\*([A-Z][A-Z0-9_]{1,15})\*/(.*?)/\*\1\*/", re.S)
