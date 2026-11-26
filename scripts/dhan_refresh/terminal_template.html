@@ -210,7 +210,7 @@ async function livePoll(mcp){if(LV.busy)return;LV.busy=true;
     const t=liveText(r);if(!t)throw{code:"empty"};const d=JSON.parse(t);if(!d.q||!d.t)throw{code:"empty"};
     const fresh=String(d.t).slice(0,10)===istNow().toISOString().slice(0,10);let n=0;
     if(fresh&&MK)for(const rows of Object.values(MK.groups))for(const r of rows){const a=((d.q[r.seg]||{})[String(r.sid)]);
-      if(a&&a[0]){const base=a[4]||r.prev,el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
+      if(a&&a[0]){const base=r.d===String(d.t).slice(0,10)?r.prev:(r.last||a[4]),el=$(`lv-${r.seg}-${r.sid}`),ec=$(`lc-${r.seg}-${r.sid}`);if(el)el.textContent=fmt(a[0]);
         if(ec&&base){const c=(a[0]/base-1)*100;ec.textContent=pct(c);ec.className="n "+cls(c)}n++}}
     LV.ok=true;LV.at=Date.now();LV.t=d.t;
     liveNote(fresh?`<b>LIVE</b> ${String(d.t).slice(11,19)} IST · ${n} board prices`:`Market closed · last live ${String(d.t).slice(0,16)} IST`,fresh)}
