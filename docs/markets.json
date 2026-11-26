@@ -1,135 +1,135 @@
 {
- "asof": "2026-11-25 23:59",
+ "asof": "2026-11-26 21:01",
  "source": "Dhan",
  "futures": {
   "GOLD": {
    "name": "Gold (MCX, Rs/10 g)",
    "contract": "GOLD-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 122571.0,
+   "ltp": 122273.0,
    "prev": 121137.0,
-   "chg": 0.01184,
-   "oi": 7795,
-   "high": 122905,
-   "low": 122471
+   "chg": 0.00938,
+   "oi": 7010,
+   "high": 123888,
+   "low": 121478
   },
   "SILVER": {
    "name": "Silver (MCX, Rs/kg)",
    "contract": "SILVER-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 146948.0,
+   "ltp": 146235.0,
    "prev": 142517.0,
-   "chg": 0.03109,
-   "oi": 9562,
-   "high": 147618,
-   "low": 145800
+   "chg": 0.02609,
+   "oi": 8879,
+   "high": 148801,
+   "low": 145265
   },
   "CRUDEOIL": {
    "name": "Crude oil (MCX, Rs/bbl)",
    "contract": "CRUDEOIL-18DEC2026-FUT",
    "expiry": "2026-12-18",
-   "ltp": 7839.0,
+   "ltp": 7874.0,
    "prev": 7759.0,
-   "chg": 0.01031,
-   "oi": 8427,
-   "high": 7874,
-   "low": 7791
+   "chg": 0.01482,
+   "oi": 8391,
+   "high": 7935,
+   "low": 7720
   },
   "NATURALGAS": {
    "name": "Natural gas (MCX, Rs/mmBtu)",
    "contract": "NATURALGAS-28DEC2026-FUT",
    "expiry": "2026-12-28",
-   "ltp": 342.4,
+   "ltp": 337.6,
    "prev": 343.8,
-   "chg": -0.00407,
-   "oi": 17765,
-   "high": 342.7,
-   "low": 341.9
+   "chg": -0.01803,
+   "oi": 20100,
+   "high": 343.6,
+   "low": 332.7
   },
   "COPPER": {
    "name": "Copper (MCX, Rs/kg)",
    "contract": "COPPER-30NOV2026-FUT",
    "expiry": "2026-11-30",
-   "ltp": 1139.05,
+   "ltp": 1134.5,
    "prev": 1127.15,
-   "chg": 0.01056,
-   "oi": 2164,
-   "high": 1140,
-   "low": 1139.05
+   "chg": 0.00652,
+   "oi": 1864,
+   "high": 1144,
+   "low": 1128.5
   }
  },
  "news": {},
  "movers": [
   {
-   "s": "APLAPOLLO",
-   "r1": -0.1162,
-   "last": 1476.0,
+   "s": "MAHABANK",
+   "r1": -0.0457,
+   "last": 94.2,
    "headlines": []
   },
   {
-   "s": "SUNTV",
-   "r1": -0.0921,
-   "last": 616.25,
+   "s": "INDIACEM",
+   "r1": -0.0438,
+   "last": 309.75,
    "headlines": []
   },
   {
-   "s": "ITI",
-   "r1": -0.0674,
-   "last": 257.6,
+   "s": "IKS",
+   "r1": -0.0423,
+   "last": 1575.4,
    "headlines": []
   },
   {
-   "s": "ZEEL",
-   "r1": -0.0618,
-   "last": 67.21,
+   "s": "PVRINOX",
+   "r1": -0.0416,
+   "last": 1638.2,
    "headlines": []
   },
   {
-   "s": "MRPL",
-   "r1": -0.0609,
-   "last": 164.68,
+   "s": "TBOTEK",
+   "r1": -0.0411,
+   "last": 1483.0,
    "headlines": []
   },
   {
-   "s": "IREDA",
-   "r1": -0.0564,
-   "last": 124.75,
+   "s": "LLOYDSME",
+   "r1": -0.0397,
+   "last": 1542.2,
    "headlines": []
   },
   {
-   "s": "JWL",
-   "r1": 0.2,
-   "last": 222.46,
+   "s": "ACE",
+   "r1": 0.0879,
+   "last": 1295.0,
    "headlines": []
   },
   {
-   "s": "DABUR",
-   "r1": 0.0777,
-   "last": 430.0,
+   "s": "PRESTIGE",
+   "r1": 0.0872,
+   "last": 1832.1,
    "headlines": []
   },
   {
-   "s": "CANHLIFE",
-   "r1": 0.0678,
-   "last": 132.96,
+   "s": "HEGAM",
+   "r1": 0.0863,
+   "last": 280.99,
    "headlines": []
   },
   {
-   "s": "HINDUNILVR",
-   "r1": 0.0608,
-   "last": 2141.8,
+   "s": "RUBICON",
+   "r1": 0.0819,
+   "last": 1851.7,
    "headlines": []
   },
   {
-   "s": "J&KBANK",
-   "r1": 0.0585,
-   "last": 155.32,
+   "s": "MCX",
+   "r1": 0.0757,
+   "last": 3835.0,
    "headlines": []
   },
   {
-   "s": "GODREJCP",
-   "r1": 0.0556,
-   "last": 963.0,
+   "s": "WOCKPHARMA",
+   "r1": 0.0749,
+   "last": 2233.7,
    "headlines": []
   }
  ],
@@ -140,17 +140,17 @@
   "news CURRENCY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news GLOBAL: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news INDIAN_ECONOMY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
-  "news APLAPOLLO: /data/newsheadline returned 401: {\"error",
-  "news SUNTV: /data/newsheadline returned 401: {\"error",
-  "news ITI: /data/newsheadline returned 401: {\"error",
-  "news ZEEL: /data/newsheadline returned 401: {\"error",
-  "news MRPL: /data/newsheadline returned 401: {\"error",
-  "news IREDA: /data/newsheadline returned 401: {\"error",
-  "news JWL: /data/newsheadline returned 401: {\"error",
-  "news DABUR: /data/newsheadline returned 401: {\"error",
-  "news CANHLIFE: /data/newsheadline returned 401: {\"error",
-  "news HINDUNILVR: /data/newsheadline returned 401: {\"error",
-  "news J&KBANK: /data/newsheadline returned 401: {\"error",
-  "news GODREJCP: /data/newsheadline returned 401: {\"error"
+  "news MAHABANK: /data/newsheadline returned 401: {\"error",
+  "news INDIACEM: /data/newsheadline returned 401: {\"error",
+  "news IKS: /data/newsheadline returned 401: {\"error",
+  "news PVRINOX: /data/newsheadline returned 401: {\"error",
+  "news TBOTEK: /data/newsheadline returned 401: {\"error",
+  "news LLOYDSME: /data/newsheadline returned 401: {\"error",
+  "news ACE: /data/newsheadline returned 401: {\"error",
+  "news PRESTIGE: /data/newsheadline returned 401: {\"error",
+  "news HEGAM: /data/newsheadline returned 401: {\"error",
+  "news RUBICON: /data/newsheadline returned 401: {\"error",
+  "news MCX: /data/newsheadline returned 401: {\"error",
+  "news WOCKPHARMA: /data/newsheadline returned 401: {\"error"
  ]
 }
