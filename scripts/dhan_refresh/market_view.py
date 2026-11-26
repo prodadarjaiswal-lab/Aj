@@ -837,8 +837,9 @@ def desk(days: list, X: dict, reg: list, bl: list, idl: list, tim: list, vix: di
     stance = ("TRADE: " + ", ".join(m["etf"] or m["idx"] for m in trade)) if trade else "NO TRADE TODAY"
     why = ("Only ideas with positive results on data they were never fitted on are traded; size comes from the "
            f"Rs {SIZE['max_loss']:,} per-trade loss limit and the index's own volatility.") if trade else \
-          "Nothing that is in play today has enough unseen evidence. The watch list below is what the desk would " \
-          "trade if its evidence firms up. Sitting out is a position."
+          ("Nothing that is in play today has enough unseen evidence. " + ("The watch list below is what the desk "
+           "would trade if its evidence firms up. " if picks else "No tested rule is signalling today. ") +
+           "Sitting out is a position.")
     fails = [b["title"] for b in bl if b.get("verdict") == "FAILS"][:3]
     return {"stance": stance, "why": why, "memos": picks, "heat_rs": heat, "limit_rs": SIZE["max_loss"],
             "capital": SIZE["capital"], "avoid": fails,
