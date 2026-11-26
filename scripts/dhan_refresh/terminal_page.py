@@ -356,6 +356,10 @@ def mview_summary(root: Path) -> dict | None:
             "next": v.get("next_day"), "rot": (v.get("rotation") or {}).get("stats"),
             "screen": v.get("screen") or [], "screen_v": cs["verdict"] if cs else None,
             "screen_hit": cs["oos"].get("hit") if cs else None, "screen_m": cs["oos"].get("raw_mean") if cs else None,
+            "ideas": [{"k": o["key"], "t": o["title"], "p": o["plain"], "hedge": o.get("hedge"), "sizing": o.get("sizing"),
+                       "note": o.get("note"), "v": o.get("verdict"), "live": o.get("live") or [], "pts": o.get("pts"),
+                       "is": {x: o["is"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")},
+                       "oos": {x: o["oos"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")}} for o in v.get("ideas") or []],
             "risk": [{"k": r["k"], **r["oos"]} for r in v.get("risk") or []][:24], "sectors": (v.get("sectors_today") or [])[:6]}
 
 

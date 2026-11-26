@@ -287,19 +287,22 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
   const tag={HOLDS:"pass",UNPROVEN:"warn",FAILS:"fail"},hz=h=>h===5?"5 days":h===126?"6 months":"1 month";
   const vx=V.vix,held=V.beliefs.filter(b=>b.v==="HOLDS").length,ok=V.screen_v==="HOLDS";
   const bl=V.beliefs.map(b=>`<li><span class="pill ${tag[b.v]||""}">${E(b.v==="HOLDS"?"Holds":b.v==="FAILS"?"Fails":"Unproven")}</span><span>${E(b.t)}<small> · ${pc(b.m,2)} ${b.u?E(b.u):"vs Nifty per "+hz(b.h)} · right ${sh(b.hit)} · ${b.mo} months tested${b.note?" · "+E(b.note):""}</small></span></li>`).join("");
-  const sc=V.screen.length?`<div class="spnl wide"><h3>Low risk, high return ${ok?'<span class="pill pass">Tested: holds</span>':'<span class="pill warn">Watch, not proven</span>'}</h3>
-    <p class="sm">Calmer half of the Nifty 500, best 12-month return per unit of risk. Back-test: ${pc(V.screen_m,2)} a month vs Nifty after charges, right ${sh(V.screen_hit)} of months since ${E(D_(V.oos_from))}.</p>
-    <div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">Return/risk</th><th class="n">12M</th><th class="n">Volatility</th><th class="n">Worst fall 1Y</th><th class="n">Beta</th></tr>
-    ${V.screen.map(r=>`<tr class="go${ok?" hi":""}" data-mk="${E(r.s)}"><td><button class="lnk" data-mk="${E(r.s)}">${E(r.s)}</button></td>${lvc(r.s)}<td class="n">${F(r.score,2)}</td><td class="n up">${pc(r.mom,0)}</td><td class="n">${sh(r.vol)}</td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td></tr>`).join("")}</table></div></div>`:"";
+  const idv=o=>{const L=o.live||[];if(o.k==="nifty_condor"&&L[0]){const c=L[0];return`Today: sell ${F(c.sp,0)} put and ${F(c.sc,0)} call, buy ${F(c.lp,0)} put and ${F(c.lc,0)} call. Credit about ${F(c.credit,0)} pts, worst case ${F(c.max_loss,0)} pts.`}
+    if(!L.length)return o.k==="bank_pair_flat"?"Not active: the market is not flat today.":"Not active: no spread is stretched 2 standard deviations today.";
+    return"Active now: "+L.map(x=>`${x.side>0?"buy":"sell"} <button class="lnk" data-mk="${E(x.k)}">${E(x.k)}</button>, ${x.side>0?"sell":"buy"} ${F(x.beta,2)}x Nifty${x.z!=null?` (gap ${F(x.z,1)} sd)`:""}`).join("; ")};
+  const idc=(V.ideas||[]).map(o=>`<div class="spnl idea"><h3>${E(o.t)} <span class="pill ${tag[o.v]||""}">${E(o.v==="HOLDS"?"Tested: holds":o.v==="FAILS"?"Tested: fails":"Watch, not proven")}</span></h3>
+    <p class="sm">${E(o.p)} ${E(o.hedge||"")}</p><p><b>${idv(o)}</b></p>
+    <p class="sm">Back-test since ${E(D_(V.oos_from))}: ${pc(o.oos.raw_mean,2)} a trade${o.k==="nifty_condor"?" on the capped loss":""}, right ${sh(o.oos.hit)} of ${o.oos.n} trades (before: ${pc(o.is.raw_mean,2)}, right ${sh(o.is.hit)} of ${o.is.n}). ${E(o.sizing||"")} ${E(o.note||"")}</p></div>`).join("");
   const rk=V.risk.length?`<details class="spnl wide"><summary><b>Risk and return, last 3 years</b> <span class="sm">Sharpe, worst fall, beta and correlation to the Nifty for every index and NSE factor index</span></summary>
     <div class="scroll"><table><tr><th>Index</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Beta</th><th class="n">Corr</th></tr>
     ${V.risk.map(r=>`<tr><td>${E(r.k)}</td><td class="n ${r.ret>0?"up":"down"}">${pc(r.ret)}</td><td class="n">${sh(r.vol)}</td><td class="n"><b>${r.sharpe==null?"–":F(r.sharpe,2)}</b></td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td><td class="n">${r.corr==null?"–":F(r.corr,2)}</td></tr>`).join("")}</table></div>
     <p class="note">Sharpe uses a 6.5% risk-free rate. Next-session direction from market type was also tested: right ${sh(V.next&&V.next.accuracy)} of days vs ${sh(V.next&&V.next.always_up)} for always saying up, so no next-day call is shown. Sector rotation by market type: ${pc(V.rot&&V.rot.mean,2)} a month, right ${sh(V.rot&&V.rot.hit)}.</p></details>`:"";
-  el.innerHTML=`<div class="head" style="margin-top:6px"><h2>Market view</h2><span class="pill ${held?"pass":"warn"}">${held} of ${V.beliefs.length} beliefs proven</span></div>
+  el.innerHTML=`<div class="head" style="margin-top:6px"><h2>Market view</h2></div>
    <div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · close of ${E(D_(V.asof))}</span></div>
    ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}
-   <div class="sgrid">${sc}
-   <div class="spnl wide"><h3>Popular beliefs, tested on data since ${E(D_(V.oos_from))} they were never fitted on</h3><ul class="wk">${bl}</ul></div>
+   ${idc?`<div class="head"><h2>Trading ideas</h2><span class="sm">hedged, index legs only, tested on data they were never fitted on</span></div><div class="sgrid">${idc}</div>`:""}
+   <div class="sgrid">
+   <details class="spnl wide"><summary><b>Popular beliefs, tested</b> <span class="sm">${held} of ${V.beliefs.length} proven</span></summary><h3>Popular beliefs, tested on data since ${E(D_(V.oos_from))} they were never fitted on</h3><ul class="wk">${bl}</ul></details>
    ${rk}</div>`}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */
 function works(){const el=$("tm-works"),Y=window.PLAY,L=window.LAB;if(!el)return;
