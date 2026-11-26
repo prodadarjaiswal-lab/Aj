@@ -841,7 +841,22 @@ def desk(days: list, X: dict, reg: list, bl: list, idl: list, tim: list, vix: di
            "would trade if its evidence firms up. " if picks else "No tested rule is signalling today. ") +
            "Sitting out is a position.")
     fails = [b["title"] for b in bl if b.get("verdict") == "FAILS"][:3]
-    return {"stance": stance, "why": why, "memos": picks, "heat_rs": heat, "limit_rs": SIZE["max_loss"],
+    nxt = []                                               # what would make the desk act, in plain numbers
+    vv = X.get("India VIX")
+    if vv and vv[-1] and len(vv) > 252:
+        w = sorted(x for x in vv[-253:-1] if x)
+        thr = w[int(len(w) * 0.9)] if w else None
+        if thr and vv[-1] < thr:
+            nxt.append(f"India VIX above {thr:.1f} (now {vv[-1]:.1f}): the buy-the-fear rule switches on, watch list only.")
+    n = X["Nifty 50"]
+    if reg[i] != "flat" and i > 63 and n[i - 63]:
+        lo, hi = n[i - 63] * (1 - FLAT_BAND), n[i - 63] * (1 + FLAT_BAND)
+        nxt.append(f"Nifty back between {lo:,.0f} and {hi:,.0f} (now {n[i]:,.0f}): a flat market, where the Bank Nifty "
+                   "views apply.")
+    label = REGIME_TEXT.get(reg[i], "this").lower()
+    headline = (f"Trade: {', '.join(m['etf'] or m['idx'] for m in trade)}, sized for a Rs {SIZE['max_loss']:,} worst case."
+                if trade else f"Do nothing today: no tested edge in a {label}.")
+    return {"stance": stance, "headline": headline, "next": nxt, "why": why, "memos": picks, "heat_rs": heat, "limit_rs": SIZE["max_loss"],
             "capital": SIZE["capital"], "avoid": fails,
             "process": ["Thesis from published research or a market belief", "Tested on data it was never fitted on",
                         "Size from the loss limit and volatility, not from conviction", "Stop and exit fixed before entry",
