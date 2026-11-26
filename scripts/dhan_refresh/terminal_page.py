@@ -197,6 +197,8 @@ CLEAN_CSS = """
 #term .eye h4 span{color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
 #term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
 #term .eye p.sm{margin:6px 0 0}
+#term .eye p.bt{font-family:var(--mono);font-size:11px}#term .eye.pb{border-color:var(--acc,#3b82f6)}
+#term .mtype{font:600 13px var(--mono);margin:0 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}#term .mtype .sm{font-weight:400;color:var(--mute)}
 #term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 #term ul.wk li{display:flex;gap:10px;align-items:baseline;font-size:13px}
 #term ul.wk b{font-family:var(--mono);min-width:56px;text-align:right}#term ul.wk small{color:var(--mute)}
@@ -333,6 +335,26 @@ def lab_summary(root: Path, correction: bool) -> dict | None:
             f"many-ideas test{'' if kept else ', so these are leads, not proven signals'}.")
     return {"market": "falling" if correction else "rising", "best": best, "worst": worst, "note": note}
 
+def play_summary(root: Path) -> dict | None:
+    """Today's playbook from the desk journal (journal/playbook.json): the market type, what the indicator back-test
+    favours and warns against in it, and the stocks where those indicators fired on the last session."""
+    pb = _load(root / "journal/playbook.json")
+    if not pb or not pb.get("type"):
+        return None
+    lab = _load(root / "journal/indicator-lab.json") or {}
+    slim = lambda x: {k: x.get(k) for k in ("k", "name", "grade", "abn", "net", "t", "n")}
+    ind = lab.get("indicators") or {}
+    mt = pb["type"]
+    # every indicator's out-of-sample result in today's market type, so each screen card can show its own evidence
+    ev = {k: [round((r.get("out_" + mt) or {}).get("abn") or 0, 5), (r.get("out_" + mt) or {}).get("n", 0)]
+          for k, r in ind.items() if (r.get("out_" + mt) or {}).get("n", 0) >= 60}
+    return {"asof": pb.get("asof"), "type": mt, "label": pb.get("label"), "since": pb.get("since"),
+            "use": [slim(x) for x in pb.get("use", [])[:10]], "avoid": [slim(x) for x in pb.get("avoid", [])[:6]],
+            "fired": {k: v[:40] for k, v in (pb.get("fired") or {}).items()},
+            "warned": {k: v[:40] for k, v in (pb.get("warned") or {}).items()}, "ev": ev,
+            "tested": lab.get("tested"), "from": lab.get("from"), "cutoff": lab.get("cutoff")}
+
+
 AZ_JS = Path(__file__).parent / "terminal_analyze.js"
 
 
@@ -439,7 +461,8 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     j = j if j >= 0 else len(html)
     mac_js = json.dumps(macro_summary(root), separators=(",", ":")).replace("</", "<\\/")
     lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
-    html = html[:j] + f"<script>window.LAB={lab_js};window.MACRO={mac_js};</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    play_js = json.dumps(play_summary(root), separators=(",", ":")).replace("</", "<\\/")
+    html = html[:j] + f"<script>window.LAB=/*LAB*/{lab_js}/*LAB*/;window.MACRO=/*MACRO*/{mac_js}/*MACRO*/;window.PLAY=/*PLAY*/{play_js}/*PLAY*/;</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
     # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
     html = html.replace('<div class="tabs" role="tablist">',
                         '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)

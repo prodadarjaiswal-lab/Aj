@@ -448,6 +448,77 @@ def summarize(rows):
             "years": len(years)}
 
 
+MTYPES = {"rising": "Rising market: Nifty above a rising 200-day average",
+          "falling": "Falling market: Nifty below a falling 200-day average",
+          "choppy": "Choppy market: Nifty and its 200-day average disagree (a turn may be under way)"}
+
+
+def market_types(ncl) -> list:
+    """The market type on each date, from the Nifty 50 alone (known on that day, no look-ahead)."""
+    m200 = sma(ncl, 200)
+    out = []
+    for t in range(len(ncl)):
+        if t < 220 or np.isnan(m200[t]) or np.isnan(m200[t - 20]):
+            out.append("choppy")
+            continue
+        above, rising = ncl[t] > m200[t], m200[t] > m200[t - 20]
+        out.append("rising" if above and rising else "falling" if not above and not rising else "choppy")
+    return out
+
+
+def playbook(lab: dict, mt: str | None = None) -> dict:
+    """Which indicators the back-test favours, and which it warns against, in today's market type.
+
+    Grades (out-of-sample = last 3 years, never used to pick the rules):
+      proven  - passed every check in run() including Holm's many-ideas correction, and positive in this market type
+      leaning - in this market type: positive before AND after the cut-off (t >= 1.5 in both), beats the Nifty after
+                charges out of sample, 60+ cases over 6+ months. A lead, not proven: it has not survived the many-ideas test.
+      avoid   - in this market type: negative before and after the cut-off, out-of-sample t <= -1.5.
+    """
+    mt = mt or (lab.get("market") or {}).get("type") or "choppy"
+    use, avoid = [], []
+    for k, r in (lab.get("indicators") or {}).items():
+        o, i_ = r.get("out_" + mt) or {}, r.get("in_" + mt) or {}
+        if o.get("n", 0) < 60 or (o.get("months") or 0) < 6 or o.get("abn") is None or i_.get("abn") is None:
+            continue
+        row = {"k": k, "name": r["name"], "abn": o["abn"], "net": o.get("net"), "t": o.get("t_abn"), "n": o["n"],
+               "in_abn": i_["abn"], "in_t": i_.get("t_abn"), "win": o.get("win_abn")}
+        if r.get("verdict") == "keep" and o["abn"] > 0:
+            use.append(dict(row, grade="proven"))
+        elif (i_["abn"] > 0 and o["abn"] > 0 and (i_.get("t_abn") or 0) >= 1.5 and (o.get("t_abn") or 0) >= 1.5
+              and (o.get("net") or 0) > 0):
+            use.append(dict(row, grade="leaning"))
+        elif i_["abn"] < 0 and o["abn"] < 0 and (o.get("t_abn") or 0) <= -1.5:
+            avoid.append(dict(row, grade="avoid"))
+    use.sort(key=lambda x: (x["grade"] != "proven", -x["abn"]))
+    avoid.sort(key=lambda x: x["abn"])
+    return {"asof": lab.get("asof"), "type": mt, "label": MTYPES.get(mt, mt), "since": (lab.get("market") or {}).get("since"),
+            "use": use, "avoid": avoid, "proven": sum(1 for x in use if x["grade"] == "proven")}
+
+
+def xs_today(data: dict, last: str) -> dict:
+    """Today's members of each cross-sectional factor (same rules as run(), on the last session)."""
+    rows = []
+    for sym, o in data.items():
+        c = [x for x in o["c"] if x is not None]
+        if len(c) < 253 or o["d"][-1] != last:
+            continue
+        c = np.array(c[-253:], float)
+        dl = np.diff(np.log(c[-61:]))
+        rows.append((sym, c[-22] / c[0] - 1, c[-22] / c[-127] - 1, c[-1] / c[-22] - 1, float(np.std(dl)), c[-1] / c[-252:].max()))
+    out = {}
+    if len(rows) < 100:
+        return out
+    for name, col, top in (("xs_mom12", 1, True), ("xs_mom6", 2, True), ("xs_mom12_low", 1, False), ("xs_rev1", 3, False),
+                           ("xs_lowvol", 4, False), ("xs_highvol", 4, True), ("xs_hi52", 5, True)):
+        v = np.array([r[col] for r in rows])
+        q = np.quantile(v, 0.9 if top else 0.1)
+        pick = [(rows[j][0], v[j]) for j in range(len(rows)) if (v[j] >= q if top else v[j] <= q)]
+        pick.sort(key=lambda z: -z[1] if top else z[1])
+        out[name] = [s for s, _ in pick]
+    return out
+
+
 def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
     """data: {sym: {d,o,h,l,c,v}}; nifty: {d,c}. Returns the lab result (JSON-able)."""
     dates = list(nifty["d"])
@@ -456,6 +527,7 @@ def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
     ncl = np.array(nifty["c"], float)
     nm200 = sma(ncl, 200)
     up_reg = ncl > nm200
+    mtype = market_types(ncl)
     nfwd = np.full(N, np.nan)
     nfwd[:N - H] = ncl[H:] / ncl[:N - H] - 1
     cut = (dt.date.fromisoformat(dates[-1]) - dt.timedelta(days=int(365 * OOS_YEARS))).isoformat()
@@ -529,7 +601,7 @@ def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
         if np.isnan(r) or np.isnan(base[t]) or np.isnan(nfwd[t]):
             continue
         per = "out" if dates[t] >= cut else "in"
-        rows[name][per].append((dates[t][:7], float(r - base[t]), float(r - nfwd[t] - COST), bool(up_reg[t])))
+        rows[name][per].append((dates[t][:7], float(r - base[t]), float(r - nfwd[t] - COST), bool(up_reg[t]), mtype[t]))
     K = len(NAMES)
     res = {}
     for k in NAMES:
@@ -539,6 +611,8 @@ def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
             r[per] = summarize(rr)
             r[per + "_up"] = summarize([x for x in rr if x[3]])
             r[per + "_weak"] = summarize([x for x in rr if not x[3]])
+            for mt in MTYPES:
+                r[per + "_" + mt] = summarize([x for x in rr if x[4] == mt])
         res[k] = r
     # base rate (the average stock vs the Nifty, after charges) for context
     base_rows = {"in": [], "out": []}
@@ -568,7 +642,13 @@ def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
         near = (not keep and enough and (i_.get("abn") or 0) > 0 and (o_.get("abn") or 0) > 0 and r["p_keep"] <= 0.05)
         r["verdict"] = "keep" if keep else "avoid" if avoid else "near" if near else "drop"
     keep = sorted([k for k in res if res[k]["verdict"] == "keep"], key=lambda k: -(res[k]["out"]["net"] or 0))
-    return {"asof": asof or dates[-1], "from": dates[0], "cutoff": cut, "stocks": int((ok.any(axis=1)).sum()),
+    since = N - 1
+    while since > 0 and mtype[since - 1] == mtype[N - 1]:
+        since -= 1
+    out_days = [t for t in range(N) if dates[t] >= cut]
+    return {"asof": asof or dates[-1], "from": dates[0], "cutoff": cut,
+            "market": {"type": mtype[N - 1], "since": dates[since], "label": MTYPES[mtype[N - 1]],
+                       "share_out": {mt: round(sum(1 for t in out_days if mtype[t] == mt) / max(1, len(out_days)), 3) for mt in MTYPES}}, "stocks": int((ok.any(axis=1)).sum()),
             "tested": K, "horizon_days": H, "cost": COST, "alpha": ALPHA,
             "base": {p: summarize(base_rows[p]) for p in ("in", "out")},
             "keep": keep, "avoid": [k for k in res if res[k]["verdict"] == "avoid"],

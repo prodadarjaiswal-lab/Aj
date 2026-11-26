@@ -80,3 +80,37 @@ def test_add_plans_marks_calls():
     assert J.add_plans(led, tp) == 0
     called = {r["sym"]: r["called"] for r in led["recs"]}
     assert called == {"A": True, "B": False}
+
+
+def test_market_types_and_playbook():
+    up = np.linspace(100, 200, 400)
+    mt = L.market_types(np.concatenate([up, up[::-1]]))
+    assert mt[399] == "rising" and mt[-1] == "falling"
+    lab = {"asof": "2026-11-26", "market": {"type": "rising", "since": "2026-01-01"}, "indicators": {
+        "a": {"name": "A", "verdict": "drop", "out_rising": {"n": 200, "months": 20, "abn": 0.01, "t_abn": 2.0, "net": 0.004},
+              "in_rising": {"n": 500, "abn": 0.008, "t_abn": 2.5}},
+        "b": {"name": "B", "verdict": "drop", "out_rising": {"n": 200, "months": 20, "abn": -0.02, "t_abn": -2.5, "net": -0.02},
+              "in_rising": {"n": 500, "abn": -0.01, "t_abn": -3}},
+        "c": {"name": "C", "verdict": "drop", "out_rising": {"n": 200, "months": 20, "abn": 0.02, "t_abn": 3.0, "net": 0.01},
+              "in_rising": {"n": 500, "abn": -0.01, "t_abn": -1}}}}
+    pb = L.playbook(lab)
+    assert [x["k"] for x in pb["use"]] == ["a"] and pb["use"][0]["grade"] == "leaning"
+    assert [x["k"] for x in pb["avoid"]] == ["b"]
+
+
+def test_tradeplan_skips_warned_signal():
+    import tradeplan as T
+    sig = {"dip3": {"tested": True, "out": {"up": {"x21": 0.02}}}, "don55": {"tested": True, "out": {"up": {"x21": 0.01}}}}
+    play = {"type": "rising", "use": [], "avoid": [{"k": "dip3", "abn": -0.02}]}
+    assert T.best_signal(["dip3", "don55"], sig, True, 21)[0] == "dip3"
+    assert T.best_signal(["dip3", "don55"], sig, True, 21, play)[0] == "don55"
+    assert T.playbook_check("dip3", play)["ok"] is False
+
+
+def test_journal_writes_playbook(tmp_path):
+    data, nifty = _panel(60, 1600, 3, plant=True)
+    out = J.run(tmp_path, data, nifty, {})
+    pb = json.loads((tmp_path / "journal/playbook.json").read_text())
+    assert pb["type"] in ("rising", "falling", "choppy") and "fired" in pb
+    assert "Today's playbook" in (tmp_path / "journal/JOURNAL.md").read_text()
+    assert "playbook:" in out

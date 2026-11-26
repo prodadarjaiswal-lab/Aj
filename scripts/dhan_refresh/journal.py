@@ -131,13 +131,28 @@ def picks_summary(track: dict, data: dict, nmap: dict, last: str) -> dict:
     return res
 
 
-def lab_today(data: dict, nifty: dict, keep: list, near: list) -> dict:
-    """Stocks where a kept (or near-miss) indicator fired on the last session."""
+def indicator_lab_playbook(lab: dict) -> dict:
+    import indicator_lab as L
+    return L.playbook(lab)
+
+
+def lab_today(data: dict, nifty: dict, keep: list, near: list, play: dict | None = None) -> dict:
+    """Stocks where a kept, near-miss or playbook indicator fired on the last session."""
     import indicator_lab as L
     nm = dict(zip(nifty["d"], nifty["c"]))
     last = nifty["d"][-1]
-    want = [k for k in keep + near if not k.startswith("xs_")]
-    out = {"asof": last, "keep": {}, "near": {}}
+    pu = [x["k"] for x in (play or {}).get("use", [])]
+    pa = [x["k"] for x in (play or {}).get("avoid", [])]
+    allk = list(dict.fromkeys(keep + near + pu + pa))
+    out = {"asof": last, "keep": {}, "near": {}, "use": {}, "avoid": {}}
+    if any(k.startswith("xs_") for k in allk):
+        xs = L.xs_today(data, last)
+        for k in allk:
+            if k in xs:
+                for grp, ks in (("keep", keep), ("near", near), ("use", pu), ("avoid", pa)):
+                    if k in ks:
+                        out[grp][k] = xs[k]
+    want = [k for k in allk if not k.startswith("xs_")]
     if not want:
         return out
     for sym, o in data.items():
@@ -153,7 +168,9 @@ def lab_today(data: dict, nifty: dict, keep: list, near: list) -> dict:
             continue
         for k in want:
             if k in ev and ev[k][-1]:
-                out["keep" if k in keep else "near"].setdefault(k, []).append(sym)
+                for grp, ks in (("keep", keep), ("near", near), ("use", pu), ("avoid", pa)):
+                    if k in ks:
+                        out[grp].setdefault(k, []).append(sym)
     return out
 
 
@@ -204,7 +221,46 @@ def pct(x, d=1):
     return "n/a" if x is None else f"{x * 100:+.{d}f}%"
 
 
-def render(root: Path, lab: dict, ledger: dict, log: list, picks: dict, today: dict, tech: dict | None) -> str:
+def render_playbook(play: dict, log: list) -> list:
+    L = ["## Today's playbook (feeds the Trading Terminal)\n"]
+    L.append(f"**Market type: {play['type']}** since {play.get('since')}. {play['label']}. The terminal's at-a-glance "
+             f"cards, its screen order and the back-test picks all follow this section, and the trade plans skip any "
+             f"signal the back-test warns against in this market type. Rebuilt every run, so it changes when the market "
+             f"type changes or the evidence moves.\n")
+    L.append("Grades: **proven** passed every check including the many-ideas correction; **leaning** was positive "
+             "before and after the cut-off in this market type (t 1.5+ both times) and beat the Nifty after charges, but "
+             "has not survived the many-ideas correction, so it is a lead; **avoid** was reliably worse than the average "
+             "stock in this market type.\n")
+    def tab(rows, title):
+        out = [f"### {title}\n"]
+        if not rows:
+            return out + ["None in this market type.\n"]
+        out.append("| Indicator | grade | vs average stock after | t | vs Nifty after charges | cases | before cut-off | fired today |\n|---|---|---|---|---|---|---|---|")
+        fired = {**play.get("fired", {}), **play.get("warned", {})}
+        for x in rows:
+            f = fired.get(x["k"]) or []
+            out.append(f"| {x['name']} | {x['grade']} | {pct(x['abn'])} | {x.get('t')} | {pct(x.get('net'))} | {x['n']} | "
+                       f"{pct(x.get('in_abn'))} (t {x.get('in_t')}) | {', '.join(sorted(f)[:12]) + (f' +{len(f) - 12}' if len(f) > 12 else '') or 'none'} |")
+        return out + [""]
+    L += tab(play.get("use", []), f"Favoured in a {play['type']} market")
+    L += tab(play.get("avoid", []), f"Warnings in a {play['type']} market")
+    hist = [e for e in log if e.get("market")]
+    if hist:
+        L.append("### Market type history (from this journal)\n")
+        runs, cur = [], None
+        for e in hist:
+            if not cur or cur[0] != e["market"]:
+                cur = [e["market"], e["asof"], e["asof"], len(e.get("play_use") or [])]
+                runs.append(cur)
+            else:
+                cur[2] = e["asof"]
+        for m, a, b, n in reversed(runs[-20:]):
+            L.append(f"- {a} to {b}: {m} ({n} indicators favoured at the start)")
+        L.append("")
+    return L
+
+
+def render(root: Path, lab: dict, ledger: dict, log: list, picks: dict, today: dict, tech: dict | None, play: dict | None = None) -> str:
     how = (root / J / "how-it-works.md").read_text(encoding="utf-8") if (root / J / "how-it-works.md").exists() else ""
     L = []
     last = log[-1] if log else {}
@@ -213,6 +269,8 @@ def render(root: Path, lab: dict, ledger: dict, log: list, picks: dict, today: d
              f"**{last.get('asof', 'n/a')}**. This file is rebuilt automatically every run. Research software, not advice.\n")
     L.append("## Today in one paragraph\n")
     L.append(last.get("summary", "No run logged yet.") + "\n")
+    if play:
+        L += render_playbook(play, log)
     # indicator lab
     ind = lab.get("indicators", {}) if lab else {}
     if lab:
@@ -337,13 +395,23 @@ def run(root: Path, data: dict, nifty: dict, tech: dict | None = None, with_lab:
             msgs.append(f"lab: {lab['tested']} tested, keep {lab['keep']}, avoid {lab['avoid']}, near {lab['near']}")
         except Exception as e:
             msgs.append(f"lab FAILED: {str(e)[:200]}")
-    today = {}
+    today, play = {}, {}
     if lab:
         try:
-            today = lab_today(data, nifty, lab.get("keep", []), lab.get("near", []))
+            play = indicator_lab_playbook(lab)
+        except Exception as e:
+            msgs.append(f"playbook failed: {str(e)[:120]}")
+        try:
+            today = lab_today(data, nifty, lab.get("keep", []), lab.get("near", []), play)
             _w(jd / "lab-today.json", today)
         except Exception as e:
             msgs.append(f"lab-today failed: {str(e)[:120]}")
+        if play:
+            # the terminal reads this file: today's market type, what the back-test favours and warns against,
+            # and the stocks where those indicators fired on the last session
+            play = dict(play, fired=(today or {}).get("use", {}), warned=(today or {}).get("avoid", {}))
+            _w(jd / "playbook.json", play)
+            msgs.append(f"playbook: {play['type']}, use {[x['k'] for x in play['use']]}, avoid {[x['k'] for x in play['avoid']]}")
     # 2. recommendations ledger
     led_p = jd / "recommendations.json"
     ledger = _j(led_p, {"recs": []})
@@ -366,6 +434,17 @@ def run(root: Path, data: dict, nifty: dict, tech: dict | None = None, with_lab:
                 changes.append(f"{lab['indicators'][k]['name']} added to {side}")
             for k in sorted(was - now):
                 changes.append(f"{lab['indicators'].get(k, {}).get('name', k)} removed from {side}")
+    prev = log[-1] if log else {}
+    if play:
+        if prev.get("market") and prev.get("market") != play["type"]:
+            changes.append(f"market type changed from {prev['market']} to {play['type']}: the playbook switched to the {play['type']}-market results")
+        pu = set(prev.get("play_use") or [])
+        nu = {x["k"] for x in play["use"]}
+        pa_, na_ = set(prev.get("play_avoid") or []), {x["k"] for x in play["avoid"]}
+        nm_ = lambda k: (lab["indicators"].get(k) or {}).get("name", k)
+        if prev.get("play_use") is not None:
+            changes += [f"now favoured: {nm_(k)}" for k in sorted(nu - pu)] + [f"no longer favoured: {nm_(k)}" for k in sorted(pu - nu)]
+            changes += [f"now a warning: {nm_(k)}" for k in sorted(na_ - pa_)] + [f"no longer a warning: {nm_(k)}" for k in sorted(pa_ - na_)]
     sig = (tech or {}).get("signals", {})
     rising = [k for k, v in sig.items() if v.get("tested")]
     weak = [k for k, v in sig.items() if v.get("tested_weak")]
@@ -381,11 +460,13 @@ def run(root: Path, data: dict, nifty: dict, tech: dict | None = None, with_lab:
             f"All plans so far: {a.get('plans', 0)} ({a.get('closed', 0)} closed, {a.get('open', 0)} open).")
     now_ist = dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%d %b %Y %H:%M")
     log.append({"asof": asof, "run_ist": now_ist, "stocks": len(data), "rising": rising, "weak": weak, "plans": nplans,
-                "called": called, "lab_keep": (lab or {}).get("keep", []), "changes": changes, "summary": summ})
+                "called": called, "lab_keep": (lab or {}).get("keep", []), "changes": changes, "summary": summ,
+                "market": play.get("type"), "play_use": [x["k"] for x in play.get("use", [])] if play else None,
+                "play_avoid": [x["k"] for x in play.get("avoid", [])] if play else None})
     log = sorted(log, key=lambda e: e["asof"])[-400:]
     _w(log_p, log)
     # 5. the journal
-    (jd / "JOURNAL.md").write_text(render(root, lab, ledger, log, picks, today, tech), encoding="utf-8")
+    (jd / "JOURNAL.md").write_text(render(root, lab, ledger, log, picks, today, tech, play), encoding="utf-8")
     msgs.append(f"journal: {added} new plans, {a.get('plans', 0)} in ledger, log {len(log)} days")
     return " | ".join(msgs)
 

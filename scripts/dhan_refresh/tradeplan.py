@@ -104,12 +104,40 @@ def regime_up(nifty: dict) -> bool:
     return len(c) < 200 or c[-1] > sum(c[-200:]) / 200
 
 
-def best_signal(new: list, signals: dict, up: bool, horizon: int):
-    """The new signal with the largest tested out-of-sample move for today's market regime (long side only)."""
+# The desk's signals and their closest indicator in the journal's indicator lab (journal/playbook.json).
+LAB_TWIN = {"hi52v": "hi52_vol", "vcp": "atr_contract", "adx": "adx_x20", "rsi2": "rsi2_10_up", "st_up": "supertrend_up",
+            "nr7": "nr4_inside", "accum": "accum", "gap": "gap_up3", "volbreak": "vol2_up", "don55": "don55",
+            "macd0": "macd_up", "bbsq": "bb_squeeze_up", "rsnew": "rs_hi", "dip3": "dip3", "ibs": "ibs_low",
+            "reclaim200": "x_sma200", "qdrop10": "drop5d_10", "brk20": "don20", "flag": "flag", "reclaim20": "x_sma20",
+            "os14": "rsi14_x30", "os_bounce": "rsi14_x30", "trend": "align", "pullback": "dip3"}
+
+
+def playbook_check(key: str, play: dict) -> dict:
+    """The journal's back-test in today's market type must not warn against this signal."""
+    rule = "back-test in today's market type"
+    if not play or not play.get("type"):
+        return {"rule": rule, "ok": True, "note": "no playbook yet (journal/playbook.json), so not applied"}
+    twin = LAB_TWIN.get(key)
+    use = {x["k"]: x for x in play.get("use", [])}
+    bad = {x["k"]: x for x in play.get("avoid", [])}
+    mt = play["type"]
+    if twin in bad:
+        return {"rule": rule, "ok": False, "note": f"{twin} is a warning in a {mt} market ({bad[twin]['abn'] * 100:+.1f}% vs the average stock over 21 days)"}
+    if twin in use:
+        return {"rule": rule, "ok": True, "note": f"{twin} is {use[twin]['grade']} in a {mt} market ({use[twin]['abn'] * 100:+.1f}% vs the average stock)"}
+    return {"rule": rule, "ok": True, "note": f"no clear edge either way for {twin or key} in a {mt} market"}
+
+
+def best_signal(new: list, signals: dict, up: bool, horizon: int, play: dict | None = None):
+    """The new signal with the largest tested out-of-sample move for today's market regime (long side only).
+    Signals whose lab twin the journal's playbook warns against in today's market type are skipped."""
     flag, side, hk = ("tested", "up", f"x{horizon}") if up else ("tested_weak", "weak", f"x{horizon}")
+    warned = {x["k"] for x in (play or {}).get("avoid", [])}
     best = None
     for k in new:
         if k in ("extended", "downtrend"):      # warnings, never buy signals (journal 26 Nov: 24 plans were printed on "downtrend")
+            continue
+        if LAB_TWIN.get(k) in warned:
             continue
         s = signals.get(k) or {}
         o = (s.get("out") or {}).get(side) or {}
@@ -159,7 +187,7 @@ def _joint_check(key: str, joint: dict) -> dict:
 
 
 def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: dict, stock_cap: float, min_cr: float,
-             feeds: dict, asof: str, up: bool, joint: dict | None = None) -> dict | None:
+             feeds: dict, asof: str, up: bool, joint: dict | None = None, play: dict | None = None) -> dict | None:
     key, st = sig
     h = int(cfg.get("horizon_days", 21))
     last = float(td.get("c") or o["c"][-1])
@@ -200,6 +228,7 @@ def plan_one(sym: str, o: dict, td: dict, sig: tuple, cfg: dict, r: dict, vol: d
         {"rule": "daily loss limit", "ok": 0 < risk <= float(cfg["daily_loss_limit"]),
          "note": f"loss at stop Rs {risk:,.0f} of the Rs {float(cfg['daily_loss_limit']):,.0f} daily limit"},
         _joint_check(key, joint or {}),
+        playbook_check(key, play or {}),
         {"rule": "no results or board meeting while held", "ok": not ev,
          "note": "; ".join(f"{e['d']} {e.get('p', '')}" for e in ev) or f"none in the next {h} sessions (NSE calendar)"},
     ]
@@ -224,6 +253,7 @@ def run(data: dict, nifty: dict, root) -> str:
     rl = _j(root / "docs/risklab.json", {}) or {}
     vol = rl.get("vol") or {}
     joint = rl.get("signals") or {}
+    play = _j(root / "journal/playbook.json", {})     # the previous run's playbook (the journal runs after the plans)
     r = rates(cfg)
     up = regime_up(nifty)
     h = int(cfg.get("horizon_days", 21))
@@ -231,11 +261,11 @@ def run(data: dict, nifty: dict, root) -> str:
     plans = {}
     for sym, td in (today.get("stocks") or {}).items():
         o = data.get(sym)
-        sig = best_signal(td.get("new") or [], model.get("signals") or {}, up, h)
+        sig = best_signal(td.get("new") or [], model.get("signals") or {}, up, h, play)
         if not o or not sig or len(o.get("c") or []) < 60:
             continue
         p = plan_one(sym, o, td, sig, cfg, r, vol, float(pf.get("stock_cap", 0.10)), float(pf.get("min_traded_cr", 1.0)),
-                     feeds, asof, up, joint)
+                     feeds, asof, up, joint, play)
         if p:
             plans[sym] = p
     out = {"asof": asof, "config_assumed": bool(cfg.get("_assumed", True)),
@@ -245,4 +275,4 @@ def run(data: dict, nifty: dict, root) -> str:
            "plans": plans}
     (root / "docs/tradeplan.json").write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
     ok = sum(all(c["ok"] for c in p["checks"]) for p in plans.values())
-    return f"trade plan: {len(plans)} plans ({ok} pass every check), regime {'rising' if up else 'weak'}, vol from {'risklab' if vol else 'ATR'}"
+    return f"trade plan: {len(plans)} plans ({ok} pass every check), regime {'rising' if up else 'weak'}, playbook {play.get('type', 'none')}, vol from {'risklab' if vol else 'ATR'}"

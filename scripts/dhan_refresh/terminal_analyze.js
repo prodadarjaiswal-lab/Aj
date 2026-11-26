@@ -280,20 +280,45 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */
-function works(){const el=$("tm-works"),L=window.LAB;if(!el||!L||!L.best)return;
+function works(){const el=$("tm-works"),Y=window.PLAY,L=window.LAB;if(!el)return;
+  if(Y&&Y.type){const nm={rising:"Rising",falling:"Falling",choppy:"Choppy"}[Y.type]||Y.type;
+    const row=x=>`<li><b class="${x.abn>0?"up":"down"}">${P(x.abn,1)}</b><span>${E(x.name)}<small> · ${E(x.grade)} · ${x.n} cases${(Y.fired[x.k]||Y.warned[x.k]||[]).length?` · fired today on ${(Y.fired[x.k]||Y.warned[x.k]).length}`:""}</small></span></li>`;
+    el.innerHTML=`<div class="mtype"><b>${E(nm)} market</b> since ${E(D_(Y.since))} <span class="sm">${E(Y.label||"")}</span></div>
+     <div class="sgrid"><div class="spnl"><h3>Back-test favours now</h3><ul class="wk">${Y.use.map(row).join("")||'<li class="note">Nothing has a clear edge in this market type. Fewer trades is the honest answer.</li>'}</ul></div>
+     <div class="spnl"><h3>Back-test warns against now</h3><ul class="wk">${Y.avoid.map(row).join("")||'<li class="note">No reliable warnings in this market type.</li>'}</ul></div></div>
+     <p class="note">Updated every evening from the desk journal: ${E(String(Y.tested||""))} indicators back-tested on Dhan data from ${E(D_(Y.from))}, judged on ${E(nm.toLowerCase())}-market days since ${E(D_(Y.cutoff))} only (never used to pick the rules). Extra 21-day return over the average Nifty 500 stock. <b>proven</b> passed the many-ideas correction; <b>leaning</b> held up before and after but has not, so treat it as a lead. The cards below are ordered by this evidence and the trade plans skip any warned signal.</p>`;return}
+  if(!L||!L.best)return;
   const row=x=>`<li><b class="${x.abn>0?"up":"down"}">${P(x.abn,1)}</b><span>${E(x.name)}<small> · ${x.n} cases · ${E(x.verdict)}</small></span></li>`;
   el.innerHTML=`<div class="sgrid"><div class="spnl"><h3>What has worked in ${E(L.market)} markets</h3><ul class="wk">${L.best.map(row).join("")||'<li class="note">None.</li>'}</ul></div>
    <div class="spnl"><h3>What has done worst in ${E(L.market)} markets</h3><ul class="wk">${L.worst.map(row).join("")||'<li class="note">None.</li>'}</ul></div></div>
    <p class="note">Extra 21-day return over the average stock, last 3 years. ${E(L.note)}</p>`}
+function D_(d){if(!d)return"–";const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];const x=String(d).split("-");return x.length<3?d:`${+x[2]} ${m[+x[1]-1]} ${x[0]}`}
+/* each screen and the lab indicators closest to it: the card shows their back-test in today's market type */
+const TWIN={"dd-rising":["supertrend_up","macd_up","ema20_50","x_sma50","adx_x20"],"dd-swing":["vol2_up","accum","obv_x20","cmf_x10"],
+  "dd-dips":["drop5d_10","dip3","rsi2_10_up","below50_15"],"dd-movers":["gap_up3","roc10_10","vol2_up"],
+  flow:["vol2_up","cmf_x10","obv_x20"],osq:["rsi14_x30","mfi_20","bb_below"],lead:["rs_hi","rs3m_10","xs_mom6","xs_mom12"],
+  downco:["xs_mom12_low","drop5d_10","below50_15"],downmkt:["xs_mom12_low","drop5d_10","below50_15"],setup:["don55","hi52_vol","bb_squeeze_up","flag"]};
+function twinEv(id){const Y=window.PLAY;if(!Y||!Y.ev)return null;const xs=(TWIN[id]||[]).map(k=>Y.ev[k]).filter(Boolean);if(!xs.length)return null;
+  const n=xs.reduce((a,x)=>a+x[1],0);return{abn:xs.reduce((a,x)=>a+x[0]*x[1],0)/n,n}}
 /* ---------- Bird's-eye view of every screener section ---------- */
-function eye(){const el=$("tm-eye");if(!el)return;const cards=[];
-  const card=(t,n,names,d,go)=>cards.push(`<div class="eye"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}</div>`);
+function eye(){const el=$("tm-eye");if(!el)return;const cards=[],Y=window.PLAY,mt=Y&&Y.type?({rising:"rising",falling:"falling",choppy:"choppy"}[Y.type]||Y.type):"";
+  const badge=ev=>ev?`<p class="sm bt ${ev.abn>0.002?"up":ev.abn<-0.002?"down":""}">Back-test in ${E(mt)} markets: ${P(ev.abn,1)} vs the average stock (${ev.n} cases)</p>`:"";
+  const card=(t,n,names,d,ev,cls)=>cards.push({ev,h:`<div class="eye${cls?" "+cls:""}"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}${badge(ev)}</div>`});
+  const liquid=s=>typeof RS==="undefined"||!RS[s]||(RS[s].turnover_cr||0)>=10;
+  /* 1. the playbook's own picks: stocks where an indicator the back-test favours in this market type fired on the last session */
+  if(Y&&Y.type){const sc={};Y.use.forEach(x=>(Y.fired[x.k]||[]).forEach(s=>{if(!liquid(s))return;(sc[s]=sc[s]||{s,v:0,k:[]}).v+=x.abn;sc[s].k.push(x.name)}));
+    const top=Object.values(sc).sort((a,b)=>b.v-a.v);
+    const w=new Set();Y.avoid.forEach(x=>(Y.warned[x.k]||[]).forEach(s=>w.add(s)));
+    cards.push({ev:{abn:9},h:`<div class="eye pb"><h4>Back-test picks for a ${E(mt)} market <span>${top.length} stocks</span></h4><div class="eyen">${top.length?top.slice(0,8).map(z=>`<button class="chip" data-mk="${E(z.s)}" title="${E(z.k.join("; "))}">${E(z.s)}</button>`).join(""):'<span class="sm">none fired on the last session</span>'}</div><p class="sm">Fired on the last session: ${E([...new Set(top.slice(0,8).flatMap(z=>z.k))].slice(0,3).join("; ")||"–")}. Turnover Rs 10 Cr+ a day.${w.size?` ${w.size} stocks tripped a warning, so check before buying them.`:""}</p></div>`})}
   [["dd-rising",""],["dd-dips",""],["dd-movers",""],["dd-swing",""]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
     const names=[...new Set([...x.querySelectorAll("[data-s]")].map(b=>b.dataset.s))].slice(0,6),cnt=(x.querySelector("[id^=n-]")||{}).textContent||names.length;
-    card(((x.querySelector(".ddt")||{}).textContent||id).trim(),cnt,names,d)});
+    card(((x.querySelector(".ddt")||{}).textContent||id).trim(),cnt,names,d,twinEv(id))});
   if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.filter(p=>["best","setup","flow","osq","lead","downco","downmkt"].includes(p[0])).forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10}catch(e){return false}});
-    try{rows.sort(p[4])}catch(e){}card(p[1],rows.length+" stocks",rows.slice(0,6).map(x=>x.s),p[2])});
-  el.innerHTML=cards.join("")}
+    try{rows.sort(p[4])}catch(e){}card(p[1],rows.length+" stocks",rows.slice(0,6).map(x=>x.s),p[2],twinEv(p[0]),p[0]==="best"?"best":"")});
+  /* order: playbook picks, then Top picks, then screens by their back-test in today's market type (no evidence last) */
+  const key=c=>c.ev?c.ev.abn:-1;
+  const head=cards.filter(c=>c.ev&&c.ev.abn===9),best=cards.filter(c=>c.h.includes("eye best")),rest=cards.filter(c=>!head.includes(c)&&!best.includes(c)).sort((a,b)=>key(b)-key(a));
+  el.innerHTML=[...head,...best,...rest].map(c=>c.h).join("")}
 function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
   document.querySelectorAll("#tm-sum [data-lc]").forEach(td=>{const d=dayChg(td.dataset.lc);td.textContent=d.c==null?"–":P(d.c,2);td.className="n "+(d.c>0?"up":d.c<0?"down":"")});
   const L=STK.map(s=>({s,...dayChg(s)})).filter(z=>z.c!=null);const g=$("tm-gain"),l=$("tm-lose"),ad=$("tm-adv");
