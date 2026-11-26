@@ -261,7 +261,7 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   const lt=Object.keys(VMT).map(s=>{const on=(VMT[s].on||[]).filter(k=>VTEST.includes(k));if(on.length<2||!INS[s])return null;const h=window.azHorizons(s);return h&&h[2].v[1]==="good"?{s,on,h,r:RS[s]||{}}:null})
     .filter(Boolean).sort((a,b)=>b.on.length-a.on.length||((a.r.pe_sec||9)-(b.r.pe_sec||9))).slice(0,12);
   const up200=STK.filter(k=>RS[k].vs200>0).length;
-  el.innerHTML=`<div id="tm-mview" class="tm-idx"></div><div class="tm-stk" id="tm-stkw"><div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
+  el.innerHTML=`<div id="tm-mview" class="tm-ide"></div><div class="tm-stk" id="tm-stkw"><div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
    <div class="sumbar" id="tm-breadth"><span><b>${PK.length}</b> setups today</span><span><b>${R.length}</b> buy now</span><span><b>${up200}</b> of ${STK.length} above 200-day</span><span id="tm-adv"></span></div>
    <div class="sgrid">
    <div class="spnl wide"><h3>Screener picks</h3><div class="scroll"><table><tr><th>Stock</th><th>Setup</th><th class="n">Live</th><th class="n">Day</th><th class="n">3M vs Nifty</th><th class="n">RSI</th><th>Value</th><th>3M</th><th>6M</th><th>1Y</th></tr>
@@ -283,6 +283,10 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   try{const tw=document.querySelector("#term .twrap"),mv=$("tm-mview"),mk=$("tm-mk");const mp=mk&&mk.closest("section");
     if(mp)mp.classList.add("tm-idx");el.classList.add("tm-stk");const st=$("tm-strip");if(st)st.classList.add("tm-idx");
     if(tw&&mv&&mp)tw.insertBefore(mv,mp)}catch(e){console.error("layout",e)}
+  /* Stocks tab: decision cards first; number tables folded away (ADARSH 26 Nov: fewer numbers, click to drill in) */
+  try{const w=$("tm-stkw"),g=w&&w.querySelector(".sgrid");if(w&&g){const d=document.createElement("details");d.className="tm-tables";
+    d.innerHTML='<summary>Tables: screener picks, buy now, live gainers and losers</summary>';d.appendChild(g);w.appendChild(d);
+    const r=document.getElementById("research");if(r){const d2=document.createElement("details");d2.className="tm-tables";d2.innerHTML='<summary>Full Nifty 500 screener (filters and presets)</summary>';w.appendChild(d2);setTimeout(()=>d2.appendChild(r),0)}}}catch(e){console.error("fold",e)}
   try{works()}catch(e){console.error("works",e)}
   try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
@@ -341,7 +345,7 @@ function works(){const el=$("tm-works"),Y=window.PLAY,L=window.LAB;if(!el)return
     el.innerHTML=`<div class="mtype"><b>${E(nm)} market</b> since ${E(D_(Y.since))} <span class="sm">${E(Y.label||"")}</span></div>
      <div class="sgrid"><div class="spnl"><h3>Back-test favours now</h3><ul class="wk">${Y.use.map(row).join("")||'<li class="note">Nothing has a clear edge in this market type. Fewer trades is the honest answer.</li>'}</ul></div>
      <div class="spnl"><h3>Back-test warns against now</h3><ul class="wk">${Y.avoid.map(row).join("")||'<li class="note">No reliable warnings in this market type.</li>'}</ul></div></div>
-     <p class="note">Updated every evening from the desk journal: ${E(String(Y.tested||""))} indicators back-tested on Dhan data from ${E(D_(Y.from))}, judged on ${E(nm.toLowerCase())}-market days since ${E(D_(Y.cutoff))} only (never used to pick the rules). Extra 21-day return over the average Nifty 500 stock. <b>proven</b> passed the many-ideas correction; <b>leaning</b> held up before and after but has not, so treat it as a lead. The cards below are ordered by this evidence and the trade plans skip any warned signal.</p>`;return}
+     <p class="note">From the desk journal's nightly back-test of ${E(String(Y.tested||""))} indicators, judged only on past ${E(nm.toLowerCase())} markets. Leaning = a lead, not proven. Details in the journal.</p>`;return}
   if(!L||!L.best)return;
   const row=x=>`<li><b class="${x.abn>0?"up":"down"}">${P(x.abn,1)}</b><span>${E(x.name)}<small> · ${x.n} cases · ${E(x.verdict)}</small></span></li>`;
   el.innerHTML=`<div class="sgrid"><div class="spnl"><h3>What has worked in ${E(L.market)} markets</h3><ul class="wk">${L.best.map(row).join("")||'<li class="note">None.</li>'}</ul></div>
@@ -374,7 +378,7 @@ function eye(){const el=$("tm-eye");if(!el)return;const cards=[],Y=window.PLAY,m
   const key=c=>c.ev?c.ev.abn:-1;
   const head=cards.filter(c=>c.ev&&c.ev.abn===9),best=cards.filter(c=>c.h.includes("eye best")),rest=cards.filter(c=>!head.includes(c)&&!best.includes(c)).sort((a,b)=>key(b)-key(a));
   el.innerHTML=[...head,...best,...rest].map(c=>c.h).join("")}
-function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
+function sumLive(){document.querySelectorAll("#tm-eye .chip[data-mk]").forEach(b=>{const d=dayChg(b.dataset.mk);b.classList.toggle("cu",d.c>0);b.classList.toggle("cd",d.c<0);if(d.c!=null)b.title=(d.c>0?"+":"")+(d.c*100).toFixed(2)+"% today"});document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
   document.querySelectorAll("#tm-sum [data-lc]").forEach(td=>{const d=dayChg(td.dataset.lc);td.textContent=d.c==null?"–":P(d.c,2);td.className="n "+(d.c>0?"up":d.c<0?"down":"")});
   const L=STK.map(s=>({s,...dayChg(s)})).filter(z=>z.c!=null);const g=$("tm-gain"),l=$("tm-lose"),ad=$("tm-adv");
   if(ad)ad.innerHTML=L.length?`<b class="up">${L.filter(z=>z.c>0).length}</b> up · <b class="down">${L.filter(z=>z.c<0).length}</b> down, live`:"";
