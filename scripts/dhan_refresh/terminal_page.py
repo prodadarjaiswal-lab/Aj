@@ -197,8 +197,10 @@ CLEAN_CSS = """
 #term .eye h4 span{color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
 #term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
 #term .eye p.sm{margin:6px 0 0}
+details.sec{margin:14px 0 4px}details.sec>summary{cursor:pointer;list-style:none}details.sec>summary h2{display:inline}details.sec>summary::after{content:" ▸ tap for every detail";font-size:12px;color:var(--mute,#8b949e)}details.sec[open]>summary::after{content:" ▾"}#newsx .ni{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;margin:8px 0;color:inherit;cursor:pointer}#newsx .ni b{margin-right:8px}#newsx .eff{font-size:12px;margin-top:4px}
+.pcg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:8px 0}.pc{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;color:inherit;cursor:pointer}.pc .pct{display:flex;justify-content:space-between;align-items:baseline}.pc .spk{display:block;width:100%;height:34px;margin:6px 0}.pc .pl{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;margin-top:4px}.pcw h4{margin:0 0 4px}#tm-move h4{margin:10px 0 4px}
 #term:not(.stk) .tm-stk,#term:not(.ide) .tm-ide,#term.stk .tm-idx,#term.ide .tm-idx{display:none!important}
-#screener>*:not(#vm){display:none!important}
+#screener>*:not(#newsx){display:none!important}
 #vm .vtg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:8px}
 #vm .vt{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;font:inherit;cursor:pointer}
 #vm .vt.wait{opacity:.55}#vm .vwait summary{cursor:pointer;margin:8px 0;color:var(--mute)}
@@ -206,11 +208,11 @@ CLEAN_CSS = """
 #term .nx h4{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}#term .nx b.big{font-size:18px;display:block;margin-bottom:4px}#term .nx p{margin:0;font-size:13px}
 #term ol.phil{margin:6px 0 0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:3px}
 #vm .vt:hover{border-color:var(--accent)}#vm .vt .big{font:600 20px var(--mono)}#vm .vt small{color:var(--mute);font-size:11px}
-#vm .dbars{display:flex;flex-direction:column;gap:4px;max-width:720px}#vm .dsep{height:8px}
-#vm .dbar{display:grid;grid-template-columns:minmax(90px,140px) 1fr 56px;gap:8px;align-items:center;background:none;border:0;padding:2px 0;color:inherit;font:inherit;text-align:left;cursor:pointer}
-#vm .dbar .dl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#vm .dbar .dv{font:12px var(--mono);text-align:right}
-#vm .dbar .dt{position:relative;height:12px;background:linear-gradient(var(--line),var(--line)) 50% 0/1px 100% no-repeat}
-#vm .dbar .dt i{position:absolute;top:1px;bottom:1px;border-radius:2px}#vm .dbar .gd{background:#22a06b}#vm .dbar .bd{background:#e5484d}
+.dbars{display:flex;flex-direction:column;gap:4px;max-width:720px}.dsep{height:8px}
+.dbar{display:grid;grid-template-columns:minmax(90px,140px) 1fr 56px;gap:8px;align-items:center;background:none;border:0;padding:2px 0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.dbar .dl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dbar .dv{font:12px var(--mono);text-align:right}
+.dbar .dt{position:relative;height:12px;background:linear-gradient(var(--line),var(--line)) 50% 0/1px 100% no-repeat}
+.dbar .dt i{position:absolute;top:1px;bottom:1px;border-radius:2px}.dbar .gd{background:#22a06b}.dbar .bd{background:#e5484d}
 #term .eye .chip.cu{border-color:#22a06b;color:#22a06b}#term .eye .chip.cd{border-color:#e5484d;color:#e5484d}
 #term .tm-tables>summary{cursor:pointer;font-weight:600;padding:6px 0}
 #term .eye p.bt{font-family:var(--mono);font-size:11px}#term .eye.pb{border-color:var(--acc,#3b82f6)}
@@ -325,6 +327,7 @@ const dam=x=>{if(!(x.pe>0)||!(x.pb>0))return null;const roe=x.roce>0?Math.min(x.
 const dm=L.map(x=>Object.assign(x,{dm:dam(x)})).filter(x=>x.dm&&(x.turnover_cr||0)>=10&&!CYC.test((x.industry||"")+" "+(x.ind||"")));
 const pass=x=>x.dm.spread>=0.03&&x.dm.vp>=1.25&&(x.de==null||x.de<=1.5);
 const cheap=dm.filter(pass).sort((a,b)=>b.dm.vp-a.dm.vp).slice(0,15);
+window.DAMV=cheap.map(x=>({s:x.s,line:`+${Math.round((x.dm.vp-1)*100)}% to value · ROE ${p(x.dm.roe,0)} vs cost ${p(x.dm.ke,0)}`}));
 const dear=dm.filter(x=>x.dm.vp<=0.5&&x.dm.gi>x.dm.g+0.1).sort((a,b)=>a.dm.vp-b.dm.vp).slice(0,6);
 const tile=(x,ok)=>{const d=x.dm;return `<button class="vt${ok?"":" wait"}" data-s="${esc(x.s)}"><b>${esc(x.s)}</b><span class="big ${ok?"good":"bad"}">${ok?"+"+Math.round((d.vp-1)*100)+"%":Math.round((d.vp-1)*100)+"%"} to value</span><small>ROE ${p(d.roe,0)} vs cost of equity ${p(d.ke,0)}</small><small>${d.gi<-0.09?"price assumes it shrinks":"price needs "+p(d.gi,0)+" growth"}; it funds ${p(d.g,0)}</small></button>`};
 h+=`<h3>Undervalued on Damodaran's tests</h3><p class="note">Every tile passes three fundamental tests, no price charts involved: <b>it earns more than its cost of capital</b> (return on equity, the lower of P/B ÷ P/E and ROCE, at least 3 points above its cost of equity = risk-free ${p(RF,1)} + beta × India equity risk premium ${p(ERP,1)}); <b>its value is 25%+ above the price</b> (two-stage model: 5 years growing at ROE × retained profit, capped at 12%, then ${p(Math.min(0.05,RF+ERP-0.01),0)} with excess returns fading to the cost of equity); and <b>debt/equity is 1.5 or less</b>. Cyclicals (oil, metals, power, cement and similar) are left out because their current profits may be a peak. Ranked by the gap to value. Tap a tile to analyze.</p><div class="vtg">${cheap.map(x=>tile(x,true)).join("")||'<p class="note">No stock passes all three today.</p>'}</div>
@@ -536,7 +539,14 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
     play_js = json.dumps(play_summary(root), separators=(",", ":")).replace("</", "<\\/")
     mv_js = json.dumps(mview_summary(root), separators=(",", ":")).replace("</", "<\\/")
-    html = html[:j] + f"<script>window.LAB=/*LAB*/{lab_js}/*LAB*/;window.MACRO=/*MACRO*/{mac_js}/*MACRO*/;window.PLAY=/*PLAY*/{play_js}/*PLAY*/;window.MVIEW=/*MVIEW*/{mv_js}/*MVIEW*/;</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    try:                                            # 60-day closes per stock for the Terminal's sparklines and swing stops, scaled to last = 1000
+        _cd = _load(root / "docs/chart-data.json") or {}
+        spk = {k: [round(x / v["c"][-1] * 1000) for x in v["c"][-60:]] for k, v in (_cd.get("s") or {}).items() if v.get("c") and v["c"][-1] and None not in v["c"][-60:]}
+    except Exception:
+        spk = {}
+    spk_js = json.dumps(spk, separators=(",", ":"))
+    news_js = json.dumps(_load(root / "docs/news.json") or {}, separators=(",", ":")).replace("</", "<\\/")
+    html = html[:j] + f"<script>window.SPK={spk_js};window.NEWS={news_js};window.LAB=/*LAB*/{lab_js}/*LAB*/;window.MACRO=/*MACRO*/{mac_js}/*MACRO*/;window.PLAY=/*PLAY*/{play_js}/*PLAY*/;window.MVIEW=/*MVIEW*/{mv_js}/*MVIEW*/;</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
     # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
     html = html.replace('<div class="tabs" role="tablist">',
                         '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)
