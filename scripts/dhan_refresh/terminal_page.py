@@ -197,7 +197,18 @@ CLEAN_CSS = """
 #term .eye h4 span{color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
 #term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
 #term .eye p.sm{margin:6px 0 0}
-#term.stk .tm-idx,#term:not(.stk) .tm-stk{display:none!important}
+#term:not(.stk) .tm-stk,#term:not(.ide) .tm-ide,#term.stk .tm-idx,#term.ide .tm-idx{display:none!important}
+#screener>*:not(#vm){display:none!important}
+#vm .vtg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:8px}
+#vm .vt{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;font:inherit;cursor:pointer}
+#vm .vt:hover{border-color:var(--accent)}#vm .vt .big{font:600 20px var(--mono)}#vm .vt small{color:var(--mute);font-size:11px}
+#vm .dbars{display:flex;flex-direction:column;gap:4px;max-width:720px}#vm .dsep{height:8px}
+#vm .dbar{display:grid;grid-template-columns:minmax(90px,140px) 1fr 56px;gap:8px;align-items:center;background:none;border:0;padding:2px 0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#vm .dbar .dl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#vm .dbar .dv{font:12px var(--mono);text-align:right}
+#vm .dbar .dt{position:relative;height:12px;background:linear-gradient(var(--line),var(--line)) 50% 0/1px 100% no-repeat}
+#vm .dbar .dt i{position:absolute;top:1px;bottom:1px;border-radius:2px}#vm .dbar .gd{background:#22a06b}#vm .dbar .bd{background:#e5484d}
+#term .eye .chip.cu{border-color:#22a06b;color:#22a06b}#term .eye .chip.cd{border-color:#e5484d;color:#e5484d}
+#term .tm-tables>summary{cursor:pointer;font-weight:600;padding:6px 0}
 #term .eye p.bt{font-family:var(--mono);font-size:11px}#term .eye.pb{border-color:var(--acc,#3b82f6)}
 #term .mtype{font:600 13px var(--mono);margin:0 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}#term .mtype .sm{font-weight:400;color:var(--mute)}
 #term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -298,16 +309,16 @@ if(V){const pc=V.pct;const val=pc==null?["Not enough history","warn"]:pc<0.33?["
   <p class="note">How to read it: in India, rallies have tended to start when the market is cheap and foreign money turns to buying, rather than "high keeps going higher" as in the US. This view combines the two. It is a rule of thumb, not a tested signal: the old NSE terminal's back-test found the Nifty's cheapness predicted the next 12 months only weakly (correlation ${f(V.ts12,2)}).</p>`}
 /* 2. being sold cheap */
 const cheap=L.filter(x=>x.value==="cheap"&&(x.pe_sec||0)>0&&(x.r3m||0)<=-0.08&&(x.roce||0)>=12&&(x.turnover_cr||0)>=10).sort((a,b)=>(a.r3m||0)-(b.r3m||0)).slice(0,15);
-h+=`<h3>Being sold while cheap</h3><p class="note">Nifty 500 stocks down 8%+ in 3 months, cheaper than their sector, ROCE 12%+. "Institutions adding" marks a rise in FII or DII holding last quarter.</p><div class="tw"><table><tr><th>Stock</th><th class="n">3 months</th><th class="n">P/E vs sector</th><th class="n">ROCE</th><th>Institutions</th></tr>${cheap.map(x=>`<tr><td><button class="link" data-s="${esc(x.s)}">${esc(x.s)}</button><div class="sm">${esc((x.ind||"").slice(0,24))}</div></td><td class="n bad">${p(x.r3m,0)}</td><td class="n">${f(x.pe_sec,2)}×</td><td class="n">${f(x.roce,0)}%</td><td class="${((x.d_fii||0)+(x.d_dii||0))>0?"good":""}">${((x.d_fii||0)+(x.d_dii||0))>0?"adding":"–"}</td></tr>`).join("")||'<tr><td class="note">None today.</td></tr>'}</table></div>`;
+h+=`<h3>Being sold while cheap</h3><p class="note">Down 8%+ in 3 months, cheaper than its sector, ROCE 12%+, Rs 10 Cr+ a day. Tap a tile to analyze it. ★ = institutions added last quarter.</p><div class="vtg">${cheap.map(x=>{const inst=((x.d_fii||0)+(x.d_dii||0))>0;return `<button class="vt" data-s="${esc(x.s)}"><b>${esc(x.s)}${inst?' <span class="good">★</span>':""}</b><span class="bad big">${p(x.r3m,0)}</span><small>${f(x.pe_sec,2)}× sector P/E · ROCE ${f(x.roce,0)}%</small><small>${esc((x.ind||"").slice(0,22))}</small></button>`}).join("")||'<p class="note">None today.</p>'}</div>`;
 /* 3. what the price asks for (reverse DCF from the old NSE terminal) */
 const G=(M.growth||{}).rows||[];if(G.length){const room=G.slice(0,8),stretch=G.slice(-6).reverse();
-  const tr=r=>`<tr><td><button class="link" data-s="${esc(r.s)}">${esc(r.s)}</button></td><td class="n">${p(r.g_impl,1)}</td><td class="n">${p(r.g_sus,1)}</td><td class="n ${r.g_impl<=r.g_sus?"good":"bad"}">${p(r.g_impl-r.g_sus,1)}</td></tr>`;
-  const hd=`<tr><th>Stock</th><th class="n">Growth the price needs</th><th class="n">Growth it can sustain</th><th class="n">Gap</th></tr>`;
-  h+=`<h3>What the price asks for (Nifty 50)</h3><p class="note">The price implies a yearly growth rate; the company can sustain about ROE × the share of profit it keeps. Needing less than it can sustain = room for error. Fundamentals as of ${esc((M.growth||{}).asof||"")}.</p>
-  <div class="sgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px"><div><b class="good">Most room</b><div class="tw"><table>${hd}${room.map(tr).join("")}</table></div></div><div><b class="bad">Most stretched</b><div class="tw"><table>${hd}${stretch.map(tr).join("")}</table></div></div></div>`}
+  const mx=Math.max(...G.map(r=>Math.abs(r.g_impl-r.g_sus)).filter(isFinite),0.01);
+  const bar=r=>{const g=r.g_impl-r.g_sus,w=Math.min(50,Math.abs(g)/mx*50);return `<button class="dbar" data-s="${esc(r.s)}"><span class="dl">${esc(r.s)}</span><span class="dt"><i class="${g<=0?"gd":"bd"}" style="${g<=0?"right":"left"}:50%;width:${w}%"></i></span><span class="dv ${g<=0?"good":"bad"}">${p(g,0)}</span></button>`};
+  h+=`<h3>What the price asks for (Nifty 50)</h3><p class="note">Green bar = the price needs less growth than the company can sustain (room for error). Red = the price asks for more. Tap a name to analyze it. Fundamentals as of ${esc((M.growth||{}).asof||"")}.</p>
+  <div class="dbars">${room.map(bar).join("")}<div class="dsep"></div>${stretch.map(bar).join("")}</div>`}
 /* 4. macro, sectors, global */
 if((M.tiles||[]).length)h+=`<h3>India macro</h3><div class="mtiles">${M.tiles.map(t=>`<div class="mt"><span>${esc(t.name)}</span><b>${f(t.v)}${esc(t.unit)}</b><small>${esc(t.m)} · ${t.y>0?"+":""}${f(t.y)} on a year ago</small></div>`).join("")}${M.flows?`<div class="mt"><span>FII net, ${esc(M.flows.d)}</span><b class="${M.flows.fii>0?"up":"down"}">₹${f(M.flows.fii,0)} Cr</b><small>DII ₹${f(M.flows.dii,0)} Cr</small></div>`:""}</div>`;
-if((M.sectors||[]).length)h+=`<h3>Sector valuations (P/E vs own median)</h3><div class="tw"><table><tr><th>Sector</th><th class="n">P/E</th><th class="n">Median</th><th class="n">vs median</th><th class="n">Day</th></tr>${M.sectors.map(s=>`<tr><td>${esc(s.name)}</td><td class="n">${f(s.pe,1)}</td><td class="n">${f(s.med,1)}</td><td class="n ${s.prem<0?"up":"down"}">${p(s.prem,0)}</td><td class="n ${s.chg>0?"up":s.chg<0?"down":""}">${p(s.chg,2)}</td></tr>`).join("")}</table></div><p class="note">Green = cheaper than its own history. P/E = NSE's last published index P/E scaled to today's close (${esc(M.asof||"")}).</p>`;
+if((M.sectors||[]).length){const sx=Math.max(...M.sectors.map(x=>Math.abs(x.prem||0)),0.01);h+=`<h3>Sector valuations: cheap or dear vs their own history</h3><div class="dbars">${M.sectors.slice().sort((a,b)=>(a.prem||0)-(b.prem||0)).map(x=>{const w=Math.min(50,Math.abs(x.prem||0)/sx*50);return `<div class="dbar"><span class="dl">${esc(x.name.replace(/^Nifty /,""))}</span><span class="dt"><i class="${x.prem<0?"gd":"bd"}" style="${x.prem<0?"right":"left"}:50%;width:${w}%"></i></span><span class="dv ${x.prem<0?"good":"bad"}">${p(x.prem,0)}</span></div>`}).join("")}</div><p class="note">P/E vs its own median. Green = cheaper than usual. NSE's last published index P/E scaled to today's close (${esc(M.asof||"")}).</p>`}
 if((M.glob||[]).length)h+=`<h3>Global</h3><div class="mtiles">${M.glob.map(g=>`<div class="mt"><span>${esc(g.name)}</span><b>${f(g.v,g.v<50?2:0)}</b><small class="${g.m1>0?"up":"down"}">${p(g.m1)} in a month · ${esc(g.d)}</small></div>`).join("")}</div>`;
 el.innerHTML=h||'<p class="note">Macro data appears after the next refresh.</p>';
 el.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.s)}});
@@ -488,11 +499,11 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     # Stocks tab (ADARSH 26 Nov): the Terminal tab is index-first (market view, trading ideas, markets board); every
     # stock list lives on Stocks, which is the same #term section with the stock half shown instead of the index half.
     html = html.replace('aria-selected="true">Terminal</button>',
-                        'aria-selected="true">Terminal</button><button class="tab" role="tab" data-t="stk" aria-selected="false">Stocks</button>', 1)
+                        'aria-selected="true">Terminal</button><button class="tab" role="tab" data-t="ide" aria-selected="false">Ideas</button><button class="tab" role="tab" data-t="stk" aria-selected="false">Stocks</button>', 1)
     html = html.replace('const r=t==="research";if(r)t="screener";',
-                        'const r=t==="research";if(r)t="screener";const sk=t==="stk";if(sk)t="term";$("term").classList.toggle("stk",sk);const hh=sk?"stk":t;', 1)
+                        'const r=t==="research";if(r)t="screener";const sk=t==="stk",ide=t==="ide";if(sk||ide)t="term";$("term").classList.toggle("stk",sk);$("term").classList.toggle("ide",ide);const hh=sk?"stk":ide?"ide":t;', 1)
     html = html.replace('if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}', 'if(location.hash!=="#"+hh)history.replaceState(null,"","#"+hh)}', 1)
-    html = html.replace('const pick=h=>(!h||h==="term"||h==="terminal")?"term":', 'const pick=h=>(!h||h==="term"||h==="terminal")?"term":(h==="stk"||h==="stocks")?"stk":', 1)
+    html = html.replace('const pick=h=>(!h||h==="term"||h==="terminal")?"term":', 'const pick=h=>(!h||h==="term"||h==="terminal")?"term":(h==="stk"||h==="stocks")?"stk":(h==="ide"||h==="ideas")?"ide":', 1)
     for a, b in (("Best evidence", "Top picks"), ("Tested setups today", "Setups today"),
                  ("Turning bullish (tested signals)", "Turning bullish"), ("Dips in proven stocks", "Dips in strong stocks")):
         html = html.replace(a, b)
@@ -515,7 +526,7 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     k = html.rfind("</body>")
     k = k if k >= 0 else len(html)
     html = html[:k] + theme + html[k:]
-    for must in ('data-t="stk"', 'const sk=t==="stk"', 'h==="stocks"', 'data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
+    for must in ('data-t="stk"', 'data-t="ide"', 'const sk=t==="stk",ide=t==="ide"', 'h==="stocks"', 'data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
         if must not in html:
             raise RuntimeError(f"desk page changed shape; could not insert the Terminal tab ({must})")
     import page_feed                                    # newer nightly data from aj-live, no republish needed
