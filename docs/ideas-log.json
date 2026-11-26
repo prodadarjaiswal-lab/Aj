@@ -1,0 +1,67 @@
+{
+ "since": "2026-11-25",
+ "trades": [
+  {
+   "k": "nifty_condor",
+   "d": "2026-11-25",
+   "px": 25819.25,
+   "legs": {
+    "sc": 27150,
+    "sp": 24550,
+    "lc": 28600,
+    "lp": 23300,
+    "credit": 175.4,
+    "max_loss": 1274.6
+   },
+   "exit": null
+  },
+  {
+   "k": "nifty_condor_tight",
+   "d": "2026-11-25",
+   "px": 25819.25,
+   "legs": {
+    "sc": 27150,
+    "sp": 24550,
+    "lc": 27250,
+    "lp": 24450,
+    "credit": 26.0,
+    "max_loss": 74.0
+   },
+   "exit": null
+  }
+ ],
+ "summary": {
+  "nifty_condor": {
+   "closed": 0,
+   "won": 0,
+   "pts": 0,
+   "open": {
+    "d": "2026-11-25",
+    "legs": {
+     "sc": 27150,
+     "sp": 24550,
+     "lc": 28600,
+     "lp": 23300,
+     "credit": 175.4,
+     "max_loss": 1274.6
+    }
+   }
+  },
+  "nifty_condor_tight": {
+   "closed": 0,
+   "won": 0,
+   "pts": 0,
+   "open": {
+    "d": "2026-11-25",
+    "legs": {
+     "sc": 27150,
+     "sp": 24550,
+     "lc": 27250,
+     "lp": 24450,
+     "credit": 26.0,
+     "max_loss": 74.0
+    }
+   }
+  }
+ }
+}
