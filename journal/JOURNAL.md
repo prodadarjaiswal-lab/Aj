@@ -1,6 +1,6 @@
 # Evidence Desk journal
 
-Last updated by the daily run: **26 Nov 2026 22:19 IST**, market data as of the close of **2026-11-26**. This file is rebuilt automatically every run. Research software, not advice.
+Last updated by the daily run: **26 Nov 2026 22:27 IST**, market data as of the close of **2026-11-26**. This file is rebuilt automatically every run. Research software, not advice.
 
 ## Today in one paragraph
 
@@ -8,32 +8,31 @@ Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its ris
 
 ## Today's playbook (feeds the Trading Terminal)
 
-**Market type: choppy** since 2026-11-05. Choppy market: Nifty and its 200-day average disagree (a turn may be under way). The terminal's at-a-glance cards, its screen order and the back-test picks all follow this section, and the trade plans skip any signal the back-test warns against in this market type. Rebuilt every run, so it changes when the market type changes or the evidence moves.
+**Market type: rising** since 2026-11-11. Rising market: Nifty above its 200-day average and up 3%+ over 63 sessions. The terminal's at-a-glance cards, its screen order and the back-test picks all follow this section, and the trade plans skip any signal the back-test warns against in this market type. Rebuilt every run, so it changes when the market type changes or the evidence moves.
 
 Grades: **proven** passed every check including the many-ideas correction; **leaning** was positive before and after the cut-off in this market type (t 1.5+ both times) and beat the Nifty after charges, but has not survived the many-ideas correction, so it is a lead; **avoid** was reliably worse than the average stock in this market type.
 
-### Favoured in a choppy market
+### Favoured in a rising market
 
 | Indicator | grade | vs average stock after | t | vs Nifty after charges | cases | before cut-off | fired today |
 |---|---|---|---|---|---|---|---|
-| Down 10%+ in 5 days | leaning | +1.5% | 1.94 | +2.9% | 1212 | +1.1% (t 1.52) | HFCL, IIFL, LLOYDSME, STLTECH, TTML |
+| New 52-week closing high on 1.5x average volume | leaning | +1.5% | 2.75 | +2.1% | 4475 | +0.9% (t 1.6) | ACE, ANANDRATHI, BAJAJHLDNG, MCX, PRESTIGE |
+| Relative strength line vs Nifty at a 1-year high | leaning | +1.1% | 2.26 | +1.7% | 2958 | +1.0% (t 1.89) | none |
+| Up 10%+ in 10 days | leaning | +0.9% | 3.17 | +1.4% | 4021 | +0.5% (t 2.07) | ABSLAMC, ACE, ANURAS, BRIGADE, DOMS, GODREJPROP, JWL, PRESTIGE |
+| Up day on 2x the 50-day average volume | leaning | +0.4% | 1.59 | +1.1% | 8556 | +0.6% (t 2.59) | ACE, APLAPOLLO, BALRAMCHIN, BRIGADE, BRITANNIA, DEEPAKFERT, DOMS, ENRIN, FACT, HDFCBANK, HEGAM, J&KBANK +10 |
 
-### Warnings in a choppy market
+### Warnings in a rising market
 
 | Indicator | grade | vs average stock after | t | vs Nifty after charges | cases | before cut-off | fired today |
 |---|---|---|---|---|---|---|---|
-| Within 3% of the 52-week high, first day | avoid | -3.3% | -1.83 | -2.7% | 573 | -0.5% (t -0.84) | 360ONE, ACE, ACUTAAS, BAJAJHLDNG, CRAFTSMAN, JSWINFRA, MCX, NAVINFLUOR, PRESTIGE, RKFORGE, TECHM |
-| New 52-week closing high | avoid | -2.9% | -2.25 | -2.3% | 515 | -1.1% (t -1.75) | ABDL, ACE, ACUTAAS, ANANDRATHI, ANGELONE, BAJAJHLDNG, MCX, PRESTIGE, TECHM, UNOMINDA |
-| RSI(14) crosses above 70 (momentum) | avoid | -2.1% | -1.52 | -1.7% | 570 | -0.5% (t -0.72) | ACE, ANANDRATHI, ANTHEM, BRIGADE, DOMS, GODREJPROP, HDFCBANK, PRESTIGE, RELIANCE, TCS, TORNTPHARM |
-| New 52-week closing high on 1.5x average volume | avoid | -2.1% | -1.81 | -1.5% | 433 | -1.6% (t -1.9) | ACE, ANANDRATHI, BAJAJHLDNG, MCX, PRESTIGE |
-| Relative strength line vs Nifty at a 1-year high | avoid | -1.7% | -1.61 | -1.0% | 731 | -0.5% (t -0.99) | none |
-| Close crosses above the 200-day average | avoid | -1.3% | -1.74 | -0.6% | 1011 | -0.2% (t -0.42) | ABREL, CAMS, INFY, LICI, LTM, SBILIFE, TDPOWERSYS |
-| Supertrend(10, 3) turns up | avoid | -0.6% | -1.6 | -0.2% | 752 | -0.7% (t -0.92) | CHOICEIN, SAGILITY, WIPRO |
-| Relative strength line crosses above its 50-day average | avoid | -0.5% | -1.7 | +0.1% | 2197 | -0.7% (t -2.98) | 360ONE, ACE, ANTHEM, BRIGADE, BSE, COHANCE, DEEPAKFERT, DOMS, GLAND, HCLTECH, HEGAM, HEROMOTOCO +10 |
+| Close back inside the lower Bollinger band | avoid | -1.4% | -2.3 | -0.1% | 2496 | -0.2% (t -0.47) | JBMA, KEI, MRPL, NATIONALUM, NTPCGREEN, PFOCUS, TARIL, TATAPOWER, TATASTEEL |
+| Factor: bottom 10% by 12-1 month return (losers) | avoid | -1.3% | -2.23 | -0.1% | 705 | -0.9% (t -1.8) | ABREL, ACC, AFCONS, AMBUJACEM, AWL, BATAINDIA, BDL, BLS, CHOLAHLDNG, COCHINSHIP, EIDPARRY, FIRSTCRY +37 |
+| Factor: bottom 10% by last month's return (short-term reversal) | avoid | -1.0% | -1.85 | +0.1% | 705 | -0.5% (t -1.4) | APLAPOLLO, APTUS, ASTRAL, AZAD, BHARTIHEXA, CAPLIPOINT, CARBORUNIV, CARTRADE, CHENNPETRO, CLEAN, CONCORDBIO, CRISIL +37 |
+| Close above a rising 200-day average, first day | avoid | -0.8% | -1.87 | +0.2% | 1231 | -0.1% (t -0.26) | CIPLA, ENDURANCE, GMRAIRPORT, GODREJPROP, INDUSINDBK, TDPOWERSYS |
 
 ### Market type history (from this journal)
 
-- 2026-11-26 to 2026-11-26: choppy (1 indicators favoured at the start)
+- 2026-11-26 to 2026-11-26: rising (4 indicators favoured at the start)
 
 ## Which indicators work (back-test)
 
@@ -330,7 +329,7 @@ Desk picks bought at 09:30, 12:30 or 15:00 on each of the last 22 sessions (2026
 
 ## Daily log, newest first
 
-- **2026-11-26** (run 26 Nov 2026 22:19 IST): Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 8 for rising markets, 1 for weak markets. Trade plans printed: 81, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 634 (26 closed, 608 open).
+- **2026-11-26** (run 26 Nov 2026 22:27 IST): Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 8 for rising markets, 1 for weak markets. Trade plans printed: 81, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 634 (26 closed, 608 open).
 
 ## How the desk works
 
