@@ -199,6 +199,7 @@ CLEAN_CSS = """
 #term .eye p.sm{margin:6px 0 0}
 details.sec{margin:14px 0 4px}details.sec>summary{cursor:pointer;list-style:none}details.sec>summary h2{display:inline}details.sec>summary::after{content:" ▸ tap for every detail";font-size:12px;color:var(--mute,#8b949e)}details.sec[open]>summary::after{content:" ▾"}#newsx .ni{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;margin:8px 0;color:inherit;cursor:pointer}#newsx .ni b{margin-right:8px}#newsx .eff{font-size:12px;margin-top:4px}
 .pc .odds{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line);margin:6px 0 2px}.pc .odds i{display:block;background:var(--line)}.pc .odds i.gd{background:#22a06b}.pc .odds i.bd{background:#e5484d}
+.pgtabs{display:flex;gap:6px;flex-wrap:wrap}#term .rt{width:100%}#term .rt td.on{outline:2px solid var(--accent);font-weight:600}#term .rt td.g{color:var(--up)}#term .rt td.b{color:var(--down)}
 .pcg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:8px 0}.pc{display:block;width:100%;text-align:left;font:inherit;background:var(--card,#141a1f);border:1px solid var(--line,#2a333b);border-radius:10px;padding:10px;color:inherit;cursor:pointer}.pc .pct{display:flex;justify-content:space-between;align-items:baseline}.pc .spk{display:block;width:100%;height:34px;margin:6px 0}.pc .pl{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;margin-top:4px}.pcw h4{margin:0 0 4px}#tm-move h4{margin:10px 0 4px}
 #term:not(.stk) .tm-stk,#term:not(.ide) .tm-ide,#term.stk .tm-idx,#term.ide .tm-idx{display:none!important}
 #screener>*:not(#newsx){display:none!important}
@@ -417,7 +418,12 @@ def play_summary(root: Path) -> dict | None:
     # every indicator's out-of-sample result in today's market type, so each screen card can show its own evidence
     ev = {k: [round((r.get("out_" + mt) or {}).get("abn") or 0, 5), (r.get("out_" + mt) or {}).get("n", 0)]
           for k, r in ind.items() if (r.get("out_" + mt) or {}).get("n", 0) >= 60}
-    return {"asof": pb.get("asof"), "type": mt, "label": pb.get("label"), "since": pb.get("since"),
+    # the trader-skill setups' lab twins, out of sample in every market type (21-day return vs the average stock)
+    tw = {"breakout_20d": "don20", "reclaim_ma20": "x_sma20", "oversold_bounce": "rsi14_x30", "rsi2_dip": "rsi2_5", "momentum70": "rsi14_x70"}
+    setups = {s: {"name": (ind.get(k) or {}).get("name"), **{t: [round((((ind.get(k) or {}).get("out_" + t) or {}).get("abn") or 0), 5),
+                                                             (((ind.get(k) or {}).get("out_" + t) or {}).get("n") or 0)] for t in ("rising", "flat", "turning", "falling")}}
+              for s, k in tw.items() if k in ind}
+    return {"asof": pb.get("asof"), "type": mt, "label": pb.get("label"), "since": pb.get("since"), "setups": setups,
             "use": [slim(x) for x in pb.get("use", [])[:10]], "avoid": [slim(x) for x in pb.get("avoid", [])[:6]],
             "fired": {k: v[:40] for k, v in (pb.get("fired") or {}).items()},
             "warned": {k: v[:40] for k, v in (pb.get("warned") or {}).items()}, "ev": ev,
