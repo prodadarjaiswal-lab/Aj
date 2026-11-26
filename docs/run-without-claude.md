@@ -6,7 +6,8 @@
 |---|---|---|
 | Live prices, every 5 s, 09:15 to 15:30 IST (plus Telegram alerts and bot replies) | GitHub Actions `live-feed.yml`, writes `live.json` to the public repo `aj-live` | Outside timer at 09:00 IST. Backup: GitHub's own clock, every 15 min from 08:45 to 10:15 IST, then 11:30 and 13:30 |
 | Close, screens, value, journal | GitHub Actions `dhan-refresh.yml` | Outside timer at 16:20 IST. Backup: GitHub's own clock at 17:00 and 20:00 IST |
-| The terminal page reading those prices | The artifact in your browser, through the GitHub connector | Opening the page |
+| Page data (screens, Value tab, charts) | Same nightly run, to `aj-live` branch `page` | The refresh |
+| The terminal page reading all of it | The artifact in your browser, through the GitHub connector | Opening the page |
 
 Every start first runs `scripts/dhan_refresh/run_guard.py`, which stops spare starts: never two live feeds at once,
 no backup live start after 15:25 or at weekends, and no backup refresh once today's close is saved.
@@ -47,9 +48,11 @@ cron-job.org is a free timer that fires to the minute and emails you if a start 
 ## What still needs Claude
 
 - Changing the page itself (layout, new tabs). That is the "updates" job.
-- Today the screen lists, value tab and closing prices inside the page only change when the page is republished.
-  Live prices tick without it. Moving the nightly lists into `aj-live` so the page reads them on open
-  removes this last daily Claude step.
+- Nothing else. Each night the refresh also sends the page's data (screens, Value tab, playbook, charts) to
+  `aj-live`, branch `page` (`page_feed.py`, `push_page_feed.sh`). When the page is opened on claude.ai it checks
+  that branch through the GitHub connector; if the data is newer than the page it saves it in the browser and
+  reloads once (a small note says "Data updated automatically"). If that fails it shows what was baked in.
+  To send the page data by hand: Actions, Dhan nightly refresh, Run workflow, tick "page_only".
 
 ## Costs and limits
 
