@@ -25,6 +25,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/dhan_refresh/run_guard.py live
+      - name: Start the morning ideas re-test (first run of the day only)
+        if: steps.guard.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(TZ=Asia/Kolkata date +%H%M)
+          # the 09:00 start re-tests the trading ideas in a separate short job, so the desk has a fresh
+          # pre-open view by about 09:10 IST; later starts (hand-overs, backups) skip this
+          if [ "$now" -lt 1000 ]; then
+            gh api -X POST repos/${{ github.repository }}/actions/workflows/dhan-refresh.yml/dispatches \
+              -f ref=main -f 'inputs[view_only]=true' || echo "::warning::could not start the ideas re-test"
+          fi
       - uses: actions/setup-python@v6
         if: steps.guard.outputs.go == 'true'
         with:

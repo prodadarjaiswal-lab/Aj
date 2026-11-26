@@ -41,10 +41,8 @@ cron-job.org is a free timer that fires to the minute and emails you if a start 
    - Headers: `Authorization` = `Bearer <your token>`, `Accept` = `application/vnd.github+json`, `Content-Type` = `application/json`
    - Request body: `{"ref":"main"}`
    - Notifications: turn on "execution of the cronjob fails".
-   **Job 3, Aj morning ideas** (re-tests the trading ideas before the market opens): same URL as Job 2,
-   Schedule Custom: Mon to Fri, 08:00, Asia/Kolkata, same headers, request body
-   `{"ref":"main","inputs":{"view_only":"true"}}`. GitHub's own clock also starts it at 08:00 IST as a backup.
-   The evening re-test runs inside Job 2.
+   No third job is needed for the trading ideas: Job 1 (09:00) starts the morning re-test itself, and the
+   evening re-test runs inside Job 2.
 3. Press **Test run** on Job 1. GitHub answers `204` and a new run appears at
    https://github.com/prodadarjaiswal-lab/aj/actions/workflows/live-feed.yml (outside market hours it stops
    itself within a minute; that is expected).
