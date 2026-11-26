@@ -1,0 +1,25 @@
+{
+ "note": "Hand-written summary of widely reported causes. Current fall: news of 6-20 Nov 2026 and the earlier Gold Desk / Gold: What Next pages. Past falls: standard market history. Edit this file to change the text; the daily run keeps it.",
+ "current": {
+  "title": "Why gold fell about 30% from the January 2026 record",
+  "points": [
+   "A blow-off top: gold ran to a record on 29 January 2026 after a near-vertical rally, then fell about a quarter by mid-year as ETF investors sold.",
+   "Rates went the wrong way for gold: the Fed raised rates a quarter point in September, the US 10-year yield went above 5% in October, and Fed speakers in November kept a December hike on the table.",
+   "A firm dollar: a 1% rise in the dollar index has gone with roughly a 1% fall in dollar gold since 2001.",
+   "Liquidation in the 16-20 November sell-off: an AI-led stock rout pushed funds to sell gold with equities to raise cash; gold fell about 9% in the week, its worst in eight months, to a 14-month low near $3,515.",
+   "Central-bank buying slowed at the higher prices, removing part of the floor that had held since 2022."
+  ],
+  "holding_up": "Central banks still bought on dips (321 t in Jul-Sep 2026), the rupee kept weakening, which cushions gold in rupees, and Middle East tensions keep a safe-haven bid in the background.",
+  "sources": "Reuters and Kitco, 20 Nov 2026; Newsweek, 20 Nov 2026; World Gold Council Q3 2026; earlier Gold Desk pages (6-7 Nov 2026)."
+ },
+ "falls": {
+  "2008": {"cause": "Global financial crisis: funds sold everything for cash and the dollar surged.", "back": "Fed cut to near zero and began QE; gold made new highs by 2009."},
+  "2009": {"cause": "Pause after the 2008-09 rebound; a firmer dollar and rupee.", "back": "Euro debt worries and loose money revived buying."},
+  "2012": {"cause": "Euro crisis eased, the US recovery firmed and the Fed signalled the end of QE (the 2013 taper scare); ETFs dumped gold in the April 2013 crash.", "back": "Took until 2019: Fed rate cuts, negative bond yields abroad and steady central-bank buying."},
+  "2013": {"cause": "Taper scare and record ETF outflows.", "back": "Fed cuts in 2019."},
+  "2020-03": {"cause": "COVID dash for cash: gold was sold with everything else.", "back": "Unlimited Fed QE and zero rates; recovered within two weeks."},
+  "2020-08": {"cause": "Vaccines and reopening lifted real yields from record lows and pulled money back into stocks.", "back": "Record central-bank buying after the 2022 Russia sanctions, then the March 2023 US bank failures."},
+  "2025-10": {"cause": "Profit-taking after a stretched record run.", "back": "Central-bank and ETF buying resumed; new highs by December 2025."},
+  "2026": {"cause": "See above: blow-off top, Fed hikes, 5% yields, firm dollar, AI-rout liquidation.", "back": "Not yet recovered."}
+ }
+}
