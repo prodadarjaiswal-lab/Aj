@@ -18,7 +18,6 @@ on:
   schedule:                    # backup clock; run_guard.py stops it if a refresh already ran since the close
     - cron: "30 11 * * 1-5"    # 17:00 IST
     - cron: "30 14 * * 1-5"    # 20:00 IST
-    - cron: "30 2 * * 1-5"     # 08:00 IST: morning market-view re-test only (backup to the outside timer at 08:00)
 
 permissions:
   contents: write
@@ -29,7 +28,7 @@ concurrency:
 
 jobs:
   guard:
-    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only && github.event.schedule != '30 2 * * 1-5' }}
+    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -84,7 +83,7 @@ jobs:
           git push
 
   view:
-    if: ${{ inputs.view_only || github.event.schedule == '30 2 * * 1-5' }}
+    if: ${{ inputs.view_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
