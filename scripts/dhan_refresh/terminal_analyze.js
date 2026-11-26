@@ -22,7 +22,7 @@ const find=q=>{q=String(q||"").trim();if(!q)return null;if(INS[q])return INS[q];
   const s=u.split(" · ")[0].trim();if(INS[s])return INS[s];return Object.values(INS).find(x=>x.k.toUpperCase()===s||x.name.toUpperCase()===u)||null};
 
 /* ---------- prices ---------- */
-function live(x){const q=window.TLIVE;let a=q&&x.sid!=null&&(q[x.seg]||{})[String(x.sid)];if(a&&a[0])return{ltp:a[0],pc:a[4]||null,t:window.TLIVE_T};
+function live(x){const q=window.TLIVE;let a=q&&x.sid!=null&&(q[x.seg]||{})[String(x.sid)];if(a&&a[0]){const R0=((D.rs||{}).stocks||{})[x.k]||{},done=String(window.TLIVE_T||"").slice(0,10)===(D.rs||{}).pcd;return{ltp:a[0],pc:done?(R0.pc||null):(a[4]||null),t:window.TLIVE_T}}
   const e=typeof LIVE!=="undefined"&&LIVE.eq&&LIVE.eq[x.k];return e&&e.ltp?{ltp:e.ltp,pc:e.pc||null,t:LIVE.t}:null}
 function closes(x){
   if(x.mk){const h=x.mk.hist;if(h&&h.c&&h.c.length>20)return{c:h.c.slice(),d:h.d.slice()};return{c:(x.mk.spark||[]).slice(),d:null}}

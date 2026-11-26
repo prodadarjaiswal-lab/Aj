@@ -365,7 +365,42 @@ def markets(dhan, scrip_csv: str, now) -> dict:
         seg, sid, sym, exp = fut[name]
         r = row(name, MK.NAMES[name], seg, "FUTCOM", sid, {"contract": sym, "expiry": exp.isoformat()})
         r and out["groups"]["MCX"].append(r)
+    add_today_close(dhan, out, now)
     return out
+
+
+def add_today_close(dhan, out: dict, now) -> int:
+    """Dhan's daily history gets today's bar only hours after the close, so an evening run would show
+    yesterday's close. Like refresh.append_today, add today's close from the quote API after 15:35 IST."""
+    import refresh as R
+    day = now.date().isoformat()
+    if now.weekday() >= 5 or now.timetz().replace(tzinfo=None) < R.CLOSE_DONE:
+        return 0
+    rows = [r for g in ("Indices", "ETFs") for r in out["groups"][g] if r.get("d", day) < day]
+    if not rows:
+        return 0
+    try:
+        qs = R.quotes(dhan, [r["sid"] for r in rows if r["seg"] == "NSE_EQ"], [r["sid"] for r in rows if r["seg"] == "IDX_I"])
+    except Exception as e:
+        print(f"  markets: could not add today's close from quotes: {str(e)[:120]}")
+        return 0
+    n = 0
+    for r in rows:
+        q = qs.get((r["seg"], str(r["sid"])))
+        if not q or q[3] <= 0 or q[0] <= 0 or abs(q[3] / r["last"] - 1) < 1e-6:  # holiday: quote repeats last close
+            continue
+        ltp = q[3]
+        c = list(r["spark"]) + [ltp]
+        r.update(prev=r["last"], last=ltp, d=day, chg=round(ltp / r["last"] - 1, 5), spark=c[-60:])
+        if r.get("hist"):
+            r["hist"] = {"d": r["hist"]["d"] + [day], "c": r["hist"]["c"] + [ltp]}
+        if len(c) > 5:
+            r["r5"] = round(c[-1] / c[-6] - 1, 4)
+        if len(c) > 21:
+            r["r21"] = round(c[-1] / c[-22] - 1, 4)
+        n += 1
+    print(f"  markets: added today's close to {n} rows", flush=True)
+    return n
 
 
 def main() -> int:
