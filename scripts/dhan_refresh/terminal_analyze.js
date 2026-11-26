@@ -302,7 +302,7 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
     if(!L.length)return o.k==="bank_pair_flat"?"Not active: the market is not flat today.":"Not active: no spread is stretched 2 standard deviations today.";
     return"Active now: "+L.map(x=>`${x.side>0?"buy":"sell"} <button class="lnk" data-mk="${E(x.k)}">${E(x.k)}</button>, ${x.side>0?"sell":"buy"} ${F(x.beta,2)}x Nifty${x.z!=null?` (gap ${F(x.z,1)} sd)`:""}`).join("; ")};
   const idc=(V.ideas||[]).map(o=>`<div class="spnl idea"><h3>${E(o.t)} <span class="pill ${tag[o.v]||""}">${E(o.v==="HOLDS"?"Tested: holds":o.v==="FAILS"?"Tested: fails":"Watch, not proven")}</span></h3>
-    <p class="sm">${E(o.p)} ${E(o.hedge||"")}</p><p><b>${idv(o)}</b></p>
+    <p class="sm">${E(o.p)} ${E(o.hedge||"")}</p>${o.v==="HOLDS"?`<p><b>${idv(o)}</b></p>`:`<p class="sm">${o.v==="FAILS"?"Fired today, not traded (failed the test)":"Fired today, watch only (not proven)"}: ${idv(o).replace(/^(Active now|Today): /,"")}</p>`}
     <p class="sm">Back-test since ${E(D_(V.oos_from))}: ${pc(o.oos.raw_mean,2)} a trade${o.k==="nifty_condor"?" on the capped loss":""}, right ${sh(o.oos.hit)} of ${o.oos.n} trades (before: ${pc(o.is.raw_mean,2)}, right ${sh(o.is.hit)} of ${o.is.n}). ${E(o.sizing||"")} ${E(o.note||"")}</p></div>`).join("");
   const rk=V.risk.length?`<details class="spnl wide"><summary><b>Risk and return, last 3 years</b> <span class="sm">Sharpe, worst fall, beta and correlation to the Nifty for every index and NSE factor index</span></summary>
     <div class="scroll"><table><tr><th>Index</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Beta</th><th class="n">Corr</th></tr>
