@@ -65,5 +65,66 @@
    "no longer passes in weak markets: Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days",
    "no longer passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
   ]
+ },
+ {
+  "asof": "2026-11-23",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag",
+   "downtrend"
+  ],
+  "weak": [
+   "gap",
+   "qdd_hold",
+   "os14"
+  ],
+  "changes": [
+   "now passes in weak markets: Proven stock 25% below its 52-week high, first close back above its 20-day average",
+   "now passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)"
+  ]
+ },
+ {
+  "asof": "2026-11-25",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [
+   "gap"
+  ],
+  "changes": [
+   "no longer passes in weak markets: Proven stock 25% below its 52-week high, first close back above its 20-day average",
+   "no longer passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)",
+   "no longer passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
+  ]
+ },
+ {
+  "asof": "2026-11-26",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "volbreak",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [
+   "gap"
+  ],
+  "changes": [
+   "now passes in rising markets: Volume breakout above the 20-day high (existing setup)"
+  ]
  }
 ]

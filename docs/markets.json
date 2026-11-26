@@ -1,135 +1,135 @@
 {
- "asof": "2026-11-20 23:59",
+ "asof": "2026-11-26 21:01",
  "source": "Dhan",
  "futures": {
   "GOLD": {
    "name": "Gold (MCX, Rs/10 g)",
    "contract": "GOLD-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 121949.0,
-   "prev": 121778.0,
-   "chg": 0.0014,
-   "oi": 11511,
-   "high": 123975,
-   "low": 121424
+   "ltp": 122273.0,
+   "prev": 121137.0,
+   "chg": 0.00938,
+   "oi": 7010,
+   "high": 123888,
+   "low": 121478
   },
   "SILVER": {
    "name": "Silver (MCX, Rs/kg)",
    "contract": "SILVER-04DEC2026-FUT",
    "expiry": "2026-12-04",
-   "ltp": 148900.0,
-   "prev": 147813.0,
-   "chg": 0.00735,
-   "oi": 14455,
-   "high": 153100,
-   "low": 146868
-  },
-  "NATURALGAS": {
-   "name": "Natural gas (MCX, Rs/mmBtu)",
-   "contract": "NATURALGAS-24NOV2026-FUT",
-   "expiry": "2026-11-24",
-   "ltp": 306.3,
-   "prev": 306.6,
-   "chg": -0.00098,
-   "oi": 10560,
-   "high": 311,
-   "low": 292.2
+   "ltp": 146235.0,
+   "prev": 142517.0,
+   "chg": 0.02609,
+   "oi": 8879,
+   "high": 148801,
+   "low": 145265
   },
   "CRUDEOIL": {
    "name": "Crude oil (MCX, Rs/bbl)",
    "contract": "CRUDEOIL-18DEC2026-FUT",
    "expiry": "2026-12-18",
-   "ltp": 7720.0,
-   "prev": 7807.0,
-   "chg": -0.01114,
-   "oi": 8866,
-   "high": 7787,
-   "low": 7508
+   "ltp": 7874.0,
+   "prev": 7759.0,
+   "chg": 0.01482,
+   "oi": 8391,
+   "high": 7935,
+   "low": 7720
+  },
+  "NATURALGAS": {
+   "name": "Natural gas (MCX, Rs/mmBtu)",
+   "contract": "NATURALGAS-28DEC2026-FUT",
+   "expiry": "2026-12-28",
+   "ltp": 337.6,
+   "prev": 343.8,
+   "chg": -0.01803,
+   "oi": 20100,
+   "high": 343.6,
+   "low": 332.7
   },
   "COPPER": {
    "name": "Copper (MCX, Rs/kg)",
    "contract": "COPPER-30NOV2026-FUT",
    "expiry": "2026-11-30",
-   "ltp": 1154.0,
-   "prev": 1152.9,
-   "chg": 0.00095,
-   "oi": 4987,
-   "high": 1180,
-   "low": 1141.45
+   "ltp": 1134.5,
+   "prev": 1127.15,
+   "chg": 0.00652,
+   "oi": 1864,
+   "high": 1144,
+   "low": 1128.5
   }
  },
  "news": {},
  "movers": [
   {
-   "s": "MTARTECH",
-   "r1": -0.057,
-   "last": 5614.5,
+   "s": "MAHABANK",
+   "r1": -0.0457,
+   "last": 94.2,
    "headlines": []
   },
   {
-   "s": "PFOCUS",
-   "r1": -0.0541,
-   "last": 252.7,
+   "s": "INDIACEM",
+   "r1": -0.0438,
+   "last": 309.75,
    "headlines": []
   },
   {
-   "s": "IIFL",
-   "r1": -0.0504,
-   "last": 611.95,
+   "s": "IKS",
+   "r1": -0.0423,
+   "last": 1575.4,
    "headlines": []
   },
   {
-   "s": "STLTECH",
-   "r1": -0.05,
-   "last": 621.85,
+   "s": "PVRINOX",
+   "r1": -0.0416,
+   "last": 1638.2,
    "headlines": []
   },
   {
-   "s": "AETHER",
-   "r1": -0.0449,
-   "last": 1620.3,
+   "s": "TBOTEK",
+   "r1": -0.0411,
+   "last": 1483.0,
    "headlines": []
   },
   {
-   "s": "THANGAMAYL",
-   "r1": -0.0417,
-   "last": 3813.0,
+   "s": "LLOYDSME",
+   "r1": -0.0397,
+   "last": 1542.2,
    "headlines": []
   },
   {
-   "s": "INDUSINDBK",
-   "r1": 0.0859,
-   "last": 1003.0,
+   "s": "ACE",
+   "r1": 0.0879,
+   "last": 1295.0,
    "headlines": []
   },
   {
-   "s": "EIHOTEL",
-   "r1": 0.0779,
-   "last": 334.15,
+   "s": "PRESTIGE",
+   "r1": 0.0872,
+   "last": 1832.1,
    "headlines": []
   },
   {
-   "s": "NAVA",
-   "r1": 0.063,
-   "last": 563.95,
+   "s": "HEGAM",
+   "r1": 0.0863,
+   "last": 280.99,
    "headlines": []
   },
   {
-   "s": "CUB",
-   "r1": 0.0625,
-   "last": 248.8,
+   "s": "RUBICON",
+   "r1": 0.0819,
+   "last": 1851.7,
    "headlines": []
   },
   {
-   "s": "WELSPUNLIV",
-   "r1": 0.0618,
-   "last": 268.78,
+   "s": "MCX",
+   "r1": 0.0757,
+   "last": 3835.0,
    "headlines": []
   },
   {
-   "s": "ASTERDM",
-   "r1": 0.0541,
-   "last": 779.3,
+   "s": "WOCKPHARMA",
+   "r1": 0.0749,
+   "last": 2233.7,
    "headlines": []
   }
  ],
@@ -140,17 +140,17 @@
   "news CURRENCY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news GLOBAL: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
   "news INDIAN_ECONOMY: /data/newsheadline returned 401: {\"errorType\":\"Invalid_Acces",
-  "news MTARTECH: /data/newsheadline returned 401: {\"error",
-  "news PFOCUS: /data/newsheadline returned 401: {\"error",
-  "news IIFL: /data/newsheadline returned 401: {\"error",
-  "news STLTECH: /data/newsheadline returned 401: {\"error",
-  "news AETHER: /data/newsheadline returned 401: {\"error",
-  "news THANGAMAYL: /data/newsheadline returned 401: {\"error",
-  "news INDUSINDBK: /data/newsheadline returned 401: {\"error",
-  "news EIHOTEL: /data/newsheadline returned 401: {\"error",
-  "news NAVA: /data/newsheadline returned 401: {\"error",
-  "news CUB: /data/newsheadline returned 401: {\"error",
-  "news WELSPUNLIV: /data/newsheadline returned 401: {\"error",
-  "news ASTERDM: /data/newsheadline returned 401: {\"error"
+  "news MAHABANK: /data/newsheadline returned 401: {\"error",
+  "news INDIACEM: /data/newsheadline returned 401: {\"error",
+  "news IKS: /data/newsheadline returned 401: {\"error",
+  "news PVRINOX: /data/newsheadline returned 401: {\"error",
+  "news TBOTEK: /data/newsheadline returned 401: {\"error",
+  "news LLOYDSME: /data/newsheadline returned 401: {\"error",
+  "news ACE: /data/newsheadline returned 401: {\"error",
+  "news PRESTIGE: /data/newsheadline returned 401: {\"error",
+  "news HEGAM: /data/newsheadline returned 401: {\"error",
+  "news RUBICON: /data/newsheadline returned 401: {\"error",
+  "news MCX: /data/newsheadline returned 401: {\"error",
+  "news WOCKPHARMA: /data/newsheadline returned 401: {\"error"
  ]
 }

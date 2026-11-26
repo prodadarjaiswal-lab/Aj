@@ -57,3 +57,20 @@ def test_backtest_runs_on_synthetic_data():
     assert len(res["days"]) == 22
     assert res["grid"]["all"]["09:30"]["any"]["day"]["n"] > 0
     assert set(res["equity"]) == set(TB.CHECKS)
+
+
+def test_add_today_close_after_close_and_skips_holiday(monkeypatch):
+    import datetime as dt
+    import refresh as R
+    import terminal_bt as T
+    rows = [{"sid": 13, "seg": "IDX_I", "last": 100.0, "prev": 99.0, "d": "2026-11-25", "spark": [float(x) for x in range(78, 101)]},
+            {"sid": 7, "seg": "NSE_EQ", "last": 50.0, "prev": 49.0, "d": "2026-11-25", "spark": [50.0]}]
+    out = {"groups": {"Indices": [rows[0]], "ETFs": [rows[1]], "MCX": []}}
+    monkeypatch.setattr(R, "quotes", lambda dhan, eq, ix: {("IDX_I", "13"): (101, 103, 100, 102.0, 0), ("NSE_EQ", "7"): (50, 50, 50, 50.0, 0)})
+    early = dt.datetime(2026, 11, 26, 15, 0, tzinfo=R.IST)
+    assert T.add_today_close(None, out, early) == 0
+    late = dt.datetime(2026, 11, 26, 21, 0, tzinfo=R.IST)
+    assert T.add_today_close(None, out, late) == 1
+    assert rows[0]["d"] == "2026-11-26" and rows[0]["last"] == 102.0 and rows[0]["prev"] == 100.0
+    assert rows[0]["chg"] == 0.02 and rows[0]["spark"][-1] == 102.0
+    assert rows[1]["d"] == "2026-11-25"  # quote repeats the last close: holiday, unchanged

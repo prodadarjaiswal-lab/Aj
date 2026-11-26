@@ -1,12 +1,27 @@
 name: Dhan nightly refresh
 
 on:
-  workflow_dispatch:           # "Run workflow" button for a manual run
+  workflow_dispatch:           # "Run workflow" button, the outside timer (cron-job.org, 16:20 IST) or a Claude task
     inputs:
+      journal_only:
+        description: "Only rebuild the desk journal and indicator back-test (no desk refresh, no Telegram)"
+        type: boolean
+        default: false
+      view_only:
+        description: "Only rebuild the market view (back-tested beliefs, risk table, low-risk screen)"
+        type: boolean
+        default: false
+      page_only:
+        description: "Only rebuild the terminal page's data and send it to aj-live (no refresh, no Telegram)"
+        type: boolean
+        default: false
       only_gold:
         description: "Only rebuild the Gold desk (skip everything else)"
         type: boolean
         default: false
+  schedule:                    # backup clock; run_guard.py stops it if a refresh already ran since the close
+    - cron: "30 11 * * 1-5"    # 17:00 IST
+    - cron: "30 14 * * 1-5"    # 20:00 IST
 
 permissions:
   contents: write
@@ -16,7 +31,118 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only && !inputs.only_gold }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.guard.outputs.go }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Is this run needed?
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/dhan_refresh/run_guard.py refresh
+
+  page:
+    if: ${{ inputs.page_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Send the page's data to aj-live
+        env:
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+        run: bash scripts/dhan_refresh/push_page_feed.sh
+
+  journal:
+    if: ${{ inputs.journal_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3
+      - name: Desk journal and indicator back-test on Dhan history
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python journal.py
+      - name: Commit the journal
+        run: |
+          git add journal
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "Desk journal $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin "$GITHUB_REF_NAME"
+          git push
+
+  view:
+    if: ${{ inputs.view_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3
+      - name: Market view on Dhan history
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python market_view.py
+      - name: Commit the market view
+        run: |
+          git add docs/market-view.json docs/market-view.md
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "Market view $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin "$GITHUB_REF_NAME"
+          git push
+
+  gold:
+    if: ${{ inputs.only_gold }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3 pytest==8.3.3
+      - name: Gold desk (Dhan daily closes for GOLDBEES, MCX GOLD, Nifty)
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: |
+          python -m pytest -q scripts/dhan_refresh/tests/test_gold_desk.py
+          cd scripts/dhan_refresh && python gold_desk.py
+      - name: Commit the Gold desk
+        run: |
+          git add docs/gold docs/gold-desk.html
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "Gold desk $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin "$GITHUB_REF_NAME"
+          git push
+
   refresh:
+    needs: guard
+    if: needs.guard.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -26,10 +152,8 @@ jobs:
           python-version: "3.11"
       - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3 pytest==8.3.3 arch==9.0.0 mapie==1.6.0 scikit-learn==1.9.1
       - name: Offline tests
-        if: ${{ !inputs.only_gold }}
         run: python -m pytest -q scripts/dhan_refresh/tests
       - name: Pull from Dhan and update RA Desk
-        if: ${{ !inputs.only_gold }}
         env:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
@@ -38,51 +162,46 @@ jobs:
         run: |
           python scripts/dhan_refresh/refresh.py --page docs/ra-desk.html --with-options --with-n500 --with-markets --with-auction --with-tech
       - name: NSE feeds (results calendar, filings, FII/DII)
-        if: ${{ !inputs.only_gold }}
         run: cd scripts/dhan_refresh && python nse_feeds.py || true
       - name: US desk data (Alpha Vantage weekly history + Dhan US closes)
-        if: ${{ !inputs.only_gold }}
         run: cd scripts/dhan_refresh && python us_model.py || true
       - name: Journal review and daily Telegram digest
-        if: ${{ !inputs.only_gold }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: cd scripts/dhan_refresh && python daily_digest.py --send || true
       - name: Trading Terminal back-test (09:30 / 12:30 / 15:00, last month) and markets board
-        if: ${{ !inputs.only_gold }}
         env:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
         run: cd scripts/dhan_refresh && python terminal_bt.py || echo "::warning::Terminal back-test failed"
+      - name: Market view (back-tested beliefs by market type, risk table, low-risk screen)
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python market_view.py || echo "::warning::Market view failed"
       - name: Gold desk (Dhan daily closes for GOLDBEES, MCX GOLD, Nifty)
         env:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
-        run: |
-          python -m pytest -q scripts/dhan_refresh/tests/test_gold_desk.py
-          cd scripts/dhan_refresh && python gold_desk.py || echo "::warning::Gold desk failed"
-      - name: Commit gold only
-        if: ${{ inputs.only_gold }}
-        run: |
-          git add docs/gold docs/gold-desk.html
-          if git diff --cached --quiet; then echo "no change"; exit 0; fi
-          git config user.name "dhan-refresh-bot"
-          git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          git commit -m "Gold desk $(TZ=Asia/Kolkata date +%F)"
-          git push
+        run: cd scripts/dhan_refresh && python gold_desk.py || echo "::warning::Gold desk failed"
       - name: Commit if changed
-        if: ${{ !inputs.only_gold }}
         run: |
-          git add -N docs/gold docs/gold-desk.html docs/terminal docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv 2>/dev/null || true
-          if git diff --quiet -- docs/gold docs/gold-desk.html docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
+          git add -N docs/gold docs/gold-desk.html docs/market-view.json docs/market-view.md docs/terminal docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv journal 2>/dev/null || true
+          if git diff --quiet -- docs/gold docs/gold-desk.html docs/market-view.json docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          for f in docs/gold docs/gold-desk.html docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json; do [ -e "$f" ] && git add "$f"; done
+          for f in docs/gold docs/gold-desk.html docs/market-view.json docs/market-view.md docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json journal; do [ -e "$f" ] && git add "$f"; done
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
-          git pull -q --rebase --autostash -X theirs origin main || { git rebase --abort 2>/dev/null || true; git pull -q --no-rebase --autostash -X ours origin main; }
+          git pull -q --rebase --autostash -X theirs origin "$GITHUB_REF_NAME" || { git rebase --abort 2>/dev/null || true; git pull -q --no-rebase --autostash -X ours origin "$GITHUB_REF_NAME"; }
           git push
+      - name: Send the page's data to aj-live (the open page loads it; no republish needed)
+        env:
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+        run: bash scripts/dhan_refresh/push_page_feed.sh
       - name: Tell the owner if this failed
         if: failure()
         env:
