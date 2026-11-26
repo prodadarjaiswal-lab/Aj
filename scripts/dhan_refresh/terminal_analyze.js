@@ -438,11 +438,43 @@ function movers(){const tw=document.querySelector("#term .twrap");if(!tw||$("tm-
   /* the full board and the ticker strip fold away */
   const mk=$("tm-mk"),sec=mk&&mk.closest("section");if(sec){const f=document.createElement("details");f.className="tm-idx tm-tables";f.innerHTML="<summary>All indices, ETFs and MCX</summary>";sec.parentNode.insertBefore(f,sec);f.appendChild(sec)}
   const st=$("tm-strip");if(st)st.style.display="none"}
-function picksTerm(){const nx=$("tm-next");if(!nx||$("tm-best"))return;const sw=bestSwing(4),V=(window.DAMV||[]).slice(0,4);
+
+/* ---------- Technicals from the trader skills (ADARSH 27 Nov): trader-scanner rules on daily closes, a trader-exit style plan,
+   trader-timemachine replays (10,000 paths from the stock's own last 120 daily moves, plus every past time the rule fired),
+   trader-risk sizing (Rs 5,000 max loss, never more than the capital), Indian delivery charges ~0.25% round trip ---------- */
+const SETUPS={breakout_20d:"20-day closing-high breakout",bull_flag:"Bull flag",reclaim_ma20:"Reclaimed the 20-day average",oversold_bounce:"Oversold bounce (RSI<30, closed up)"};
+function rsiW(c,i,n=14){if(i<n)return null;let g=0,l=0;for(let k=i-n+1;k<=i;k++){const d=c[k]-c[k-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+g/l)}
+function scanAt(c,i){const o=[];if(i<25)return o;const last=c[i];
+  if(last>Math.max(...c.slice(i-20,i)))o.push("breakout_20d");
+  const b=c.slice(i-4,i+1),hi=Math.max(...b),lo=Math.min(...b);if(c[i-5]/c[i-15]-1>0.10&&(hi-lo)/lo<0.05)o.push("bull_flag");
+  const m=k=>c.slice(k-19,k+1).reduce((a,v)=>a+v,0)/20;if(c[i-1]<m(i-1)&&last>m(i))o.push("reclaim_ma20");
+  const r1=rsiW(c,i-1);if(r1!=null&&r1<30&&last>c[i-1])o.push("oversold_bounce");return o}
+function planFor(c,i,k){const e=c[i];let atr=0;for(let j=i-13;j<=i;j++)atr+=Math.abs(c[j]-c[j-1]);atr/=14;
+  let st=k==="bull_flag"?Math.min(...c.slice(i-4,i+1))-0.25*atr:k==="reclaim_ma20"?c.slice(i-19,i+1).reduce((a,v)=>a+v,0)/20-0.5*atr:k==="oversold_bounce"?Math.min(...c.slice(i-5,i+1))-0.25*atr:e-1.5*atr;
+  st=Math.min(st,e-0.5*atr);if(st<=0||st<e*0.85)st=e*0.92;const R=e-st;return{e,st,tg:e+2*R,R}}
+let SEED=19;const rnd=()=>{SEED=(SEED*1664525+1013904223)>>>0;return SEED/4294967296};
+function machine(c,pl,days=15,N=10000){const r=[];for(let k=c.length-120;k<c.length;k++)if(k>0&&c[k-1])r.push(c[k]/c[k-1]);const ch=0.0025*pl.e/pl.R;
+  let tf=0,sf=0,sumR=0;SEED=19;for(let n=0;n<N;n++){let p=pl.e,out=null;for(let d=0;d<days;d++){p*=r[Math.floor(rnd()*r.length)];if(p<=pl.st){out=-1;break}if(p>=pl.tg){out=2;break}}
+    if(out===2)tf++;else if(out===-1)sf++;sumR+=(out==null?(p-pl.e)/pl.R:out)-ch}
+  return{tf:tf/N,sf:sf/N,nn:1-(tf+sf)/N,avgR:sumR/N}}
+function history(c,k,days=15){let w=0,l=0,o=0;for(let i=25;i<c.length-1;i++){if(!scanAt(c,i).includes(k))continue;const pl=planFor(c,i,k);let out=0;
+  for(let j=i+1;j<=Math.min(c.length-1,i+days);j++){if(c[j]<=pl.st){out=-1;break}if(c[j]>=pl.tg){out=1;break}}out>0?w++:out<0?l++:o++;i+=2}return{w,l,o}}
+function techPicks(n=6){const cap=((window.CFG||{}).capital)||500000,ml=((window.CFG||{}).max_loss_per_trade)||5000,res=[];
+  STK.forEach(s=>{const r=RS[s]||{};if((r.turnover_cr||0)<10||(r.warn||[]).length||ranAlready(s))return;const c=cl60(s).filter(v=>v>0);if(c.length<60)return;
+    const i=c.length-1;scanAt(c,i).forEach(k=>{if(k!=="oversold_bounce"&&(r.vs200||0)<0)return;const pl=planFor(c,i,k),last=dayChg(s).ltp||c[i];res.push({s,k,pl,c,last,volx:r.volx})})});
+  res.forEach(z=>{z.m=machine(z.c,z.pl);z.h=history(z.c,z.k);const sc=z.pl.e/z.last||1;z.qty=Math.max(0,Math.min(Math.floor(ml/z.pl.R),Math.floor(cap/z.pl.e)))});
+  return res.filter(z=>z.m.avgR>0&&z.h.l<=z.h.w+1).sort((a,b)=>b.m.avgR-a.m.avgR).slice(0,n)}
+function tcard(z){const d=dayChg(z.s),m=z.m,w=x=>Math.round(x*100);
+  return `<button class="pc" data-mk="${E(z.s)}"><div class="pct"><b>${E(z.s)}</b><span class="${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":P(d.c,1)}</span></div>
+   <p class="sm"><b>${E(SETUPS[z.k])}</b>${z.volx?` · volume ${F(z.volx,1)}× normal`:""}</p>${spark(z.s)}
+   <div class="pl"><span>Entry ${F(z.pl.e)}</span><span class="down">Stop ${F(z.pl.st)}</span><span class="up">Target ${F(z.pl.tg)}</span><span>Qty ${z.qty}</span></div>
+   <div class="odds" title="10,000 replays over 15 sessions"><i class="gd" style="width:${w(m.tf)}%"></i><i class="bd" style="width:${w(m.sf)}%"></i><i style="width:${w(m.nn)}%"></i></div>
+   <p class="sm">Time Machine: target first <b class="up">${w(m.tf)}%</b>, stop first <b class="down">${w(m.sf)}%</b>, neither ${w(m.nn)}% · average <b>${m.avgR>0?"+":""}${m.avgR.toFixed(2)}R</b> after charges · past fires in 6 months: ${z.h.w} hit target, ${z.h.l} stopped${z.h.o?`, ${z.h.o} neither`:""}</p></button>`}
+function picksTerm(){const nx=$("tm-next");if(!nx||$("tm-best"))return;const sw=techPicks(6),V=(window.DAMV||[]).slice(0,4);
   const d=document.createElement("div");d.id="tm-best";d.className="tm-idx";
   d.innerHTML=`<div class="head"><h2>Selling at a discount (value)</h2><span class="sm">Damodaran tests · 1–3 years</span></div><div class="pcg">${V.length?V.map(z=>pcard(z,"v")).join(""):'<p class="note">No stock passes the value tests today: the market is not cheap.</p>'}</div>
-   <div class="head"><h2>Best swing trades (technical)</h2><span class="sm">2–6 weeks</span></div><div class="pcg">${sw.length?sw.map(z=>pcard(z)).join(""):'<p class="note">No clean swing setup today.</p>'}</div>
-   <p class="sm">Swing = back-tested signal that fired, above the 200-day, beating the Nifty, RSI 45–72, not already run, no warning. Stop under the 20-day low (max 8%), target 2× the risk, quantity from the Rs 5,000 max loss. Leads, not proven: the nightly back-test has not passed any single indicator yet.</p>`;
+   <div class="head"><h2>Best breakouts and setups (technical)</h2><span class="sm">up to 15 sessions</span></div><div class="pcg">${sw.length?sw.map(tcard).join(""):'<p class="note">No setup has a positive Time Machine edge today. Sitting out is a position.</p>'}</div>
+   <p class="sm">Rules from the trader skills on daily closes: 20-day closing-high breakout, bull flag (10%+ run then a tight 5-day range), reclaim of the 20-day average, oversold bounce. Breakouts, flags and reclaims only above the 200-day. Stop under the setup (flag low, 20-day average, or 1.5× daily range), target 2× the risk, quantity from the Rs 5,000 max loss. Time Machine replays the next 15 sessions 10,000 times from the stock's own last 120 daily moves, minus ~0.25% delivery charges; only setups with a positive average and a past record no worse than one extra stop-out are shown, best first. Replays reuse recent drift, so a stock that has been rising looks better than it may be; the "past fires" line is the real record.</p>`;
   nx.parentNode.insertBefore(d,nx.nextSibling)}
 function bestStocks(){const w=$("tm-stkw");if(!w||$("tm-bestk"))return;const used=new Set(),rows=[];
   const add=(t,pool)=>{const z=bestSwing(8,pool).find(z=>!used.has(z.s));if(z){used.add(z.s);rows.push([t,z])}};
