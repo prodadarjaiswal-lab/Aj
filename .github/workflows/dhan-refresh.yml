@@ -18,6 +18,7 @@ on:
   schedule:                    # backup clock; run_guard.py stops it if a refresh already ran since the close
     - cron: "30 11 * * 1-5"    # 17:00 IST
     - cron: "30 14 * * 1-5"    # 20:00 IST
+    - cron: "30 2 * * 1-5"     # 08:00 IST: morning market-view re-test only (backup to the outside timer at 08:00)
 
 permissions:
   contents: write
@@ -28,7 +29,7 @@ concurrency:
 
 jobs:
   guard:
-    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only }}
+    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only && github.event.schedule != '30 2 * * 1-5' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -83,7 +84,7 @@ jobs:
           git push
 
   view:
-    if: ${{ inputs.view_only }}
+    if: ${{ inputs.view_only || github.event.schedule == '30 2 * * 1-5' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -107,6 +108,11 @@ jobs:
           git commit -m "Market view $(TZ=Asia/Kolkata date +%F)"
           git pull -q --rebase -X theirs origin "$GITHUB_REF_NAME"   # this run wins over an older market view
           git push
+      - name: Send the page's data to aj-live (the open terminal picks up the new market view)
+        env:
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+        run: bash scripts/dhan_refresh/push_page_feed.sh || echo "::warning::page data not sent"
 
   refresh:
     needs: guard
