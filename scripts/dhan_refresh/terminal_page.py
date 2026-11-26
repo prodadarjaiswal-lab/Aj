@@ -201,6 +201,10 @@ CLEAN_CSS = """
 #screener>*:not(#vm){display:none!important}
 #vm .vtg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:8px}
 #vm .vt{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;font:inherit;cursor:pointer}
+#vm .vt.wait{opacity:.55}#vm .vwait summary{cursor:pointer;margin:8px 0;color:var(--mute)}
+#term .nx{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}#term .nx>div{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--panel)}
+#term .nx h4{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}#term .nx b.big{font-size:18px;display:block;margin-bottom:4px}#term .nx p{margin:0;font-size:13px}
+#term ol.phil{margin:6px 0 0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:3px}
 #vm .vt:hover{border-color:var(--accent)}#vm .vt .big{font:600 20px var(--mono)}#vm .vt small{color:var(--mute);font-size:11px}
 #vm .dbars{display:flex;flex-direction:column;gap:4px;max-width:720px}#vm .dsep{height:8px}
 #vm .dbar{display:grid;grid-template-columns:minmax(90px,140px) 1fr 56px;gap:8px;align-items:center;background:none;border:0;padding:2px 0;color:inherit;font:inherit;text-align:left;cursor:pointer}
@@ -309,7 +313,13 @@ if(V){const pc=V.pct;const val=pc==null?["Not enough history","warn"]:pc<0.33?["
   <p class="note">How to read it: in India, rallies have tended to start when the market is cheap and foreign money turns to buying, rather than "high keeps going higher" as in the US. This view combines the two. It is a rule of thumb, not a tested signal: the old NSE terminal's back-test found the Nifty's cheapness predicted the next 12 months only weakly (correlation ${f(V.ts12,2)}).</p>`}
 /* 2. being sold cheap */
 const cheap=L.filter(x=>x.value==="cheap"&&(x.pe_sec||0)>0&&(x.r3m||0)<=-0.08&&(x.roce||0)>=12&&(x.turnover_cr||0)>=10).sort((a,b)=>(a.r3m||0)-(b.r3m||0)).slice(0,15);
-h+=`<h3>Being sold while cheap</h3><p class="note">Down 8%+ in 3 months, cheaper than its sector, ROCE 12%+, Rs 10 Cr+ a day. Tap a tile to analyze it. ★ = institutions added last quarter.</p><div class="vtg">${cheap.map(x=>{const inst=((x.d_fii||0)+(x.d_dii||0))>0;return `<button class="vt" data-s="${esc(x.s)}"><b>${esc(x.s)}${inst?' <span class="good">★</span>':""}</b><span class="bad big">${p(x.r3m,0)}</span><small>${f(x.pe_sec,2)}× sector P/E · ROCE ${f(x.roce,0)}%</small><small>${esc((x.ind||"").slice(0,22))}</small></button>`}).join("")||'<p class="note">None today.</p>'}</div>`;
+/* value-trap guard (ADARSH 27 Nov): a cheap stock that is still falling usually keeps falling, so only "cheap and turning"
+   (last month up, RSI 45+, not in a downtrend) is a candidate; the rest are shown greyed as "wait" */
+const turning=x=>(x.r1m||0)>0&&(x.rsi||0)>=45&&!(x.warn||[]).includes("downtrend");
+const tile=(x,ok)=>{const inst=((x.d_fii||0)+(x.d_dii||0))>0;return `<button class="vt${ok?"":" wait"}" data-s="${esc(x.s)}"><b>${esc(x.s)}${inst?' <span class="good">★</span>':""}</b><span class="big ${ok?"good":"bad"}">${ok?p(x.r1m,0)+" 1M":p(x.r3m,0)+" 3M"}</span><small>${f(x.pe_sec,2)}× sector P/E · ROCE ${f(x.roce,0)}%</small><small>${ok?"turned up after "+p(x.r3m,0)+" in 3M":"still falling: wait"}</small></button>`};
+const ct=cheap.filter(turning),cw=cheap.filter(x=>!turning(x));
+h+=`<h3>Cheap and turning up</h3><p class="note">Quality stocks (ROCE 12%+) cheaper than their sector that fell 8%+ in 3 months and have <b>started to recover</b> (up over the last month, RSI 45+, not in a downtrend). Buying cheap stocks that are still falling is the classic value trap, so those wait below. ★ = institutions added last quarter. Tap a tile to analyze.</p><div class="vtg">${ct.map(x=>tile(x,true)).join("")||'<p class="note">None has turned yet: cheap stocks are still falling. Wait.</p>'}</div>
+${cw.length?`<details class="vwait"><summary>Cheap but still falling (${cw.length}): wait for a turn</summary><div class="vtg">${cw.map(x=>tile(x,false)).join("")}</div></details>`:""}`;
 /* 3. what the price asks for (reverse DCF from the old NSE terminal) */
 const G=(M.growth||{}).rows||[];if(G.length){const room=G.slice(0,8),stretch=G.slice(-6).reverse();
   const mx=Math.max(...G.map(r=>Math.abs(r.g_impl-r.g_sus)).filter(isFinite),0.01);
