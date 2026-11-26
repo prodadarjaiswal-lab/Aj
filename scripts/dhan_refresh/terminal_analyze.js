@@ -272,13 +272,35 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
    <div class="spnl"><h3>Top gainers, live</h3><div class="scroll"><table id="tm-gain"></table></div></div>
    <div class="spnl"><h3>Top losers, live</h3><div class="scroll"><table id="tm-lose"></table></div></div>
    </div>
+   <div id="tm-mview"></div>
    <div id="tm-works"></div>
    <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div>
    <div class="eyeg" id="tm-eye"></div>
    <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p>`;
+  try{mview()}catch(e){console.error("mview",e)}
   try{works()}catch(e){console.error("works",e)}
   try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
+/* ---------- Market view (market_view.py): verdict first, Roast Room 26 Nov: no forecast the data cannot back ---------- */
+function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
+  const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
+  const tag={HOLDS:"pass",UNPROVEN:"warn",FAILS:"fail"},hz=h=>h===5?"5 days":h===126?"6 months":"1 month";
+  const vx=V.vix,held=V.beliefs.filter(b=>b.v==="HOLDS").length,ok=V.screen_v==="HOLDS";
+  const bl=V.beliefs.map(b=>`<li><span class="pill ${tag[b.v]||""}">${E(b.v==="HOLDS"?"Holds":b.v==="FAILS"?"Fails":"Unproven")}</span><span>${E(b.t)}<small> · ${pc(b.m,2)} ${b.u?E(b.u):"vs Nifty per "+hz(b.h)} · right ${sh(b.hit)} · ${b.mo} months tested${b.note?" · "+E(b.note):""}</small></span></li>`).join("");
+  const sc=V.screen.length?`<div class="spnl wide"><h3>Low risk, high return ${ok?'<span class="pill pass">Tested: holds</span>':'<span class="pill warn">Watch, not proven</span>'}</h3>
+    <p class="sm">Calmer half of the Nifty 500, best 12-month return per unit of risk. Back-test: ${pc(V.screen_m,2)} a month vs Nifty after charges, right ${sh(V.screen_hit)} of months since ${E(D_(V.oos_from))}.</p>
+    <div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">Return/risk</th><th class="n">12M</th><th class="n">Volatility</th><th class="n">Worst fall 1Y</th><th class="n">Beta</th></tr>
+    ${V.screen.map(r=>`<tr class="go${ok?" hi":""}" data-mk="${E(r.s)}"><td><button class="lnk" data-mk="${E(r.s)}">${E(r.s)}</button></td>${lvc(r.s)}<td class="n">${F(r.score,2)}</td><td class="n up">${pc(r.mom,0)}</td><td class="n">${sh(r.vol)}</td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td></tr>`).join("")}</table></div></div>`:"";
+  const rk=V.risk.length?`<details class="spnl wide"><summary><b>Risk and return, last 3 years</b> <span class="sm">Sharpe, worst fall, beta and correlation to the Nifty for every index and NSE factor index</span></summary>
+    <div class="scroll"><table><tr><th>Index</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Beta</th><th class="n">Corr</th></tr>
+    ${V.risk.map(r=>`<tr><td>${E(r.k)}</td><td class="n ${r.ret>0?"up":"down"}">${pc(r.ret)}</td><td class="n">${sh(r.vol)}</td><td class="n"><b>${r.sharpe==null?"–":F(r.sharpe,2)}</b></td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td><td class="n">${r.corr==null?"–":F(r.corr,2)}</td></tr>`).join("")}</table></div>
+    <p class="note">Sharpe uses a 6.5% risk-free rate. Next-session direction from market type was also tested: right ${sh(V.next&&V.next.accuracy)} of days vs ${sh(V.next&&V.next.always_up)} for always saying up, so no next-day call is shown. Sector rotation by market type: ${pc(V.rot&&V.rot.mean,2)} a month, right ${sh(V.rot&&V.rot.hit)}.</p></details>`:"";
+  el.innerHTML=`<div class="head" style="margin-top:6px"><h2>Market view</h2><span class="pill ${held?"pass":"warn"}">${held} of ${V.beliefs.length} beliefs proven</span></div>
+   <div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · close of ${E(D_(V.asof))}</span></div>
+   ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}
+   <div class="sgrid">${sc}
+   <div class="spnl wide"><h3>Popular beliefs, tested on data since ${E(D_(V.oos_from))} they were never fitted on</h3><ul class="wk">${bl}</ul></div>
+   ${rk}</div>`}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */
 function works(){const el=$("tm-works"),Y=window.PLAY,L=window.LAB;if(!el)return;
   if(Y&&Y.type){const nm={rising:"Rising",falling:"Falling",flat:"Flat / slow",turning:"Turning"}[Y.type]||Y.type;

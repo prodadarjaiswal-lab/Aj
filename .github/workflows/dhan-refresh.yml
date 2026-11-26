@@ -7,6 +7,10 @@ on:
         description: "Only rebuild the desk journal and indicator back-test (no desk refresh, no Telegram)"
         type: boolean
         default: false
+      view_only:
+        description: "Only rebuild the market view (back-tested beliefs, risk table, low-risk screen)"
+        type: boolean
+        default: false
       page_only:
         description: "Only rebuild the terminal page's data and send it to aj-live (no refresh, no Telegram)"
         type: boolean
@@ -24,7 +28,7 @@ concurrency:
 
 jobs:
   guard:
-    if: ${{ !inputs.journal_only && !inputs.page_only }}
+    if: ${{ !inputs.journal_only && !inputs.page_only && !inputs.view_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -78,6 +82,32 @@ jobs:
           git pull -q --rebase origin "$GITHUB_REF_NAME"
           git push
 
+  view:
+    if: ${{ inputs.view_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3
+      - name: Market view on Dhan history
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python market_view.py
+      - name: Commit the market view
+        run: |
+          git add docs/market-view.json docs/market-view.md
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "dhan-refresh-bot"
+          git config user.email "dhan-refresh-bot@users.noreply.github.com"
+          git commit -m "Market view $(TZ=Asia/Kolkata date +%F)"
+          git pull -q --rebase origin "$GITHUB_REF_NAME"
+          git push
+
   refresh:
     needs: guard
     if: needs.guard.outputs.go == 'true'
@@ -113,13 +143,19 @@ jobs:
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
           DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
         run: cd scripts/dhan_refresh && python terminal_bt.py || echo "::warning::Terminal back-test failed"
+      - name: Market view (back-tested beliefs by market type, risk table, low-risk screen)
+        env:
+          DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
+          DHAN_PIN: ${{ secrets.DHAN_PIN }}
+          DHAN_TOTP_SECRET: ${{ secrets.DHAN_TOTP_SECRET }}
+        run: cd scripts/dhan_refresh && python market_view.py || echo "::warning::Market view failed"
       - name: Commit if changed
         run: |
-          git add -N docs/terminal docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv journal 2>/dev/null || true
-          if git diff --quiet -- docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
+          git add -N docs/market-view.json docs/market-view.md docs/terminal docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json data/us-history.json data/nifty500.csv journal 2>/dev/null || true
+          if git diff --quiet -- docs/market-view.json docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/nse-terminal.html; then echo "no change"; exit 0; fi
           git config user.name "dhan-refresh-bot"
           git config user.email "dhan-refresh-bot@users.noreply.github.com"
-          for f in docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json journal; do [ -e "$f" ] && git add "$f"; done
+          for f in docs/market-view.json docs/market-view.md docs/terminal docs/ra-desk.html docs/radesk-latest.json data/options docs/n500.json docs/tech-today.json docs/tech-model.json docs/tech-model-history.json docs/technical-desk.md docs/auction.json docs/auction-desk.md docs/track-record.json docs/markets.json docs/quant.json docs/value-model.json docs/portfolio.json docs/us-desk.json docs/chart-data.json docs/research.json docs/fund500.json docs/tradeplan.json docs/risklab.json docs/formula.json data/formula-sample.csv docs/journal-review.json docs/nse-feeds.json docs/nse-terminal.html data/nifty500.csv data/us-history.json journal; do [ -e "$f" ] && git add "$f"; done
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git pull -q --rebase --autostash -X theirs origin "$GITHUB_REF_NAME" || { git rebase --abort 2>/dev/null || true; git pull -q --no-rebase --autostash -X ours origin "$GITHUB_REF_NAME"; }
           git push

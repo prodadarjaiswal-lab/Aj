@@ -202,6 +202,9 @@ CLEAN_CSS = """
 #term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 #term ul.wk li{display:flex;gap:10px;align-items:baseline;font-size:13px}
 #term ul.wk b{font-family:var(--mono);min-width:56px;text-align:right}#term ul.wk small{color:var(--mute)}
+#term .pill.warn{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}#term .pill.fail{background:color-mix(in srgb,var(--down) 18%,transparent);color:var(--down)}
+#tm-mview ul.wk .pill{min-width:78px;text-align:center}#tm-mview tr.hi td{background:color-mix(in srgb,var(--up) 8%,transparent)}
+#tm-mview details summary{cursor:pointer}#tm-mview .sumbar{margin:0 0 8px}
 """
 
 
@@ -335,6 +338,27 @@ def lab_summary(root: Path, correction: bool) -> dict | None:
             f"many-ideas test{'' if kept else ', so these are leads, not proven signals'}.")
     return {"market": "falling" if correction else "rising", "best": best, "worst": worst, "note": note}
 
+def mview_summary(root: Path) -> dict | None:
+    """The market view (market_view.py): beliefs tested out of sample, VIX range, risk table, low-risk screen."""
+    v = _load(root / "docs/market-view.json")
+    if not v or not v.get("beliefs"):
+        return None
+    bl = [{"k": b["key"], "t": b["title"], "p": b.get("plain"), "v": b["verdict"], "h": b.get("h"),
+           "m": b["oos"].get("raw_mean"), "hit": b["oos"].get("hit"), "mo": b["oos"].get("months"), "note": b.get("note"),
+           "u": {"nifty_bounce": "Nifty vs a normal 5 days", "nifty_fade": "Nifty vs a normal 5 days",
+                 "bank_leads": "Nifty in the 5 days after the signal"}.get(b["key"])}
+          for b in v["beliefs"]]
+    order = {"HOLDS": 0, "UNPROVEN": 1, "FAILS": 2}
+    bl.sort(key=lambda b: (order.get(b["v"], 3), -abs(b["m"] or 0)))
+    cs = next((b for b in v["beliefs"] if b["key"] == "calm_strong"), None)
+    return {"asof": v.get("asof"), "oos_from": v.get("oos_from"), "type": v.get("regime"), "label": v.get("regime_text"),
+            "r63": v.get("nifty_r63"), "vs200": v.get("nifty_vs200"), "vix": v.get("vix"), "beliefs": bl,
+            "next": v.get("next_day"), "rot": (v.get("rotation") or {}).get("stats"),
+            "screen": v.get("screen") or [], "screen_v": cs["verdict"] if cs else None,
+            "screen_hit": cs["oos"].get("hit") if cs else None, "screen_m": cs["oos"].get("raw_mean") if cs else None,
+            "risk": [{"k": r["k"], **r["oos"]} for r in v.get("risk") or []][:24], "sectors": (v.get("sectors_today") or [])[:6]}
+
+
 def play_summary(root: Path) -> dict | None:
     """Today's playbook from the desk journal (journal/playbook.json): the market type, what the indicator back-test
     favours and warns against in it, and the stocks where those indicators fired on the last session."""
@@ -462,7 +486,8 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     mac_js = json.dumps(macro_summary(root), separators=(",", ":")).replace("</", "<\\/")
     lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
     play_js = json.dumps(play_summary(root), separators=(",", ":")).replace("</", "<\\/")
-    html = html[:j] + f"<script>window.LAB=/*LAB*/{lab_js}/*LAB*/;window.MACRO=/*MACRO*/{mac_js}/*MACRO*/;window.PLAY=/*PLAY*/{play_js}/*PLAY*/;</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    mv_js = json.dumps(mview_summary(root), separators=(",", ":")).replace("</", "<\\/")
+    html = html[:j] + f"<script>window.LAB=/*LAB*/{lab_js}/*LAB*/;window.MACRO=/*MACRO*/{mac_js}/*MACRO*/;window.PLAY=/*PLAY*/{play_js}/*PLAY*/;window.MVIEW=/*MVIEW*/{mv_js}/*MVIEW*/;</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
     # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
     html = html.replace('<div class="tabs" role="tablist">',
                         '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)

@@ -332,13 +332,169 @@ def corr(x: list, y: list) -> float | None:
     return round(sum((a - ma) * (b - mb) for a, b in p) / math.sqrt(va * vb), 3) if va and vb else None
 
 
-def build(series: dict, cap: dict) -> dict:
+
+# ---------------------------------------------------------------- risk, options maths and the low-risk screen
+RF = 0.065              # risk-free rate for Sharpe (91-day T-bill, roughly)
+FACTOR_KEYS = {"LOWVOL": "Low volatility", "LOWVOLATILITY": "Low volatility", "MOMENTM": "Momentum",
+               "MOMENTUM": "Momentum", "QUALITY": "Quality", "QLTY": "Quality", "VALUE": "Value",
+               "ALPHA": "Alpha", "DIVOPP": "Dividend", "EQUALWEIGHT": "Equal weight", "EQLWGT": "Equal weight"}
+
+
+def factor_ids(scrip_csv: str) -> dict:
+    """NSE factor (smart-beta) indices in Dhan's list: name -> security id. Names vary, so match keywords."""
+    import csv
+    import io
+    out = {}
+    for r in csv.DictReader(io.StringIO(scrip_csv)):
+        if r.get("SEM_EXM_EXCH_ID") != "NSE" or r.get("SEM_INSTRUMENT_NAME") != "INDEX":
+            continue
+        name = (r.get("SM_SYMBOL_NAME") or r.get("SEM_TRADING_SYMBOL") or "").strip()
+        key = "".join(ch for ch in name.upper() if ch.isalnum())
+        if any(k in key for k in FACTOR_KEYS) and name not in out:
+            out[name] = r["SEM_SMST_SECURITY_ID"]
+    return out
+
+
+def ncdf(x: float) -> float:
+    return 0.5 * math.erfc(-x / math.sqrt(2))
+
+
+def risk_stats(c: list, n: list, lo: int, hi: int) -> dict | None:
+    """Annual return, volatility, Sharpe, Sortino, max drawdown, beta and correlation to the Nifty, days lo..hi."""
+    p = [(c[i], n[i], c[i - 1], n[i - 1]) for i in range(max(lo, 1), hi + 1) if c[i] and c[i - 1] and n[i] and n[i - 1]]
+    if len(p) < 120:
+        return None
+    r = [a / b - 1 for a, _, b, _ in p]
+    m = [a / b - 1 for _, a, _, b in p]
+    k = len(r)
+    mu, mm = sum(r) / k, sum(m) / k
+    sd = math.sqrt(sum((x - mu) ** 2 for x in r) / (k - 1))
+    dn = math.sqrt(sum(min(0.0, x) ** 2 for x in r) / k)
+    vm = sum((x - mm) ** 2 for x in m) / (k - 1)
+    cov = sum((x - mu) * (y - mm) for x, y in zip(r, m)) / (k - 1)
+    eq, peak, dd = 1.0, 1.0, 0.0
+    for x in r:
+        eq *= 1 + x
+        peak = max(peak, eq)
+        dd = min(dd, eq / peak - 1)
+    ann = eq ** (252 / k) - 1
+    vol = sd * math.sqrt(252)
+    return {"ret": round(ann, 4), "vol": round(vol, 4), "sharpe": round((ann - RF) / vol, 2) if vol else None,
+            "sortino": round((ann - RF) / (dn * math.sqrt(252)), 2) if dn else None, "maxdd": round(dd, 4),
+            "beta": round(cov / vm, 2) if vm else None, "corr": round(cov / math.sqrt(vm) / sd, 2) if vm and sd else None}
+
+
+def risk_table(days: list, X: dict, cut: str) -> list:
+    k0 = next(i for i, d in enumerate(days) if d >= cut)
+    out = []
+    for k, c in X.items():
+        if k == "India VIX":
+            continue
+        a, b = risk_stats(c, X["Nifty 50"], 1, k0 - 1), risk_stats(c, X["Nifty 50"], k0, len(days) - 1)
+        if b:
+            out.append({"k": k, "is": a, "oos": b})
+    return sorted(out, key=lambda r: -(r["oos"]["sharpe"] or -9))
+
+
+def vix_range(days: list, X: dict) -> dict | None:
+    """Black-Scholes reading of India VIX: the market's own 1-day and 1-month ranges for the Nifty, and how often
+    the Nifty actually stayed inside them (a calibrated range covers about 68% of days at 1 sigma)."""
+    v, n = X.get("India VIX"), X["Nifty 50"]
+    if not v:
+        return None
+    in1 = in2 = tot = big = big_pred = 0
+    for i in range(len(days) - 1):
+        if v[i] and n[i] and n[i + 1]:
+            s = v[i] / 100 / math.sqrt(252)
+            mv = abs(n[i + 1] / n[i] - 1)
+            in1 += mv <= s
+            in2 += mv <= 2 * s
+            big += mv >= 0.015
+            big_pred += 2 * (1 - ncdf(0.015 / s))
+            tot += 1
+    s1, s21 = v[-1] / 100 / math.sqrt(252), v[-1] / 100 * math.sqrt(21 / 252)
+    return {"vix": round(v[-1], 2), "nifty": round(n[-1], 2), "day_pts": round(n[-1] * s1), "month_pts": round(n[-1] * s21),
+            "p_move15": round(2 * (1 - ncdf(0.015 / s1)), 3), "hit1": round(in1 / tot, 3), "hit2": round(in2 / tot, 3),
+            "big_actual": round(big / tot, 3), "big_implied": round(big_pred / tot, 3), "days": tot}
+
+
+def screen_scores(cols: dict, i: int) -> dict:
+    """sym -> (score, vol, mom) at day i: 12-1 month momentum divided by 1-year volatility (a trailing Sharpe)."""
+    out = {}
+    for s, c in cols.items():
+        w = c[i - 252:i + 1] if i >= 252 else []
+        if len(w) < 253 or not all(w):
+            continue
+        r = [w[j] / w[j - 1] - 1 for j in range(1, len(w))]
+        mu = sum(r) / len(r)
+        vol = math.sqrt(sum((x - mu) ** 2 for x in r) / (len(r) - 1)) * math.sqrt(252)
+        mom = w[-22] / w[0] - 1
+        if vol > 0:
+            out[s] = ((mom - RF) / vol, vol, mom)
+    return out
+
+
+def calm_strong(sc: dict, top: int = 20) -> list:
+    """Low risk, high return: the calmer half of stocks by volatility, then the best trailing Sharpe."""
+    if len(sc) < 40:
+        return []
+    vols = sorted(v[1] for v in sc.values())
+    med = vols[len(vols) // 2]
+    calm = [(s, v) for s, v in sc.items() if v[1] <= med]
+    return [s for s, _ in sorted(calm, key=lambda kv: -kv[1][0])[:top]]
+
+
+def screen_test(days: list, N: list, cols: dict) -> tuple[list, list]:
+    """Monthly, non-overlapping: the calm-and-strong 20 and the calmest 20%, each vs the Nifty after charges."""
+    cs, lv = [], []
+    for i in range(252, len(days) - H, H):
+        sc = screen_scores(cols, i)
+        n = fwd(N, i, H)
+        if n is None or len(sc) < 40:
+            continue
+        for pick, out in ((calm_strong(sc), cs), ([s for s, _ in sorted(sc.items(), key=lambda kv: kv[1][1])[:max(1, len(sc) // 5)]], lv)):
+            rs = [r for s in pick if (r := fwd(cols[s], i, H)) is not None]
+            if rs:
+                out.append((days[i], sum(rs) / len(rs) - n - COST_STOCK))
+    return cs, lv
+
+
+def screen_today(days: list, N: list, cols: dict, top: int = 15) -> list:
+    i = len(days) - 1
+    sc = screen_scores(cols, i)
+    rows = []
+    for s in calm_strong(sc, top):
+        st = risk_stats(cols[s], N, i - 251, i) or {}
+        rows.append({"s": s, "score": round(sc[s][0], 2), "vol": round(sc[s][1], 3), "mom": round(sc[s][2], 3),
+                     "maxdd": st.get("maxdd"), "beta": st.get("beta"), "sharpe": st.get("sharpe")})
+    return rows
+
+
+def build(series: dict, cap: dict, factors: dict | None = None, stocks: dict | None = None) -> dict:
     days, X = align(series)
     N = X["Nifty 50"]
     reg = regimes(N)
     cut = split_date(days)
     cap_cols = [align({"Nifty 50": series["Nifty 50"], k: s})[1][k] for k, s in cap.items()]
     bl = beliefs(days, X, reg, cap_cols)
+    F = {k: align({"Nifty 50": series["Nifty 50"], k: v})[1][k] for k, v in (factors or {}).items()}
+    for k, c in F.items():
+        bl.append({"key": "factor:" + k, "title": f"{k} index beats the Nifty", "sign": 1, "h": H,
+                   "plain": f"Holding the NSE {k} index beats the Nifty 50 over the next month (any market).",
+                   "cases": [(days[i], a - b) for i in range(len(days)) if reg[i] and (a := fwd(c, i, H)) is not None
+                             and (b := fwd(N, i, H)) is not None], "note": "Smart-beta index; NSE back-calculated its early history."})
+    S = {k: align({"Nifty 50": series["Nifty 50"], k: v})[1][k] for k, v in (stocks or {}).items()}
+    screen = []
+    if S:
+        cs, lv = screen_test(days, N, S)
+        bl.append({"key": "calm_strong", "title": "Low risk, high return screen (calm half, best trailing Sharpe)", "sign": 1, "h": H,
+                   "plain": "Each month buy the 20 Nifty 500 stocks with the best 12-month return per unit of risk among the "
+                            "calmer half; they beat the Nifty over the next month after 0.25% charges.", "cases": cs,
+                   "note": "Today's Nifty 500 members (survivorship bias flatters this)."})
+        bl.append({"key": "low_vol", "title": "The calmest stocks beat the Nifty (low-volatility effect)", "sign": 1, "h": H,
+                   "plain": "Each month buy the calmest 20% of Nifty 500 stocks; they beat the Nifty over the next month "
+                            "after charges.", "cases": lv, "note": "Today's Nifty 500 members (survivorship bias)."})
+        screen = screen_today(days, N, S)
     for b in bl:
         b.update(test(b.pop("cases"), cut, b["sign"]))
     holm(bl)
@@ -374,8 +530,10 @@ def build(series: dict, cap: dict) -> dict:
         "bank_corr": {"is": corr(dr(bank)[:k0], dr(N)[:k0]), "oos": corr(dr(bank)[k0:], dr(N)[k0:])} if bank else None,
         "rel_12m": dict(sorted(rel.items(), key=lambda kv: kv[1])),
         "cap_names": list(cap),
+        "risk": risk_table(days, X | F, cut), "vix": vix_range(days, X), "screen": screen,
+        "factors": list(F),
         "untested": ["FII / DII flows: only a few days are stored (docs/nse-feeds.json), so flow-driven views cannot "
-                     "be back-tested yet; each day's figures are now kept so they can be later.",
+                     "be back-tested yet.",
                      "Valuation (P/E) of sector indices: no history in the data, so 'cheap' is tested with a price proxy."],
         "note": "Research software, not advice. Index history from Dhan; today's index members and listed stocks "
                 "(survivorship bias). Holm's many-ideas correction across every belief on this page.",
@@ -417,6 +575,25 @@ def markdown(v: dict) -> str:
     L += ["", "## Sectors in this market type (1-month excess vs Nifty)", "", "| Sector | In-sample | Out of sample | OOS worked |", "|---|---|---|---|"]
     for s in v["sectors_today"]:
         L.append(f"| {s['k']} | {pct(s['is'], 2)} | {pct(s['oos'], 2)} | {share(s['oos_hit'])} |")
+    vx = v.get("vix")
+    if vx:
+        L += ["", "## Tomorrow's range from India VIX (Black-Scholes)", "",
+              f"VIX {vx['vix']}: the options market prices a 1-day move of about {vx['day_pts']} Nifty points (1 sigma) and "
+              f"{vx['month_pts']} points over a month. Chance of a 1.5%+ move tomorrow: {share(vx['p_move15'])}.",
+              f"Check on {vx['days']} days: the Nifty stayed inside the 1-sigma range {share(vx['hit1'])} of days "
+              f"(68% if calibrated) and inside 2 sigma {share(vx['hit2'])} (95%). 1.5%+ moves happened "
+              f"{share(vx['big_actual'])} of days vs {share(vx['big_implied'])} implied."]
+    if v.get("risk"):
+        L += ["", "## Risk and return, last 3 years (best Sharpe first)", "",
+              "| Index | Return a year | Volatility | Sharpe | Max drawdown | Beta | Corr to Nifty |", "|---|---|---|---|---|---|---|"]
+        for r in v["risk"]:
+            o = r["oos"]
+            L.append(f"| {r['k']} | {pct(o['ret'])} | {share(o['vol'])} | {o['sharpe']} | {pct(o['maxdd'])} | {o['beta']} | {o['corr']} |")
+    if v.get("screen"):
+        L += ["", "## Low risk, high return: today's screen", "",
+              "| Stock | Return/risk | Volatility | 12-1m return | Max drawdown 1y | Beta |", "|---|---|---|---|---|---|"]
+        for r in v["screen"]:
+            L.append(f"| {r['s']} | {r['score']} | {share(r['vol'])} | {pct(r['mom'])} | {pct(r['maxdd'])} | {r['beta']} |")
     L += ["", "## Not testable yet", ""] + [f"- {u}" for u in v["untested"]]
     return "\n".join(L) + "\n"
 
@@ -443,7 +620,35 @@ def fetch(dhan, scrip: str, start: dt.date, end: dt.date) -> tuple[dict, dict]:
                 cap[sym] = s
         except Exception as e:
             print(f"  skip {sym}: {str(e)[:80]}")
-    return series, cap
+    fac = {}
+    for name, sid in factor_ids(scrip).items():
+        try:
+            f = TB.series(dhan.daily(sid, "IDX_I", "INDEX", start, end), R.IST)
+            if len(f["c"]) > 300:
+                fac[name] = f
+        except Exception as e:
+            print(f"  skip {name}: {str(e)[:80]}")
+    print(f"  factor indices: {list(fac)}", flush=True)
+    return series, cap, fac
+
+
+def fetch_stocks(dhan, root: Path, start: dt.date, end: dt.date) -> dict:
+    import refresh as R
+    import terminal_bt as TB
+    try:
+        import tech_model
+        if tech_model.LAST:
+            return {k: v for k, v in tech_model.LAST[0].items()}
+    except Exception:
+        pass
+    out = {}
+    rows = [r for r in json.loads((root / "docs/n500.json").read_text(encoding="utf-8"))["rows"] if r.get("sid")]
+    for r in rows:
+        try:
+            out[r["s"]] = TB.series(dhan.daily(r["sid"], "NSE_EQ", "EQUITY", start, end), R.IST)
+        except Exception as e:
+            print(f"  skip {r['s']}: {str(e)[:60]}")
+    return out
 
 
 def run(dhan, root: Path) -> str:
@@ -451,8 +656,9 @@ def run(dhan, root: Path) -> str:
     import refresh as R
     now = dt.datetime.now(R.IST)
     scrip = requests.get(R.SCRIP_MASTER, timeout=60).text
-    series, cap = fetch(dhan, scrip, dt.date(2010, 1, 1), now.date())
-    v = build(series, cap)
+    series, cap, fac = fetch(dhan, scrip, dt.date(2010, 1, 1), now.date())
+    stocks = fetch_stocks(dhan, root, dt.date(2013, 1, 1), now.date())
+    v = build(series, cap, fac, stocks)
     (root / "docs/market-view.json").write_text(json.dumps(v, separators=(",", ":")), encoding="utf-8")
     (root / "docs/market-view.md").write_text(markdown(v), encoding="utf-8")
     held = [b["key"] for b in v["beliefs"] if b["verdict"] == "HOLDS"]
