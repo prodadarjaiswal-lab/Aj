@@ -530,6 +530,15 @@ def main(argv=None) -> int:
                 print(track.run(Path(a.page).resolve().parents[1]))
             except Exception as e:
                 print(f"  warning: technical signals failed: {e}")
+            try:                                         # desk journal + indicator lab on the same history
+                import journal
+                import tech_model
+                if tech_model.LAST:
+                    root_ = Path(a.page).resolve().parents[1]
+                    tm = json.loads((root_ / "docs/tech-model.json").read_text(encoding="utf-8"))
+                    print(journal.run(root_, *tech_model.LAST, tm))
+            except Exception as e:
+                print(f"::warning::journal failed: {str(e)[:200]}")
         return 0
     except RefreshError as e:
         print(f"REFRESH FAILED, page left unchanged: {e}", file=sys.stderr)

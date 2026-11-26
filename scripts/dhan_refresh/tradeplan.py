@@ -109,6 +109,8 @@ def best_signal(new: list, signals: dict, up: bool, horizon: int):
     flag, side, hk = ("tested", "up", f"x{horizon}") if up else ("tested_weak", "weak", f"x{horizon}")
     best = None
     for k in new:
+        if k in ("extended", "downtrend"):      # warnings, never buy signals (journal 26 Nov: 24 plans were printed on "downtrend")
+            continue
         s = signals.get(k) or {}
         o = (s.get("out") or {}).get(side) or {}
         if s.get(flag) and (o.get(hk) or 0) > 0 and (best is None or o[hk] > best[1][hk]):
