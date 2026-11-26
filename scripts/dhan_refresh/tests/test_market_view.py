@@ -1,6 +1,8 @@
 import datetime as dt
 import random
 
+import pytest
+
 import market_view as MV
 
 
@@ -93,3 +95,28 @@ def test_risk_vix_and_screen():
     vx = v["vix"]
     assert 0.6 < vx["hit1"] < 0.8 and vx["day_pts"] > 0      # 1% daily noise vs VIX 16 (1.0%/day) ~ calibrated
     assert len(v["screen"]) == 15 and all(r["vol"] > 0 for r in v["screen"])
+
+
+def test_condor_maths_and_ideas():
+    c = MV.condor(26000, 16)
+    assert c["lp"] < c["sp"] < 26000 < c["sc"] < c["lc"] and c["credit"] > 0 and c["max_loss"] > 0
+    assert MV.condor_pnl(c, 26000, 26000) == pytest.approx(c["credit"] - 0.0004 * 26000)
+    assert MV.condor_pnl(c, 40000, 26000) == pytest.approx(-c["max_loss"] - 0.0004 * 26000, abs=c["credit"] * 0.01 + 51)
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0] * 2600}
+    v = MV.build(series, cap)
+    keys = {o["key"]: o for o in v["ideas"]}
+    assert {"pair_revert", "bank_pair_flat", "nifty_condor"} <= set(keys)
+    assert keys["nifty_condor"]["oos"]["months"] >= 12 and all(o["verdict"] != "HOLDS" for o in v["ideas"])
+
+
+def test_pair_trade_closes_the_gap():
+    n = [100.0 * (1 + 0.002 * ((i % 5) - 2)) for i in range(400)]
+    a = [n[i] * (1 + 0.001 * ((i % 7) - 3)) for i in range(400)]
+    a[300] = n[300] * 0.9                     # sector suddenly 10% cheap vs the Nifty
+    for i in range(301, 400):
+        a[i] = n[i]
+    days = [f"2020-{1 + i // 31 % 12:02d}-{1 + i % 28:02d}" for i in range(400)]
+    ts = MV.pair_trades(days, a, n)
+    t = next(t for t in ts if t["d"] == days[300])
+    assert t["side"] == 1 and t["r"] > 0.09

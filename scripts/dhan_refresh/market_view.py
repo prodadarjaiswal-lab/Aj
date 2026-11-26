@@ -470,6 +470,142 @@ def screen_today(days: list, N: list, cols: dict, top: int = 15) -> list:
     return rows
 
 
+
+# ---------------------------------------------------------------- hedged trading ideas (index legs only)
+COST_PAIR = 0.001        # both legs of an index-futures pair, in and out (brokerage, STT on futures sells, exchange)
+CONDOR_HAIRCUT = 0.85    # keep only 85% of the Black-Scholes credit: real out-of-the-money puts trade at a higher
+                         # implied volatility than VIX (skew) and fills are worse than mid; pre-registered, not tuned
+
+
+def beta(a: list, n: list, i: int, look: int = 252) -> float | None:
+    p = [(a[j] / a[j - 1] - 1, n[j] / n[j - 1] - 1) for j in range(max(1, i - look + 1), i + 1)
+         if a[j] and a[j - 1] and n[j] and n[j - 1]]
+    if len(p) < 120:
+        return None
+    mx, my = sum(y for _, y in p) / len(p), sum(x for x, _ in p) / len(p)
+    vy = sum((y - mx) ** 2 for _, y in p)
+    return sum((x - my) * (y - mx) for x, y in p) / vy if vy else None
+
+
+def zscore(a: list, n: list, i: int, look: int = 60) -> float | None:
+    w = [math.log(a[j] / n[j]) for j in range(i - look + 1, i + 1) if j >= 0 and a[j] and n[j]]
+    if len(w) < look:
+        return None
+    mu = sum(w) / look
+    sd = math.sqrt(sum((x - mu) ** 2 for x in w) / (look - 1))
+    return (w[-1] - mu) / sd if sd else None
+
+
+def pair_trades(days: list, a: list, n: list, entry: float = 2.0, hold: int = H) -> list:
+    """Spread of an index against the Nifty, beta-hedged. z <= -entry: long the index, short beta x Nifty;
+    z >= +entry: the reverse. Exit when z crosses 0 or after `hold` sessions. One trade at a time."""
+    out, i = [], 252
+    while i < len(days) - 1:
+        z = zscore(a, n, i)
+        b = beta(a, n, i)
+        if z is None or b is None or abs(z) < entry:
+            i += 1
+            continue
+        side = 1 if z < 0 else -1
+        j = i + 1
+        while j < min(len(days) - 1, i + hold):
+            zj = zscore(a, n, j)
+            if zj is not None and zj * side >= 0:
+                break
+            j += 1
+        if not (a[j] and n[j]):
+            break
+        r = side * ((a[j] / a[i] - 1) - b * (n[j] / n[i] - 1)) - COST_PAIR
+        out.append({"d": days[i], "exit": days[j], "side": side, "z": round(z, 2), "beta": round(b, 2), "r": round(r, 5)})
+        i = j + 1
+    return out
+
+
+def bs(S: float, K: float, T: float, sig: float, call: bool, r: float = RF) -> float:
+    if T <= 0 or sig <= 0:
+        return max(0.0, (S - K) if call else (K - S))
+    d1 = (math.log(S / K) + (r + sig * sig / 2) * T) / (sig * math.sqrt(T))
+    d2 = d1 - sig * math.sqrt(T)
+    return S * ncdf(d1) - K * math.exp(-r * T) * ncdf(d2) if call else K * math.exp(-r * T) * ncdf(-d2) - S * ncdf(-d1)
+
+
+def condor(S: float, vix: float, T: float = H / 252) -> dict:
+    """Short 1-sigma strangle, long 2-sigma wings, priced off India VIX, with the skew haircut."""
+    sig = vix / 100
+    m = sig * math.sqrt(T)
+    k = {"sc": S * math.exp(m), "sp": S * math.exp(-m), "lc": S * math.exp(2 * m), "lp": S * math.exp(-2 * m)}
+    step = 50 if S > 5000 else 0.5                                         # Nifty strikes are 50 points apart
+    k = {x: round(v / step) * step for x, v in k.items()}
+    credit = (bs(S, k["sc"], T, sig, True) + bs(S, k["sp"], T, sig, False)
+              - bs(S, k["lc"], T, sig, True) - bs(S, k["lp"], T, sig, False)) * CONDOR_HAIRCUT
+    width = max(k["lc"] - k["sc"], k["sp"] - k["lp"])
+    return {**k, "credit": round(credit, 1), "max_loss": round(width - credit, 1)}
+
+
+def condor_pnl(c: dict, ST: float, S: float) -> float:
+    pay = -(max(ST - c["sc"], 0) - max(ST - c["lc"], 0)) - (max(c["sp"] - ST, 0) - max(c["lp"] - ST, 0))
+    return c["credit"] + pay - 0.0004 * S                                    # 4 legs in and out, about 0.04% of spot
+
+
+def condor_trades(days: list, n: list, v: list) -> list:
+    out = []
+    for i in range(0, len(days) - H, H):
+        if not (v[i] and n[i] and n[i + H]):
+            continue
+        c = condor(n[i], v[i])
+        if c["max_loss"] <= 0:
+            continue
+        p = condor_pnl(c, n[i + H], n[i])
+        out.append({"d": days[i], "pnl": round(p, 1), "r": round(p / c["max_loss"], 4)})
+    return out
+
+
+def ideas(days: list, X: dict, reg: list, cut: str) -> list:
+    N, out = X["Nifty 50"], []
+    pairs = {k: pair_trades(days, X[k], N) for k in X if k not in NOT_SECTORS | {"Nifty Midcap 100", "Nifty Smallcap 100", "Nifty Next 50"}}
+    pooled = sorted([(t["d"], t["r"]) for ts in pairs.values() for t in ts])
+    live = []
+    for k in pairs:
+        z, b = zscore(X[k], N, len(days) - 1), beta(X[k], N, len(days) - 1)
+        if z is not None and b is not None and abs(z) >= 2:
+            live.append({"k": k, "z": round(z, 2), "beta": round(b, 2), "side": 1 if z < 0 else -1})
+    out.append({"key": "pair_revert", "title": "Sector vs Nifty spread snaps back",
+                "plain": "When a sector index is 2+ standard deviations cheap (or rich) against the Nifty over 60 days, "
+                         "buy it and sell beta x Nifty futures (or the reverse). Exit when the gap closes or after 21 sessions.",
+                "hedge": "Market-neutral: the Nifty leg cancels the market move.", "cases": pooled, "live": live,
+                "sizing": "Needs two futures legs (a Nifty lot is roughly Rs 15 lakh of exposure), so it is above a "
+                          "Rs 1 lakh account; paper-trade it or use the option version later."})
+    bank = X.get("Nifty Bank")
+    if bank:
+        bf = []
+        for i in range(252, len(days) - H, H):
+            b = beta(bank, N, i)
+            if reg[i] == "flat" and b and fwd(bank, i, H) is not None and fwd(N, i, H) is not None:
+                bf.append((days[i], fwd(bank, i, H) - b * fwd(N, i, H) - COST_PAIR))
+        out.append({"key": "bank_pair_flat", "title": "Long Bank Nifty, short Nifty in a slow market",
+                    "plain": "In a flat market, buy Bank Nifty and sell beta x Nifty for one month (the hedged form of "
+                             "'Bank Nifty is the safest index in a slow market').",
+                    "hedge": "Market-neutral pair.", "cases": bf, "live": [{"k": "Nifty Bank", "beta": round(beta(bank, N, len(days) - 1) or 0, 2), "side": 1}] if reg[-1] == "flat" else [],
+                    "sizing": "Two futures legs, above a Rs 1 lakh account."})
+    v = X.get("India VIX")
+    if v:
+        ct = condor_trades(days, N, v)
+        today = condor(N[-1], v[-1]) if v[-1] else None
+        out.append({"key": "nifty_condor", "title": "Sell Nifty's 1-month range, wings bought (iron condor)",
+                    "plain": "Each month sell the Nifty call and put one VIX standard deviation away and buy the ones two "
+                             "away. Earns when the Nifty stays inside the range VIX prices; the loss is capped by the wings.",
+                    "hedge": "Defined risk: the bought wings cap the loss at the strike gap minus the credit.",
+                    "cases": [(t["d"], t["r"]) for t in ct], "live": [today] if today else [],
+                    "pts": {"mean": round(sum(t["pnl"] for t in ct) / len(ct), 1) if ct else None,
+                            "worst": min((t["pnl"] for t in ct), default=None)},
+                    "sizing": "Max loss per lot = max loss points x lot size, far above the Rs 1,000 per-trade limit; "
+                              "it only fits that limit as a much narrower spread.",
+                    "note": "Priced with Black-Scholes off India VIX with a 15% haircut for skew and fills (no real option "
+                            "history yet); per-trade figures are return on the capped loss."})
+    for o in out:
+        o.update(test(o.pop("cases"), cut))
+    return out
+
 def build(series: dict, cap: dict, factors: dict | None = None, stocks: dict | None = None) -> dict:
     days, X = align(series)
     N = X["Nifty 50"]
@@ -497,7 +633,10 @@ def build(series: dict, cap: dict, factors: dict | None = None, stocks: dict | N
         screen = screen_today(days, N, S)
     for b in bl:
         b.update(test(b.pop("cases"), cut, b["sign"]))
-    holm(bl)
+    idl = ideas(days, X, reg, cut)
+    holm(bl + idl)
+    for o in idl:
+        o["verdict"] = verdict(o)
     for b in bl:
         b["verdict"] = verdict(b)
     today_reg = reg[-1]
@@ -530,7 +669,7 @@ def build(series: dict, cap: dict, factors: dict | None = None, stocks: dict | N
         "bank_corr": {"is": corr(dr(bank)[:k0], dr(N)[:k0]), "oos": corr(dr(bank)[k0:], dr(N)[k0:])} if bank else None,
         "rel_12m": dict(sorted(rel.items(), key=lambda kv: kv[1])),
         "cap_names": list(cap),
-        "risk": risk_table(days, X | F, cut), "vix": vix_range(days, X), "screen": screen,
+        "ideas": idl, "risk": risk_table(days, X | F, cut), "vix": vix_range(days, X), "screen": screen,
         "factors": list(F),
         "untested": ["FII / DII flows: only a few days are stored (docs/nse-feeds.json), so flow-driven views cannot "
                      "be back-tested yet.",
