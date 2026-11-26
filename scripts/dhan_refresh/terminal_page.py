@@ -197,6 +197,7 @@ CLEAN_CSS = """
 #term .eye h4 span{color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
 #term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
 #term .eye p.sm{margin:6px 0 0}
+#term.stk .tm-idx,#term:not(.stk) .tm-stk{display:none!important}
 #term .eye p.bt{font-family:var(--mono);font-size:11px}#term .eye.pb{border-color:var(--acc,#3b82f6)}
 #term .mtype{font:600 13px var(--mono);margin:0 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}#term .mtype .sm{font-weight:400;color:var(--mute)}
 #term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -356,6 +357,10 @@ def mview_summary(root: Path) -> dict | None:
             "next": v.get("next_day"), "rot": (v.get("rotation") or {}).get("stats"),
             "screen": v.get("screen") or [], "screen_v": cs["verdict"] if cs else None,
             "screen_hit": cs["oos"].get("hit") if cs else None, "screen_m": cs["oos"].get("raw_mean") if cs else None,
+            "ideas": [{"k": o["key"], "t": o["title"], "p": o["plain"], "hedge": o.get("hedge"), "sizing": o.get("sizing"),
+                       "note": o.get("note"), "v": o.get("verdict"), "live": o.get("live") or [], "pts": o.get("pts"),
+                       "is": {x: o["is"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")},
+                       "oos": {x: o["oos"].get(x) for x in ("raw_mean", "hit", "months", "n", "t")}} for o in v.get("ideas") or []],
             "risk": [{"k": r["k"], **r["oos"]} for r in v.get("risk") or []][:24], "sectors": (v.get("sectors_today") or [])[:6]}
 
 
@@ -475,6 +480,14 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     i = html.rfind("</script>")
     html = html[:i + len("</script>")] + "\n<script>\n" + script + "\n</script>" + html[i + len("</script>"):]
     html = _patch_tabs(html)
+    # Stocks tab (ADARSH 26 Nov): the Terminal tab is index-first (market view, trading ideas, markets board); every
+    # stock list lives on Stocks, which is the same #term section with the stock half shown instead of the index half.
+    html = html.replace('aria-selected="true">Terminal</button>',
+                        'aria-selected="true">Terminal</button><button class="tab" role="tab" data-t="stk" aria-selected="false">Stocks</button>', 1)
+    html = html.replace('const r=t==="research";if(r)t="screener";',
+                        'const r=t==="research";if(r)t="screener";const sk=t==="stk";if(sk)t="term";$("term").classList.toggle("stk",sk);const hh=sk?"stk":t;', 1)
+    html = html.replace('if(location.hash!=="#"+t)history.replaceState(null,"","#"+t)}', 'if(location.hash!=="#"+hh)history.replaceState(null,"","#"+hh)}', 1)
+    html = html.replace('const pick=h=>(!h||h==="term"||h==="terminal")?"term":', 'const pick=h=>(!h||h==="term"||h==="terminal")?"term":(h==="stk"||h==="stocks")?"stk":', 1)
     for a, b in (("Best evidence", "Top picks"), ("Tested setups today", "Setups today"),
                  ("Turning bullish (tested signals)", "Turning bullish"), ("Dips in proven stocks", "Dips in strong stocks")):
         html = html.replace(a, b)
@@ -497,7 +510,7 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     k = html.rfind("</body>")
     k = k if k >= 0 else len(html)
     html = html[:k] + theme + html[k:]
-    for must in ('data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
+    for must in ('data-t="stk"', 'const sk=t==="stk"', 'h==="stocks"', 'data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
         if must not in html:
             raise RuntimeError(f"desk page changed shape; could not insert the Terminal tab ({must})")
     import page_feed                                    # newer nightly data from aj-live, no republish needed
