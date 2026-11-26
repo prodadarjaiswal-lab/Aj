@@ -1,6 +1,8 @@
 import datetime as dt
 import random
 
+import pytest
+
 import market_view as MV
 
 
@@ -93,3 +95,53 @@ def test_risk_vix_and_screen():
     vx = v["vix"]
     assert 0.6 < vx["hit1"] < 0.8 and vx["day_pts"] > 0      # 1% daily noise vs VIX 16 (1.0%/day) ~ calibrated
     assert len(v["screen"]) == 15 and all(r["vol"] > 0 for r in v["screen"])
+
+
+def test_condor_maths_and_ideas():
+    c = MV.condor(26000, 16)
+    assert c["lp"] < c["sp"] < 26000 < c["sc"] < c["lc"] and c["credit"] > 0 and c["max_loss"] > 0
+    assert MV.condor_pnl(c, 26000, 26000) == pytest.approx(c["credit"] - 0.0004 * 26000)
+    assert MV.condor_pnl(c, 40000, 26000) == pytest.approx(-c["max_loss"] - 0.0004 * 26000, abs=c["credit"] * 0.01 + 51)
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0] * 2600}
+    v = MV.build(series, cap)
+    keys = {o["key"]: o for o in v["ideas"]}
+    assert {"pair_revert", "bank_pair_flat", "nifty_condor"} <= set(keys)
+    assert keys["nifty_condor"]["oos"]["months"] >= 12 and all(o["verdict"] != "HOLDS" for o in v["ideas"])
+
+
+def test_pair_trade_closes_the_gap():
+    n = [100.0 * (1 + 0.002 * ((i % 5) - 2)) for i in range(400)]
+    a = [n[i] * (1 + 0.001 * ((i % 7) - 3)) for i in range(400)]
+    a[300] = n[300] * 0.9                     # sector suddenly 10% cheap vs the Nifty
+    for i in range(301, 400):
+        a[i] = n[i]
+    days = [f"2020-{1 + i // 31 % 12:02d}-{1 + i % 28:02d}" for i in range(400)]
+    ts = MV.pair_trades(days, a, n)
+    t = next(t for t in ts if t["d"] == days[300])
+    assert t["side"] == 1 and t["r"] > 0.09
+
+
+def test_tight_condor_and_paper_log():
+    c = MV.condor(26000, 16, wing=100)
+    assert c["lc"] - c["sc"] == 100 and c["sp"] - c["lp"] == 100 and 0 < c["max_loss"] < 100
+    days = [f"2026-01-{i:02d}" for i in range(1, 29)] + [f"2026-02-{i:02d}" for i in range(1, 29)]
+    N = [26000.0] * len(days)
+    v = [16.0] * len(days)
+    log = MV.paper_log(None, days[:10], N[:10], v[:10])
+    assert len(log["trades"]) == 2 and all(t["exit"] is None for t in log["trades"])
+    log = MV.paper_log(log, days[:40], N[:40], v[:40])
+    s = log["summary"]["nifty_condor_tight"]
+    assert s["closed"] == 1 and s["won"] == 1 and s["open"]["d"] == days[39]
+
+
+def test_timing_rules():
+    days = [f"2026-{m:02d}-{d:02d}" for m in range(1, 4) for d in range(1, 22)]
+    c = [100.0 + i for i in range(len(days))]
+    pos = MV.positions("month_turn", days, c, None)
+    assert pos[20] == 1 and pos[21] == 1 and pos[22] == 1 and pos[23] == 0      # last day, 1st, 2nd held; 3rd closes it
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0 + (i % 50) for i in range(2600)]}
+    v = MV.build(series, cap)
+    assert {o["rule"] for o in v["timing"]} == set(MV.RULES)
+    assert all(o["oos"]["strat"] and o["oos"]["hold"] for o in v["timing"])
