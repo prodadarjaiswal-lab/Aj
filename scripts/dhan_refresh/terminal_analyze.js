@@ -301,4 +301,6 @@ function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{c
   const rows=a=>a.length?`<tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th>Setup</th></tr>`+a.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td><td class="n">${F(z.ltp)}</td><td class="n ${z.c>0?"up":"down"}">${P(z.c,2)}</td><td class="sm">${E(((RS[z.s]||{}).setups||[]).slice(0,1).map(k=>SL[k]||k).join("")||"")}</td></tr>`).join(""):`<tr><td class="note">Waiting for live prices (market hours).</td></tr>`;
   L.sort((a,b)=>b.c-a.c);if(g)g.innerHTML=rows(L.slice(0,6));if(l)l.innerHTML=rows(L.slice(-6).reverse().filter(z=>z.c<0))}
 try{sum()}catch(e){console.error("sum",e)}
+/* the Nifty 500 screener (all presets and filters) sits on the Terminal tab, above the at-a-glance cards */
+try{const r=document.getElementById("research"),t=document.getElementById("tm-eye");if(r&&t)t.parentNode.insertBefore(r,t.previousElementSibling)}catch(e){console.error("move screener",e)}
 })();
