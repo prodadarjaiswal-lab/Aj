@@ -195,7 +195,7 @@ def run(data: dict, nifty: dict, root: Path, dhan=None) -> str:
             "vwap": vw.get("state"), "vwap_sd": vw.get("dev_sd"), "auction": au.get("read"), "buy": de.get("buy_share_est"),
             "swing": a.get("swing") or [],
             "pe": f.get("pe"), "pe_sec": f.get("pe_sec"), "pb": f.get("pb"), "pb_ind": f.get("pb_ind"), "roce": f.get("roce"),
-            "de": f.get("de"), "dy": f.get("dy"), "prom": f.get("prom"), "fii": f.get("fii"), "d_fii": f.get("d_fii"),
+            "de": f.get("de"), "dy": f.get("dy"), "industry": f.get("industry"), "prom": f.get("prom"), "fii": f.get("fii"), "d_fii": f.get("d_fii"),
             "dii": f.get("dii"), "d_dii": f.get("d_dii"), "value": val, "fq": fq.get(s) or {},
             "p_up": round(mc["p_up"], 2) if mc and mc.get("p_up") is not None else None,
             "score": round(score, 1), "ev": ev,
