@@ -2,6 +2,57 @@
  "asof": "2026-11-26",
  "keep": {},
  "near": {
+  "xs_mom12": [
+   "STLTECH",
+   "CUPID",
+   "HFCL",
+   "WELCORP",
+   "SANSERA",
+   "MTARTECH",
+   "ATHERENERG",
+   "CPPLUS",
+   "ACUTAAS",
+   "RUBICON",
+   "LAURUSLABS",
+   "TDPOWERSYS",
+   "PFOCUS",
+   "SYRMA",
+   "AETHER",
+   "SAILIFE",
+   "ACMESOLAR",
+   "SONACOMS",
+   "GLAND",
+   "INOXINDIA",
+   "SHRIPISTON",
+   "MCX",
+   "CRAFTSMAN",
+   "APARINDS",
+   "RRKABEL",
+   "KIRLOSENG",
+   "WELSPUNLIV",
+   "LENSKART",
+   "AZAD",
+   "HONASA",
+   "ANANDRATHI",
+   "BBOX",
+   "AEGISLOG",
+   "FINCABLES",
+   "GRANULES",
+   "THANGAMAYL",
+   "CHENNPETRO",
+   "CEMPRO",
+   "DIVISLAB",
+   "JINDALSAW",
+   "SCHNEIDER",
+   "VIJAYA",
+   "WOCKPHARMA",
+   "MOTHERSON",
+   "LLOYDSME",
+   "PTCIL",
+   "SOLARINDS",
+   "FEDERALBNK",
+   "GESHIP"
+  ],
   "macd_dn": [
    "FEDERALBNK",
    "SYNGENE",
@@ -36,6 +87,100 @@
   ],
   "gap_up3": [
    "JWL"
+  ]
+ },
+ "use": {
+  "drop5d_10": [
+   "IIFL",
+   "LLOYDSME",
+   "HFCL",
+   "TTML",
+   "STLTECH"
+  ]
+ },
+ "avoid": {
+  "rs_x50": [
+   "ZENSARTECH",
+   "RKFORGE",
+   "TCS",
+   "GLAND",
+   "360ONE",
+   "KFINTECH",
+   "HEGAM",
+   "HEROMOTOCO",
+   "TECHM",
+   "ACE",
+   "BRIGADE",
+   "COHANCE",
+   "BSE",
+   "JWL",
+   "DOMS",
+   "MCX",
+   "LODHA",
+   "WIPRO",
+   "HCLTECH",
+   "WOCKPHARMA",
+   "ANTHEM",
+   "DEEPAKFERT"
+  ],
+  "near_hi52": [
+   "RKFORGE",
+   "360ONE",
+   "TECHM",
+   "ACE",
+   "NAVINFLUOR",
+   "JSWINFRA",
+   "PRESTIGE",
+   "CRAFTSMAN",
+   "BAJAJHLDNG",
+   "MCX",
+   "ACUTAAS"
+  ],
+  "rsi14_x70": [
+   "TCS",
+   "HDFCBANK",
+   "ACE",
+   "BRIGADE",
+   "GODREJPROP",
+   "PRESTIGE",
+   "DOMS",
+   "RELIANCE",
+   "TORNTPHARM",
+   "ANANDRATHI",
+   "ANTHEM"
+  ],
+  "hi52": [
+   "TECHM",
+   "ACE",
+   "UNOMINDA",
+   "PRESTIGE",
+   "ABDL",
+   "BAJAJHLDNG",
+   "MCX",
+   "ANGELONE",
+   "ACUTAAS",
+   "ANANDRATHI"
+  ],
+  "hi52_vol": [
+   "ACE",
+   "PRESTIGE",
+   "BAJAJHLDNG",
+   "MCX",
+   "ANANDRATHI"
+  ],
+  "x_sma200": [
+   "INFY",
+   "LTM",
+   "SBILIFE",
+   "TDPOWERSYS",
+   "CAMS",
+   "ABREL",
+   "LICI"
+  ],
+  "supertrend_up": [
+   "SAGILITY",
+   "WIPRO",
+   "CHOICEIN"
   ]
  }
 }

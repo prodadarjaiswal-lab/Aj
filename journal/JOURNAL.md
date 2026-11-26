@@ -1,10 +1,39 @@
 # Evidence Desk journal
 
-Last updated by the daily run: **26 Nov 2026 21:37 IST**, market data as of the close of **2026-11-26**. This file is rebuilt automatically every run. Research software, not advice.
+Last updated by the daily run: **26 Nov 2026 22:19 IST**, market data as of the close of **2026-11-26**. This file is rebuilt automatically every run. Research software, not advice.
 
 ## Today in one paragraph
 
-Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 7 for rising markets, 1 for weak markets. Trade plans printed: 0, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 553 (26 closed, 527 open).
+Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 8 for rising markets, 1 for weak markets. Trade plans printed: 81, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 634 (26 closed, 608 open).
+
+## Today's playbook (feeds the Trading Terminal)
+
+**Market type: choppy** since 2026-11-05. Choppy market: Nifty and its 200-day average disagree (a turn may be under way). The terminal's at-a-glance cards, its screen order and the back-test picks all follow this section, and the trade plans skip any signal the back-test warns against in this market type. Rebuilt every run, so it changes when the market type changes or the evidence moves.
+
+Grades: **proven** passed every check including the many-ideas correction; **leaning** was positive before and after the cut-off in this market type (t 1.5+ both times) and beat the Nifty after charges, but has not survived the many-ideas correction, so it is a lead; **avoid** was reliably worse than the average stock in this market type.
+
+### Favoured in a choppy market
+
+| Indicator | grade | vs average stock after | t | vs Nifty after charges | cases | before cut-off | fired today |
+|---|---|---|---|---|---|---|---|
+| Down 10%+ in 5 days | leaning | +1.5% | 1.94 | +2.9% | 1212 | +1.1% (t 1.52) | HFCL, IIFL, LLOYDSME, STLTECH, TTML |
+
+### Warnings in a choppy market
+
+| Indicator | grade | vs average stock after | t | vs Nifty after charges | cases | before cut-off | fired today |
+|---|---|---|---|---|---|---|---|
+| Within 3% of the 52-week high, first day | avoid | -3.3% | -1.83 | -2.7% | 573 | -0.5% (t -0.84) | 360ONE, ACE, ACUTAAS, BAJAJHLDNG, CRAFTSMAN, JSWINFRA, MCX, NAVINFLUOR, PRESTIGE, RKFORGE, TECHM |
+| New 52-week closing high | avoid | -2.9% | -2.25 | -2.3% | 515 | -1.1% (t -1.75) | ABDL, ACE, ACUTAAS, ANANDRATHI, ANGELONE, BAJAJHLDNG, MCX, PRESTIGE, TECHM, UNOMINDA |
+| RSI(14) crosses above 70 (momentum) | avoid | -2.1% | -1.52 | -1.7% | 570 | -0.5% (t -0.72) | ACE, ANANDRATHI, ANTHEM, BRIGADE, DOMS, GODREJPROP, HDFCBANK, PRESTIGE, RELIANCE, TCS, TORNTPHARM |
+| New 52-week closing high on 1.5x average volume | avoid | -2.1% | -1.81 | -1.5% | 433 | -1.6% (t -1.9) | ACE, ANANDRATHI, BAJAJHLDNG, MCX, PRESTIGE |
+| Relative strength line vs Nifty at a 1-year high | avoid | -1.7% | -1.61 | -1.0% | 731 | -0.5% (t -0.99) | none |
+| Close crosses above the 200-day average | avoid | -1.3% | -1.74 | -0.6% | 1011 | -0.2% (t -0.42) | ABREL, CAMS, INFY, LICI, LTM, SBILIFE, TDPOWERSYS |
+| Supertrend(10, 3) turns up | avoid | -0.6% | -1.6 | -0.2% | 752 | -0.7% (t -0.92) | CHOICEIN, SAGILITY, WIPRO |
+| Relative strength line crosses above its 50-day average | avoid | -0.5% | -1.7 | +0.1% | 2197 | -0.7% (t -2.98) | 360ONE, ACE, ANTHEM, BRIGADE, BSE, COHANCE, DEEPAKFERT, DOMS, GLAND, HCLTECH, HEGAM, HEROMOTOCO +10 |
+
+### Market type history (from this journal)
+
+- 2026-11-26 to 2026-11-26: choppy (1 indicators favoured at the start)
 
 ## Which indicators work (back-test)
 
@@ -123,40 +152,41 @@ How to read: *vs average stock* is the extra 21-day return over the average Nift
 
 ### Fired on the last session
 
+- near: Factor: top 10% by 12-month return skipping the last month (momentum): ACMESOLAR, ACUTAAS, AEGISLOG, AETHER, ANANDRATHI, APARINDS, ATHERENERG, AZAD, BBOX, CEMPRO, CHENNPETRO, CPPLUS, CRAFTSMAN, CUPID, DIVISLAB, FEDERALBNK, FINCABLES, GESHIP, GLAND, GRANULES, HFCL, HONASA, INOXINDIA, JINDALSAW, KIRLOSENG, LAURUSLABS, LENSKART, LLOYDSME, MCX, MOTHERSON and 19 more
 - near: MACD crosses below its signal line: AUROPHARMA, BAJAJHFL, BBOX, BPCL, ELGIEQUIP, EMCURE, FEDERALBNK, FINCABLES, GICRE, GRAVITA, HINDPETRO, INDIANB, IOC, JINDALSAW, KALYANKJIL, NATCOPHARM, NBCC, PETRONET, PVRINOX, SHREECEM, SYNGENE, TBOTEK, ZYDUSLIFE
 - near: Down 10%+ in 5 days: HFCL, IIFL, LLOYDSME, STLTECH, TTML
 - near: Gap up 3%+ that holds into the close: JWL
 
 ## Every recommendation and what happened
 
-The desk printed **553 trade plans** since 2026-11-13. **0** passed every check (a real call); the rest failed at least one check, most often the many-signals test, and were shown as plans only. Each plan is scored on Dhan daily bars: stop first if the stop and target are touched the same day, otherwise target, otherwise sold at the 21st close. Rupee results use the plan's own share count and 0.25% charges.
+The desk printed **634 trade plans** since 2026-11-13. **0** passed every check (a real call); the rest failed at least one check, most often the many-signals test, and were shown as plans only. Each plan is scored on Dhan daily bars: stop first if the stop and target are touched the same day, otherwise target, otherwise sold at the 21st close. Rupee results use the plan's own share count and 0.25% charges.
 
-- Closed so far: 26 (target 11, stop 15, time exit 0); open: 527.
+- Closed so far: 26 (target 11, stop 15, time exit 0); open: 608.
 - All plans, including open ones marked to the last close: average -0.1%, -1.8% vs the Nifty, 0.275 beat the Nifty, Rs -21,882 if every plan had been taken.
 - Closed plans only: average +0.2%, Rs -1,730.
 - Real calls (all checks passed): 0.
 
 | Signal | plans | closed | target / stop / time | average so far | vs Nifty so far | Rs if all taken |
 |---|---|---|---|---|---|---|
-| flag | 360 | 17 | 7 / 10 / 0 | -0.1% | -1.8% | -14,195 |
-| don55 | 65 | 2 | 0 / 2 / 0 | -0.5% | -1.5% | -4,635 |
-| nr7 | 27 | 1 | 1 / 0 / 0 | +0.6% | -0.7% | 513 |
-| qdrop10 | 26 | 0 | 0 / 0 / 0 | +0.3% | -1.0% | 552 |
+| flag | 376 | 17 | 7 / 10 / 0 | -0.1% | -1.8% | -14,195 |
+| don55 | 81 | 2 | 0 / 2 / 0 | -0.5% | -1.5% | -4,635 |
+| nr7 | 50 | 1 | 1 / 0 / 0 | +0.6% | -0.7% | 513 |
+| qdrop10 | 33 | 0 | 0 / 0 / 0 | +0.3% | -1.0% | 552 |
+| volbreak | 27 | 1 | 1 / 0 / 0 | -1.1% | -2.4% | -1,401 |
+| hi52v | 26 | 1 | 0 / 1 / 0 | -0.6% | -1.9% | -1,852 |
 | downtrend | 24 | 3 | 2 / 1 / 0 | +0.9% | -1.3% | 1,027 |
-| hi52v | 21 | 1 | 0 / 1 / 0 | -0.6% | -1.9% | -1,852 |
-| volbreak | 19 | 1 | 1 / 0 / 0 | -1.1% | -2.4% | -1,401 |
-| qdrop | 11 | 1 | 0 / 1 / 0 | -2.8% | -4.1% | -1,891 |
+| qdrop | 17 | 1 | 0 / 1 / 0 | -2.8% | -4.1% | -1,891 |
 
 ### The live track record (picks logged before the outcome)
 
 | Kind | picks | vs Nifty so far | share ahead of Nifty |
 |---|---|---|---|
-| dips | 36 | -1.5% | 0.417 |
-| rising | 186 | -1.5% | 0.247 |
-| score0 | 80 | -1.4% | 0.275 |
-| score2 | 301 | -1.9% | 0.286 |
-| score4 | 186 | -1.4% | 0.312 |
-| score6 | 68 | -1.4% | 0.324 |
+| dips | 49 | -1.1% | 0.306 |
+| rising | 232 | -1.2% | 0.198 |
+| score0 | 100 | -1.1% | 0.22 |
+| score2 | 317 | -1.8% | 0.271 |
+| score4 | 195 | -1.4% | 0.297 |
+| score6 | 81 | -1.2% | 0.272 |
 
 Kinds: *rising* = tested breakout signals on leading stocks, *dips* = tested dip signals, *score0/2/4/6* = the research screener's score bands (score0 is a random control group). These are days old, so they say very little yet; they become meaningful after 21 trading days.
 
@@ -164,88 +194,135 @@ Kinds: *rising* = tested breakout signals on leading stocks, *dips* = tested dip
 
 | Day | Stock | Signal | Entry | Stop | Target | Qty | Called? | Status | Days | Return | vs Nifty | Rs |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-11-25 | VIJAYA | hi52v | 1628 | 1460 | 1880 | 5 | no | open | 1 | -2.5% | -2.8% | -225 |
-| 2026-11-25 | VEDL | qdrop10 | 232.75 | 216.5 | 257.25 | 42 | no | open | 1 | +2.3% | +2.0% | 196 |
-| 2026-11-25 | UNITDSPR | don55 | 1514 | 1428 | 1644 | 6 | no | open | 1 | -1.7% | -1.9% | -176 |
-| 2026-11-25 | UCOBANK | flag | 24.65 | 22.8 | 27.45 | 405 | no | open | 1 | -1.1% | -1.3% | -134 |
-| 2026-11-25 | TRENT | don55 | 3320 | 3095 | 3660 | 3 | no | open | 1 | -1.7% | -2.0% | -197 |
-| 2026-11-25 | THANGAMAYL | qdrop10 | 3845 | 3510 | 4350 | 2 | no | open | 1 | +2.7% | +2.5% | 191 |
-| 2026-11-25 | TATASTEEL | qdrop | 159.25 | 138.75 | 190.0 | 48 | no | open | 1 | +2.7% | +2.4% | 187 |
-| 2026-11-25 | TATAINVEST | flag | 582 | 540 | 645 | 17 | no | open | 1 | -0.1% | -0.4% | -38 |
-| 2026-11-25 | TATACONSUM | don55 | 1186 | 1106 | 1306 | 8 | no | open | 1 | -1.9% | -2.1% | -200 |
-| 2026-11-25 | STLTECH | qdrop | 580 | 498 | 703 | 12 | no | open | 1 | +1.6% | +1.4% | 95 |
-| 2026-11-25 | SONACOMS | nr7 | 883 | 826 | 969 | 11 | no | open | 1 | -0.2% | -0.4% | -41 |
-| 2026-11-25 | SIGNATURE | flag | 847 | 778 | 951 | 11 | no | open | 1 | +1.1% | +0.8% | 79 |
-| 2026-11-25 | SBIN | flag | 1138 | 1078 | 1228 | 8 | no | open | 1 | -0.1% | -0.4% | -34 |
-| 2026-11-25 | SAILIFE | flag | 1800 | 1670 | 1996 | 5 | no | open | 1 | +0.7% | +0.4% | 40 |
-| 2026-11-25 | RKFORGE | flag | 746 | 682 | 842 | 13 | no | open | 1 | +5.6% | +5.4% | 520 |
-| 2026-11-25 | RBLBANK | flag | 390.5 | 360.5 | 435.5 | 25 | no | open | 1 | -0.3% | -0.6% | -56 |
-| 2026-11-25 | PVRINOX | flag | 1710 | 1592 | 1888 | 5 | no | open | 1 | -4.2% | -4.5% | -380 |
-| 2026-11-25 | POWERINDIA | flag | 29750 | 26650 | 34400 | 0 | no | open | 1 | +2.0% | +1.7% | 0 |
-| 2026-11-25 | PNB | flag | 148.5 | 137.0 | 165.75 | 67 | no | open | 1 | -0.7% | -0.9% | -92 |
-| 2026-11-25 | PHOENIXLTD | nr7 | 2285 | 2140 | 2505 | 4 | no | open | 1 | +0.3% | +0.0% | 1 |
-| 2026-11-25 | PFOCUS | qdrop10 | 239.25 | 207.25 | 287.25 | 31 | no | open | 1 | -1.1% | -1.4% | -102 |
-| 2026-11-25 | NH | don55 | 2005 | 1875 | 2200 | 4 | no | open | 1 | -1.1% | -1.4% | -111 |
-| 2026-11-25 | NEULANDLAB | flag | 20975 | 18975 | 23975 | 0 | no | open | 1 | +0.7% | +0.4% | 0 |
-| 2026-11-25 | NATIONALUM | qdrop10 | 288.0 | 260.0 | 330.0 | 34 | no | open | 1 | +2.4% | +2.2% | 212 |
-| 2026-11-25 | MEDANTA | nr7 | 1528 | 1434 | 1670 | 6 | no | open | 1 | -1.1% | -1.3% | -122 |
-| 2026-11-25 | MARICO | don55 | 935 | 888 | 1006 | 10 | no | open | 1 | +0.4% | +0.2% | 18 |
-| 2026-11-25 | MANAPPURAM | qdrop | 267.5 | 243.5 | 303.5 | 37 | no | open | 1 | +0.9% | +0.7% | 68 |
-| 2026-11-25 | MAHABANK | flag | 98.7 | 90.8 | 110.6 | 101 | no | open | 1 | -4.6% | -4.8% | -479 |
-| 2026-11-25 | M&MFIN | flag | 292.5 | 272.5 | 322.5 | 34 | no | open | 1 | -2.4% | -2.7% | -268 |
-| 2026-11-25 | LLOYDSME | qdrop10 | 1606 | 1412 | 1898 | 5 | no | open | 1 | -4.0% | -4.2% | -339 |
-| 2026-11-25 | LICHSGFIN | flag | 598 | 561 | 654 | 16 | no | open | 1 | -0.3% | -0.5% | -52 |
-| 2026-11-25 | LGEINDIA | hi52v | 1818 | 1630 | 2100 | 5 | no | open | 1 | -3.3% | -3.5% | -322 |
-| 2026-11-25 | KARURVYSYA | flag | 379.0 | 352.0 | 419.5 | 26 | no | open | 1 | -2.4% | -2.6% | -259 |
-| 2026-11-25 | KALYANKJIL | flag | 636 | 561 | 749 | 13 | no | open | 1 | +0.6% | +0.3% | 29 |
-| 2026-11-25 | J&KBANK | don55 | 155.25 | 135.75 | 184.5 | 51 | no | open | 1 | +4.9% | +4.6% | 366 |
-| 2026-11-25 | ITC | don55 | 309.0 | 296.0 | 328.5 | 32 | no | open | 1 | -0.6% | -0.9% | -89 |
-| 2026-11-25 | IRB | flag | 17.35 | 15.65 | 19.9 | 576 | no | open | 1 | -0.2% | -0.5% | -48 |
-| 2026-11-25 | IOC | nr7 | 147.75 | 138.5 | 161.75 | 67 | no | open | 1 | -2.3% | -2.5% | -248 |
-| 2026-11-25 | INDIGO | don55 | 5720 | 5340 | 6290 | 1 | no | open | 1 | -1.7% | -1.9% | -109 |
-| 2026-11-25 | INDIANB | flag | 930 | 864 | 1029 | 10 | no | open | 1 | +0.3% | +0.1% | 7 |
-| 2026-11-25 | IIFL | nr7 | 610 | 557 | 690 | 16 | no | open | 1 | -2.6% | -2.9% | -281 |
-| 2026-11-25 | IGL | flag | 149.75 | 139.25 | 165.5 | 66 | no | open | 1 | -1.0% | -1.3% | -125 |
-| 2026-11-25 | HONASA | flag | 536 | 496 | 596 | 18 | no | open | 1 | -0.5% | -0.8% | -74 |
-| 2026-11-25 | HINDUNILVR | don55 | 2140 | 1955 | 2420 | 4 | no | open | 1 | -0.4% | -0.7% | -58 |
-| 2026-11-25 | HINDCOPPER | qdrop10 | 399.0 | 352.5 | 469.0 | 21 | no | open | 1 | +3.0% | +2.8% | 234 |
-| 2026-11-25 | HFCL | qdrop | 170.0 | 145.0 | 207.5 | 40 | no | open | 1 | -3.4% | -3.6% | -246 |
-| 2026-11-25 | HEROMOTOCO | don55 | 5750 | 5400 | 6280 | 1 | no | open | 1 | +0.7% | +0.4% | 25 |
-| 2026-11-25 | HEGAM | flag | 258.5 | 234.0 | 295.5 | 38 | no | open | 1 | +8.7% | +8.4% | 830 |
-| 2026-11-25 | HDFCLIFE | flag | 601 | 560 | 663 | 16 | no | open | 1 | -1.1% | -1.4% | -130 |
-| 2026-11-25 | GODREJCP | don55 | 963 | 902 | 1055 | 10 | no | open | 1 | -1.6% | -1.9% | -179 |
-| 2026-11-25 | GMRAIRPORT | flag | 102.75 | 95.25 | 114.0 | 97 | no | open | 1 | -1.5% | -1.8% | -175 |
-| 2026-11-25 | GMDCLTD | flag | 455.0 | 407.5 | 526.5 | 21 | no | open | 1 | +0.1% | -0.1% | -11 |
-| 2026-11-25 | GLENMARK | don55 | 2720 | 2545 | 2985 | 3 | no | open | 1 | +0.7% | +0.5% | 40 |
-| 2026-11-25 | FORCEMOT | flag | 20400 | 18650 | 23025 | 0 | no | open | 1 | -0.2% | -0.4% | -0 |
-| 2026-11-25 | FIVESTAR | flag | 424.5 | 389.5 | 477.0 | 23 | no | open | 1 | -2.6% | -2.9% | -283 |
-| 2026-11-25 | EMCURE | nr7 | 2315 | 2175 | 2525 | 4 | no | open | 1 | +0.6% | +0.4% | 33 |
-| 2026-11-25 | EMAMILTD | don55 | 427.5 | 400.5 | 468.0 | 23 | no | open | 1 | -1.4% | -1.6% | -158 |
-| 2026-11-25 | EIHOTEL | don55 | 340.0 | 312.5 | 381.5 | 29 | no | open | 1 | -2.1% | -2.4% | -236 |
-| 2026-11-25 | EICHERMOT | hi52v | 8340 | 7910 | 8990 | 1 | no | open | 1 | -1.9% | -2.2% | -181 |
-| 2026-11-25 | DELHIVERY | flag | 462.0 | 432.0 | 507.0 | 21 | no | open | 1 | -0.3% | -0.6% | -56 |
-| 2026-11-25 | DABUR | don55 | 430.0 | 397.0 | 479.5 | 23 | no | open | 1 | -2.7% | -2.9% | -289 |
-| 2026-11-25 | BPCL | nr7 | 310.0 | 291.0 | 338.5 | 32 | no | open | 1 | -0.8% | -1.0% | -100 |
-| 2026-11-25 | BLUESTARCO | don55 | 1822 | 1670 | 2050 | 5 | no | open | 1 | -2.3% | -2.5% | -232 |
-| 2026-11-25 | BELRISE | flag | 241.75 | 221.25 | 272.5 | 41 | no | open | 1 | -0.3% | -0.5% | -53 |
-| 2026-11-25 | BANKINDIA | flag | 160.0 | 146.75 | 180.0 | 62 | no | open | 1 | +0.2% | -0.1% | -7 |
-| 2026-11-25 | BANKBARODA | flag | 276.5 | 256.0 | 307.5 | 36 | no | open | 1 | -0.7% | -0.9% | -93 |
-| 2026-11-25 | BANDHANBNK | flag | 171.75 | 159.0 | 191.0 | 58 | no | open | 1 | -1.3% | -1.6% | -156 |
-| 2026-11-25 | BAJFINANCE | don55 | 1132 | 1052 | 1252 | 8 | no | open | 1 | -3.0% | -3.3% | -296 |
-| 2026-11-25 | AUBANK | flag | 1006 | 936 | 1112 | 9 | no | open | 1 | -2.4% | -2.6% | -239 |
-| 2026-11-25 | ASAHIINDIA | flag | 1196 | 1112 | 1322 | 8 | no | open | 1 | -0.5% | -0.8% | -73 |
-| 2026-11-25 | APLAPOLLO | qdrop | 1476 | 988 | 2208 | 2 | no | open | 1 | +0.4% | +0.1% | 4 |
-| 2026-11-25 | ANURAS | flag | 1316 | 1218 | 1464 | 7 | no | open | 1 | +0.6% | +0.4% | 36 |
-| 2026-11-25 | ABSLAMC | flag | 959 | 884 | 1072 | 10 | no | open | 1 | +3.5% | +3.2% | 308 |
-| 2026-11-25 | ABDL | flag | 807 | 741 | 906 | 12 | no | open | 1 | +1.6% | +1.4% | 135 |
-| 2026-11-23 | ZEEL | flag | 71.6 | 63.8 | 83.3 | 128 | no | open | 2 | -7.8% | -9.9% | -740 |
-| 2026-11-23 | WELSPUNLIV | hi52v | 271.0 | 243.5 | 312.5 | 36 | no | open | 2 | +3.5% | +1.3% | 312 |
-| 2026-11-23 | VIJAYA | hi52v | 1572 | 1432 | 1782 | 6 | no | open | 2 | +1.0% | -1.1% | 67 |
-| 2026-11-23 | VEDL | qdrop10 | 235.5 | 218.25 | 261.5 | 42 | no | open | 2 | +1.1% | -1.0% | 80 |
-| 2026-11-23 | VBL | flag | 427.0 | 401.5 | 465.5 | 23 | no | open | 2 | +0.3% | -1.8% | 8 |
-| 2026-11-23 | THERMAX | downtrend | 2705 | 2515 | 2990 | 3 | no | open | 2 | -1.1% | -3.2% | -108 |
+| 2026-11-26 | WOCKPHARMA | volbreak | 2235 | 1905 | 2730 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | WELSPUNLIV | don55 | 280.5 | 255.0 | 319.0 | 35 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | UBL | nr7 | 1272 | 1202 | 1378 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | TRENT | nr7 | 3265 | 3035 | 3610 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | TORNTPHARM | don55 | 5020 | 4740 | 5440 | 1 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | TCS | don55 | 2640 | 2480 | 2880 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | TATASTEEL | qdrop10 | 163.5 | 145.75 | 190.25 | 56 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | STLTECH | qdrop | 589 | 509 | 709 | 12 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | SIGNATURE | flag | 856 | 792 | 952 | 11 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | SHYAMMETL | nr7 | 1292 | 1200 | 1430 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | SBIN | flag | 1136 | 1082 | 1218 | 8 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | SBICARD | nr7 | 586 | 555 | 633 | 17 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | SANSERA | nr7 | 4685 | 4255 | 5330 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | RUBICON | volbreak | 1852 | 1578 | 2264 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | RELIANCE | don55 | 1396 | 1334 | 1490 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | RAMCOCEM | nr7 | 828 | 785 | 893 | 12 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | PRESTIGE | hi52v | 1832 | 1674 | 2070 | 5 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | PNB | nr7 | 147.5 | 137.0 | 163.25 | 67 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | PIDILITIND | nr7 | 1604 | 1516 | 1736 | 6 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | PFOCUS | qdrop | 236.5 | 207.75 | 279.75 | 34 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | OBEROIRLTY | volbreak | 1906 | 1786 | 2086 | 5 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | NATIONALUM | qdrop10 | 295.0 | 267.0 | 337.0 | 33 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | MCX | hi52v | 3835 | 3415 | 4465 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | MAXHEALTH | flag | 1082 | 1004 | 1200 | 9 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | MARICO | don55 | 939 | 896 | 1004 | 10 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | MANAPPURAM | qdrop | 270.0 | 248.0 | 303.0 | 37 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | M&M | flag | 3490 | 3250 | 3850 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | LODHA | don55 | 1262 | 1156 | 1422 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | LLOYDSME | qdrop10 | 1542 | 1350 | 1830 | 5 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | LAURUSLABS | don55 | 2505 | 2310 | 2800 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | KPRMILL | nr7 | 1190 | 1100 | 1326 | 8 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | KOTAKBANK | nr7 | 510 | 485 | 548 | 19 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | KFINTECH | don55 | 995 | 851 | 1211 | 6 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | KARURVYSYA | flag | 370.0 | 341.0 | 413.5 | 27 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | KALYANKJIL | flag | 640 | 574 | 739 | 15 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | JWL | volbreak | 238.75 | 189.0 | 313.5 | 20 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | JSWSTEEL | nr7 | 1304 | 1240 | 1400 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | JINDALSTEL | nr7 | 1114 | 1040 | 1226 | 8 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | J&KBANK | don55 | 162.75 | 142.25 | 193.5 | 48 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | IIFL | qdrop10 | 594 | 531 | 689 | 15 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | IGIL | flag | 423.0 | 390.5 | 472.0 | 23 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | IDFCFIRSTB | flag | 86.7 | 81.5 | 94.5 | 115 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | IDEA | qdrop10 | 11.6 | 10.25 | 13.65 | 740 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ICICILIFE | nr7 | 468.5 | 440.0 | 511.5 | 21 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | HONASA | flag | 533 | 494 | 592 | 18 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | HFCL | qdrop | 164.25 | 140.25 | 200.25 | 41 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | HEROMOTOCO | don55 | 5790 | 5440 | 6320 | 1 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | HDFCBANK | don55 | 862 | 801 | 954 | 11 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | HAVELLS | nr7 | 1180 | 1106 | 1292 | 8 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | GODREJPROP | volbreak | 2005 | 1825 | 2275 | 4 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | GLENMARK | don55 | 2740 | 2570 | 2995 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | FORCEMOT | flag | 20350 | 18625 | 22950 | 0 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | FLUOROCHEM | nr7 | 4780 | 4400 | 5350 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ENDURANCE | volbreak | 2695 | 2505 | 2980 | 3 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DOMS | don55 | 2300 | 2140 | 2540 | 4 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DLF | don55 | 808 | 763 | 876 | 12 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DIVISLAB | flag | 11625 | 10875 | 12750 | 0 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DELHIVERY | nr7 | 460.5 | 431.0 | 505.0 | 21 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DEEPAKFERT | flag | 1442 | 1302 | 1652 | 6 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | DATAPATTNS | nr7 | 4155 | 3770 | 4735 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | CIPLA | don55 | 1450 | 1382 | 1552 | 6 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | CEMPRO | nr7 | 1424 | 1310 | 1596 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | CAPLIPOINT | qdrop | 2005 | 1820 | 2285 | 4 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BSOFT | nr7 | 303.5 | 281.0 | 337.5 | 32 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BRITANNIA | don55 | 5180 | 4820 | 5720 | 1 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BRIGADE | volbreak | 628 | 577 | 705 | 15 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BIOCON | nr7 | 365.0 | 343.0 | 398.0 | 27 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BHARTIHEXA | qdrop10 | 1536 | 1430 | 1696 | 6 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BANKINDIA | flag | 160.25 | 147.0 | 180.25 | 62 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BANKBARODA | flag | 274.5 | 255.5 | 303.0 | 36 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BANDHANBNK | nr7 | 169.5 | 156.75 | 188.75 | 58 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | BAJAJHLDNG | hi52v | 11925 | 11000 | 13325 | 0 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | AXISBANK | flag | 1408 | 1324 | 1534 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ATHERENERG | nr7 | 1906 | 1682 | 2242 | 4 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ASHOKLEY | qdrop10 | 156.25 | 143.75 | 175.0 | 64 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | APOLLOHOSP | nr7 | 9220 | 8790 | 9870 | 1 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | APLAPOLLO | qdrop | 1482 | 1038 | 2148 | 2 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ANANDRATHI | hi52v | 2410 | 2300 | 2575 | 4 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ACE | hi52v | 1296 | 1166 | 1492 | 7 | no | open | 0 | n/a | n/a | 0 |
+| 2026-11-26 | ABSLAMC | volbreak | 992 | 911 | 1114 | 10 | no | open | 0 | n/a | n/a | 0 |
 
-Full ledger: `journal/recommendations.json` (553 plans).
+Full ledger: `journal/recommendations.json` (634 plans).
+
+## The desk's own signal back-test
+
+The 30 signals behind the desk's buy lists, re-tested every run on Dhan daily data from 2015-10-30 (out-of-sample from 2024-11-26, 497 stocks). 8 pass the desk's single-signal test in rising markets; 0 of 30 survive the joint many-signals test (risk lab), which is why the desk makes no real calls. Moved here from the Trading Terminal so the terminal stays a clean screen.
+
+| Signal | passes (rising) | passes (weak) | cases after | 10-day vs Nifty after | lift vs average stock | many-signals p | survives |
+|---|---|---|---|---|---|---|---|
+| Relative strength line at a 1-year high before the price is | yes | no | 273 | +1.76% | +1.54% | 0.434 | no |
+| Gap up of 3% or more that holds into the close on 2x volume | no | yes | 234 | +1.69% | +1.46% | 0.434 | no |
+| New 52-week closing high on 1.5x average volume | yes | no | 1041 | +1.56% | +1.34% | 0.434 | no |
+| Proven stock 25% below its 52-week high, first close back above its 20-day average | no | no | 858 | +1.46% | +1.23% | 0.434 | no |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 15%+ within 10 days | yes | no | 158 | +1.34% | +1.11% | 0.434 | no |
+| Bull flag: up 10%+ over 10 days, then 5 days inside a 5% range (trader-scanner) | yes | no | 2065 | +1.12% | +0.90% | 0.434 | no |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 10%+ within 10 days | yes | no | 731 | +0.96% | +0.74% | 0.434 | no |
+| Donchian breakout: close above the 55-day high (turtle rule) | yes | no | 2532 | +0.81% | +0.59% | 0.434 | no |
+| Oversold bounce: RSI(14) under 30 yesterday, closes up today (trader-scanner) | no | no | 1505 | +0.76% | +0.54% | 0.434 | no |
+| Tightest range in 7 days, inside the prior bar, in an uptrend | yes | no | 3236 | +0.72% | +0.50% | 0.434 | no |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls 25%+ within 20 days | no | no | 39 | +0.68% | +0.46% | 0.434 | no |
+| Volume breakout above the 20-day high (existing setup) | yes | no | 2490 | +0.54% | +0.32% | 0.434 | no |
+| MACD crosses above its signal line while above zero | no | no | 1738 | +0.50% | +0.27% | 0.434 | no |
+| Strong trend starting: ADX(14) crosses above 25 with buyers in control | no | no | 1097 | +0.41% | +0.19% | 0.434 | no |
+| 20-day closing-high breakout with turnover of Rs 10 crore or more (nse-day-trader / trader-scanner) | no | no | 6601 | +0.41% | +0.19% | 0.434 | no |
+| Overextended: RSI(14) over 80 and 25% above the 50-day average (warning) | no | no | 118 | +0.41% | +0.19% | 0.434 | no |
+| Trend template: price above rising 50, 150 and 200-day averages, near its 52-week high | no | no | 1387 | +0.33% | +0.11% | 0.434 | no |
+| Pullback in an uptrend (existing setup) | no | no | 1955 | +0.31% | +0.09% | 0.434 | no |
+| Downtrend: below a falling 200-day average and 50-day below 200-day (warning) | no | no | 866 | +0.30% | +0.08% | 0.434 | no |
+| Accumulation: up-day volume 1.5x down-day volume over 50 days, above the 50-day average | no | no | 2886 | +0.27% | +0.05% | 0.434 | no |
+| Three down closes in a row while above the 200-day average | no | no | 3275 | +0.19% | -0.04% | 0.434 | no |
+| Supertrend(10, 3) turns up | no | no | 1435 | +0.17% | -0.06% | 0.434 | no |
+| Closes in the bottom 20% of its day's range while above the 200-day average | no | no | 9336 | +0.16% | -0.06% | 0.434 | no |
+| Closes back above the 20-day average after 5+ days below, in an uptrend (trader-scanner) | no | no | 1471 | +0.16% | -0.06% | 0.434 | no |
+| Closes back above the 200-day average after 20+ days below | no | no | 512 | +0.16% | -0.07% | 0.434 | no |
+| Proven stock (beat the Nifty by 20%+ over 2 years) falls to 25% below its 52-week high | no | no | 897 | +0.14% | -0.08% | 0.434 | no |
+| Short dip in an uptrend: RSI(2) under 10 while above the 200-day average | no | no | 3041 | +0.10% | -0.12% | 0.434 | no |
+| Bollinger squeeze breakout: band width in its lowest 20% of 6 months, close above the upper band | no | no | 1525 | +0.10% | -0.13% | 0.434 | no |
+| Oversold: RSI(14) under 30 (trader-scanner) | no | no | 1076 | -0.03% | -0.25% | 0.434 | no |
+| Volatility contraction near the high: 10-day range under 60% of the 50-day range | no | no | 1 | n/a | n/a | None | no |
+
+## The terminal's intraday back-test (last month)
+
+Desk picks bought at 09:30, 12:30 or 15:00 on each of the last 22 sessions (2026-10-26 to 2026-11-26), 489 stocks, 5-minute Dhan bars, held to the plan's exit. Rules passing: 0.
+
+| Buy time | trades | average vs Nifty | share up | t | passes | Rs over the month |
+|---|---|---|---|---|---|---|
+| 09:30 | 1287 | -0.28% | 43% | -6.7 | no | -2959 |
+| 12:30 | 1287 | -0.07% | 43% | -2.71 | no | 4481 |
+| 15:00 | 1287 | -0.09% | 44% | -6.72 | no | -6059 |
 
 ## Rule changes
 
@@ -253,7 +330,7 @@ Full ledger: `journal/recommendations.json` (553 plans).
 
 ## Daily log, newest first
 
-- **2026-11-26** (run 26 Nov 2026 21:37 IST): Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 7 for rising markets, 1 for weak markets. Trade plans printed: 0, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 553 (26 closed, 527 open).
+- **2026-11-26** (run 26 Nov 2026 22:19 IST): Nifty 50 closed at 25,884.5 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 8 for rising markets, 1 for weak markets. Trade plans printed: 81, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 634 (26 closed, 608 open).
 
 ## How the desk works
 
