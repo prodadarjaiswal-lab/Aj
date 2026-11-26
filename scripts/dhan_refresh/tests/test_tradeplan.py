@@ -108,7 +108,8 @@ def test_run_writes_plans_and_failing_checks(tmp_path):
     assert p["stop"] < p["entry"] < p["target"]
     for k in ("entry", "stop", "target"):
         assert abs(p[k] / p["tick"] - round(p[k] / p["tick"])) < 1e-6
-    assert p["qty"] == math.floor(min(1000 / (p["entry"] - p["stop"]), 0.10 * 100000 / p["entry"], 100000 / p["entry"]))
+    cap, ml = float(CFG["capital"]), float(CFG["max_loss_per_trade"])
+    assert p["qty"] == math.floor(min(ml / (p["entry"] - p["stop"]), 0.10 * cap / p["entry"], cap / p["entry"]))
     ck = {x["rule"]: x for x in p["checks"]}
     assert len(ck) >= 6
     assert ck["no results or board meeting while held"]["ok"] is False and p["event"]["d"] == "2026-11-20"
