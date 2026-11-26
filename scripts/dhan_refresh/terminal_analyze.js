@@ -311,6 +311,16 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
     ${rules.map(r=>{const xs=TM.filter(o=>o.rule===r);return`<tr><td class="sm"><b>${E(xs[0].t)}</b><br><small>${E(xs[0].src||"")}</small></td>${[...new Set(TM.map(o=>o.idx))].map(i=>tcell(xs.find(o=>o.idx===i))).join("")}</tr>`}).join("")}</table></div>
     <p class="note">Rule vs simply holding the same index, last 3 years: return a year and worst fall. Holds = beat holding after the many-ideas correction; Safer = smaller worst fall with at least the same Sharpe, before and after the cut, without being proven to earn more. Out of the market = T-bill rate.</p></div>`:"";
   const pp=V.paper,ppl=pp?["nifty_condor","nifty_condor_tight"].filter(k=>pp[k]).map(k=>`${k==="nifty_condor"?"Wide":"Narrow"} condor: ${pp[k].closed} closed, ${pp[k].won} won, ${F(pp[k].pts,0)} pts${pp[k].open?`, open since ${E(D_(pp[k].open.d))}`:""}`).join(" · "):"";
+  const DK=V.desk,cv={high:"pass",medium:"warn",low:""},rs=x=>"₹"+F(x,0);
+  const memo=m=>`<div class="spnl idea"><h3>${E(m.etf||m.idx)} <span class="pill ${cv[m.conv]}">${m.conv==="low"?"Watch":m.conv+" conviction"}</span></h3>
+    <p class="sm"><b>Thesis.</b> ${E(m.why)}${m.src?` <small>(${E(m.src)})</small>`:""}</p>
+    <p class="sm"><b>Evidence.</b> Last 3 years, never used to fit it: ${pc(m.ev.raw_mean,2)} a month vs holding, right ${sh(m.ev.hit)} of ${m.ev.months} months${m.safer?", with a smaller worst fall":""}.</p>
+    ${m.conv==="low"?`<p class="sm"><b>Not traded:</b> the evidence is not strong enough yet.</p>`:`<p><b>Trade.</b> Buy about ${rs(m.notional)} of ${E(m.etf||m.idx)} near ${F(m.px,0)} (index). Stop ${F(m.stop,0)} (−${(m.stop_pct*100).toFixed(1)}%), risk ${rs(m.risk_rs)}.</p>
+    <p class="sm"><b>Exit.</b> ${E(m.exit)} ${m.hedge&&m.hedge.text?"<b>Hedge.</b> "+E(m.hedge.text):""} ${m.note?E(m.note):""}</p>`}</div>`;
+  const dk=DK?`<div class="head"><h2>Today's desk</h2><span class="pill ${DK.memos.some(m=>m.conv!=="low")?"pass":"fail"}">${E(DK.stance)}</span></div>
+    <p class="sm">${E(DK.why)} Risk in use: ${rs(DK.heat_rs)} of ${rs(DK.limit_rs)} per trade, capital ${rs(DK.capital)}.${DK.avoid&&DK.avoid.length?" Popular views the data rejects: "+DK.avoid.map(E).join("; ")+".":""}</p>
+    ${DK.memos.length?`<div class="sgrid">${DK.memos.map(memo).join("")}</div>`:""}
+    <p class="note">How each idea is built: ${DK.process.map(E).join(" → ")}. Rebuilt every evening from the data; nothing is hand-picked.</p>`:"";
   const rk=V.risk.length?`<details class="spnl wide"><summary><b>Risk and return, last 3 years</b> <span class="sm">Sharpe, worst fall, beta and correlation to the Nifty for every index and NSE factor index</span></summary>
     <div class="scroll"><table><tr><th>Index</th><th class="n">Return/yr</th><th class="n">Volatility</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Beta</th><th class="n">Corr</th></tr>
     ${V.risk.map(r=>`<tr><td>${E(r.k)}</td><td class="n ${r.ret>0?"up":"down"}">${pc(r.ret)}</td><td class="n">${sh(r.vol)}</td><td class="n"><b>${r.sharpe==null?"–":F(r.sharpe,2)}</b></td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td><td class="n">${r.corr==null?"–":F(r.corr,2)}</td></tr>`).join("")}</table></div>
@@ -318,6 +328,7 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
   el.innerHTML=`<div class="head" style="margin-top:6px"><h2>Market view</h2></div>
    <div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · close of ${E(D_(V.asof))}</span></div>
    ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}
+   ${dk}
    ${idc?`<div class="head"><h2>Trading ideas</h2><span class="sm">hedged, index legs only, tested on data they were never fitted on</span></div><div class="sgrid">${idc}</div>`:""}
    ${ppl?`<p class="sm">Paper record since ${E(D_(pp.since))} (no hindsight): ${ppl}</p>`:""}
    <div class="sgrid">${tm}

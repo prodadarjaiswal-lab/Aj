@@ -758,6 +758,95 @@ def timing_ideas(days: list, X: dict, cut: str) -> list:
     return out
 
 
+# ---------------------------------------------------------------- the desk: tested pieces -> trade memos
+# How a fund desk turns research into a trade: thesis -> evidence on unseen data -> instrument -> size from the
+# risk budget (volatility, not conviction) -> stop and exit decided before entry -> hedge -> portfolio limits
+# (correlated trades share one risk budget). Nothing here is new evidence; it only assembles what was tested above.
+ETF = {"Nifty 50": "NIFTYBEES", "Nifty Bank": "BANKBEES", "Nifty Midcap 100": "MID150BEES", "Nifty IT": "ITBEES",
+       "Nifty PSU Bank": "PSUBNKBEES"}
+MAX_POSITION = 0.5        # no single trade above half the capital
+
+
+def daily_vol(c: list, i: int, n: int = 63) -> float | None:
+    r = [c[j] / c[j - 1] - 1 for j in range(i - n + 1, i + 1) if j > 0 and c[j] and c[j - 1]]
+    if len(r) < n // 2:
+        return None
+    mu = sum(r) / len(r)
+    return math.sqrt(sum((x - mu) ** 2 for x in r) / (len(r) - 1))
+
+
+def conviction(o: dict) -> str:
+    if o.get("verdict") == "HOLDS":
+        return "high"
+    t, a = o["oos"].get("t") or 0, o["is"].get("raw_mean")
+    return "medium" if t >= 1.5 and (a or 0) > 0 else "low"
+
+
+def memo_long(idx: str, c: list, i: int, vix: float | None, hold: int, o: dict, why: str, exit_rule: str) -> dict:
+    sd = daily_vol(c, i) or 0.01
+    stop_pct = sd * math.sqrt(hold)                       # one ordinary holding-period move
+    px = c[i]
+    notional = min(SIZE["max_loss"] / stop_pct, SIZE["capital"] * MAX_POSITION)
+    risk = notional * stop_pct
+    sig = (vix or sd * math.sqrt(252) * 100) / 100
+    put_k = round(px * (1 - stop_pct) / 50) * 50 if px > 5000 else px * (1 - stop_pct)
+    put = bs(px, put_k, hold / 252, sig, False) / px if px > 0 else None
+    return {"k": o["key"], "idx": idx, "etf": ETF.get(idx), "title": o.get("title"), "why": why, "src": o.get("src"),
+            "conv": conviction(o), "verdict": o.get("verdict"), "safer": o.get("safer"),
+            "ev": {x: o["oos"].get(x) for x in ("raw_mean", "hit", "months", "t", "n")},
+            "px": round(px, 2), "stop": round(px * (1 - stop_pct), 2), "stop_pct": round(stop_pct, 4),
+            "notional": round(notional, -2), "risk_rs": round(risk), "hold": hold, "exit": exit_rule,
+            "hedge": {"put_strike": put_k, "cost_pct": round(put, 4) if put else None,
+                      "text": f"Optional: buy the {put_k:.0f} {idx} put for about {put * 100:.1f}% of the position; "
+                              "it replaces the stop on a gap down." if put else None}}
+
+
+def desk(days: list, X: dict, reg: list, bl: list, idl: list, tim: list, vix: dict | None) -> dict:
+    i = len(days) - 1
+    v = (vix or {}).get("vix")
+    cand = []
+    for o in tim:                                          # timing rules in the market today, with positive unseen evidence
+        if o.get("on_today") and ((o["oos"].get("raw_mean") or 0) > 0 or o.get("safer")):
+            hold = H if o["rule"] in ("trend200", "breakout55", "fear_buy") else 5
+            ex = {"trend200": "Sell when the index closes below its 200-day average, or at the stop.",
+                  "breakout55": "Sell on a close below the 20-day low, or at the stop.",
+                  "month_turn": "Sell at the close of the 3rd session of the month.",
+                  "rsi2_dip": "Sell when RSI(2) closes above 70, or at the stop.",
+                  "fear_buy": "Sell 21 sessions after the VIX spike, or at the stop."}[o["rule"]]
+            cand.append(memo_long(o["index"], X[o["index"]], i, v, hold, o, o["plain"], ex))
+    for b in bl:                                           # market-type beliefs that apply today
+        if b["key"] in ("bank_flat",) and reg[i] == "flat" and (b["oos"].get("raw_mean") or 0) > 0:
+            cand.append(memo_long("Nifty Bank", X["Nifty Bank"], i, v, H, b, b["plain"], "Sell after one month, or at the stop."))
+    rank = {"high": 0, "medium": 1, "low": 2}
+    cand.sort(key=lambda m: (rank[m["conv"]], -(m["ev"].get("t") or 0)))
+    picks, used = [], set()
+    for m in cand:                                         # one trade per index; correlated index longs share the budget
+        if m["idx"] in used:
+            continue
+        used.add(m["idx"])
+        picks.append(m)
+        if len(picks) == 3:
+            break
+    longs = [m for m in picks if m["conv"] != "low"]
+    if len(longs) > 1:                                      # Nifty, Bank Nifty and Midcap move together (corr ~0.85)
+        for m in longs:
+            m["notional"], m["risk_rs"] = round(m["notional"] / len(longs), -2), round(m["risk_rs"] / len(longs))
+            m["note"] = f"Size cut to 1/{len(longs)}: these indices move together, so they share one risk budget."
+    heat = sum(m["risk_rs"] for m in longs)
+    trade = [m for m in picks if m["conv"] in ("high", "medium")]
+    stance = ("TRADE: " + ", ".join(m["etf"] or m["idx"] for m in trade)) if trade else "NO TRADE TODAY"
+    why = ("Only ideas with positive results on data they were never fitted on are traded; size comes from the "
+           f"Rs {SIZE['max_loss']:,} per-trade loss limit and the index's own volatility.") if trade else \
+          "Nothing that is in play today has enough unseen evidence. The watch list below is what the desk would " \
+          "trade if its evidence firms up. Sitting out is a position."
+    fails = [b["title"] for b in bl if b.get("verdict") == "FAILS"][:3]
+    return {"stance": stance, "why": why, "memos": picks, "heat_rs": heat, "limit_rs": SIZE["max_loss"],
+            "capital": SIZE["capital"], "avoid": fails,
+            "process": ["Thesis from published research or a market belief", "Tested on data it was never fitted on",
+                        "Size from the loss limit and volatility, not from conviction", "Stop and exit fixed before entry",
+                        "Optional put hedge for gaps", "Correlated trades share one risk budget"]}
+
+
 def paper_log(log: dict, days: list, N: list, v: list | None) -> dict:
     """Forward (paper) record of the condor ideas from the day this went live: one open trade per idea, entered at
     the evening close, settled 21 sessions later on the Nifty close. Nothing here is fitted; it only accumulates."""
@@ -846,6 +935,7 @@ def build(series: dict, cap: dict, factors: dict | None = None, stocks: dict | N
         "bank_corr": {"is": corr(dr(bank)[:k0], dr(N)[:k0]), "oos": corr(dr(bank)[k0:], dr(N)[k0:])} if bank else None,
         "rel_12m": dict(sorted(rel.items(), key=lambda kv: kv[1])),
         "cap_names": list(cap),
+        "desk": desk(days, X, reg, bl, idl, tim, vix_range(days, X)),
         "ideas": idl, "timing": tim, "risk": risk_table(days, X | F, cut), "vix": vix_range(days, X), "screen": screen,
         "factors": list(F),
         "untested": ["FII / DII flows: only a few days are stored (docs/nse-feeds.json), so flow-driven views cannot "
