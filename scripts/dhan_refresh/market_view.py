@@ -1096,6 +1096,18 @@ def run(dhan, root: Path) -> str:
     log = paper_log(old, days, X["Nifty 50"], X.get("India VIX"))
     lp.write_text(json.dumps(log, indent=1), encoding="utf-8")
     v["paper"] = log["summary"] | {"since": log["since"]}
+    try:                                              # weekly-candle re-test of the same ideas, last 11 years
+        import weekly_view as WV
+        w = WV.build(series, cap)
+        w["compare"] = WV.compare(w, v)
+        (root / "docs/weekly-view.json").write_text(json.dumps(w, separators=(",", ":")), encoding="utf-8")
+        (root / "docs/weekly-view.md").write_text(WV.markdown(w), encoding="utf-8")
+        v["weekly"] = {"from": w["from"], "asof": w["asof"], "weeks": w["weeks"], "regime": w["regime"], "held": w["held"],
+                       "rows": [{"k": o["key"], "t": o["title"], "g": o["group"], "v": o["verdict"], "live": bool(o["live"]),
+                                 "is": o["is"].get("raw_mean"), "oos": o["oos"].get("raw_mean"), "hit": o["oos"]["hit"],
+                                 "m": o["oos"]["months"]} for o in w["results"]]}
+    except Exception as e:
+        print(f"  weekly view failed: {e}", flush=True)
     (root / "docs/market-view.json").write_text(json.dumps(v, separators=(",", ":")), encoding="utf-8")
     (root / "docs/market-view.md").write_text(markdown(v), encoding="utf-8")
     held = [b["key"] for b in v["beliefs"] if b["verdict"] == "HOLDS"]
