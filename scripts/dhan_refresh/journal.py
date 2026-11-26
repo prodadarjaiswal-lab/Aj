@@ -157,6 +157,48 @@ def lab_today(data: dict, nifty: dict, keep: list, near: list) -> dict:
     return out
 
 
+# ---------- the desk's own back-tests (moved here from the Trading Terminal, 26 Nov 2026) ----------
+def desk_backtests(root: Path) -> list:
+    L = []
+    tm = _j(root / "docs/tech-model.json", {})
+    rl = (_j(root / "docs/risklab.json", {}) or {}).get("signals") or {}
+    if tm.get("signals"):
+        names = tm.get("names") or {}
+        sig = tm["signals"]
+        nt = sum(1 for v in sig.values() if v.get("tested"))
+        ns = sum(1 for v in rl.values() if v.get("survives"))
+        L.append("## The desk's own signal back-test\n")
+        L.append(f"The {len(sig)} signals behind the desk's buy lists, re-tested every run on Dhan daily data from {tm.get('from')} "
+                 f"(out-of-sample from {tm.get('cutoff')}, {tm.get('stocks')} stocks). {nt} pass the desk's single-signal test in "
+                 f"rising markets; {ns} of {len(rl) or len(sig)} survive the joint many-signals test (risk lab), which is why the "
+                 f"desk makes no real calls. Moved here from the Trading Terminal so the terminal stays a clean screen.\n")
+        L.append("| Signal | passes (rising) | passes (weak) | cases after | 10-day vs Nifty after | lift vs average stock | many-signals p | survives |\n"
+                 "|---|---|---|---|---|---|---|---|")
+        for k, v in sorted(sig.items(), key=lambda kv: -((kv[1].get("lift_out_x10") or -9))):
+            o = (v.get("out") or {}).get("up") or {}
+            r = rl.get(k) or {}
+            L.append(f"| {names.get(k, k)} | {'yes' if v.get('tested') else 'no'} | {'yes' if v.get('tested_weak') else 'no'} | "
+                     f"{o.get('n', 0)} | {pct(o.get('x10'), 2)} | {pct(v.get('lift_out_x10'), 2)} | {r.get('spa_p', 'n/a')} | "
+                     f"{'yes' if r.get('survives') else 'no'} |")
+        L.append("")
+    bt = _j(root / "docs/terminal/backtest.json", {})
+    g = ((bt.get("grid") or {}).get("picks") or {})
+    if g:
+        days = bt.get("days") or []
+        L.append("## The terminal's intraday back-test (last month)\n")
+        L.append(f"Desk picks bought at 09:30, 12:30 or 15:00 on each of the last {len(days)} sessions "
+                 f"({days[0] if days else '?'} to {days[-1] if days else '?'}), {bt.get('stocks')} stocks, 5-minute Dhan bars, "
+                 f"held to the plan's exit. Rules passing: {len(bt.get('passing') or [])}.\n")
+        L.append("| Buy time | trades | average vs Nifty | share up | t | passes | Rs over the month |\n|---|---|---|---|---|---|---|")
+        for t_, by in g.items():
+            r = ((by or {}).get("any") or {}).get("plan") or {}
+            eq = ((bt.get("equity") or {}).get(t_) or [None])[-1]
+            L.append(f"| {t_} | {r.get('n', 0)} | {r.get('ex', 0):+.2f}% | {r.get('hit', 0):.0%} | {r.get('t')} | "
+                     f"{'yes' if r.get('pass') else 'no'} | {eq if eq is not None else 'n/a'} |")
+        L.append("")
+    return L
+
+
 # ---------- the markdown journal ----------
 def pct(x, d=1):
     return "n/a" if x is None else f"{x * 100:+.{d}f}%"
@@ -256,6 +298,7 @@ def render(root: Path, lab: dict, ledger: dict, log: list, picks: dict, today: d
                      f"{r.get('qty')} | {'yes' if r.get('called') else 'no'} | {r.get('status')} | {r.get('days', 0)} | "
                      f"{pct(r.get('ret'))} | {pct(r.get('x_nifty'))} | {r.get('pnl_rs', 0):,.0f} |")
         L.append(f"\nFull ledger: `journal/recommendations.json` ({len(recs)} plans).\n")
+    L += desk_backtests(root)
     # rule changes and daily log
     ch = [e for e in log if e.get("changes")]
     L.append("## Rule changes\n")
