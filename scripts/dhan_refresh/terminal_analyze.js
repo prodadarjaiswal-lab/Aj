@@ -262,14 +262,13 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
     .filter(Boolean).sort((a,b)=>b.on.length-a.on.length||((a.r.pe_sec||9)-(b.r.pe_sec||9))).slice(0,12);
   const up200=STK.filter(k=>RS[k].vs200>0).length;
   el.innerHTML=`<div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
-   <div class="sumbar" id="tm-breadth"><span><b>${PK.length}</b> setups today</span><span><b>${R.length}</b> buy now</span><span><b>${lt.length}</b> to hold</span><span><b>${up200}</b> of ${STK.length} above 200-day</span><span id="tm-adv"></span></div>
+   <div class="sumbar" id="tm-breadth"><span><b>${PK.length}</b> setups today</span><span><b>${R.length}</b> buy now</span><span><b>${up200}</b> of ${STK.length} above 200-day</span><span id="tm-adv"></span></div>
    <div class="sgrid">
    <div class="spnl wide"><h3>Screener picks</h3><div class="scroll"><table><tr><th>Stock</th><th>Setup</th><th class="n">Live</th><th class="n">Day</th><th class="n">3M vs Nifty</th><th class="n">RSI</th><th>Value</th><th>3M</th><th>6M</th><th>1Y</th></tr>
     ${PK.length?PK.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td><td class="sm">${[...new Set(z.r.setups.map(k=>SL[k]).filter(Boolean))].slice(0,2).map(E).join(", ")}</td>${lvc(z.s)}<td class="n ${z.r.rs3>0?"up":"down"}">${z.r.rs3==null?"–":P(z.r.rs3,0)}</td><td class="n">${z.r.rsi==null?"–":F(z.r.rsi,0)}</td><td class="sm">${E(z.r.value||"–")}</td>${vchip(window.azHorizons(z.s))}</tr>`).join(""):`<tr><td class="note">No setup on the last close.</td></tr>`}</table></div></div>
    <div class="spnl"><h3>Buy now</h3><div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">Stop</th><th class="n">Target</th><th class="n">Qty</th></tr>
     ${R.length?R.map(r=>`<tr class="go" data-mk="${E(r.s)}"><td><button class="lnk" data-mk="${E(r.s)}">${E(r.s)}</button></td>${lvc(r.s)}<td class="n down">${F(r.stop)}</td><td class="n up">${F(r.tgt)}</td><td class="n">${r.qty}</td></tr>`).join(""):`<tr><td class="note">No stock has a working signal today.</td></tr>`}</table></div></div>
-   <div class="spnl"><h3>Hold 6 to 12 months</h3><div class="scroll"><table><tr><th>Stock</th><th class="n">Live</th><th class="n">Day</th><th class="n">P/E vs sector</th><th class="n">ROCE</th></tr>
-    ${lt.length?lt.map(z=>`<tr class="go" data-mk="${E(z.s)}"><td><button class="lnk" data-mk="${E(z.s)}">${E(z.s)}</button></td>${lvc(z.s)}<td class="n">${z.r.pe_sec==null?"–":z.r.pe_sec<=0?"loss":F(z.r.pe_sec,2)+"×"}</td><td class="n">${z.r.roce==null?"–":F(z.r.roce,0)+"%"}</td></tr>`).join(""):`<tr><td class="note">Nothing passes the tested rules and the 1-year checks today.</td></tr>`}</table></div></div>
+
    <div class="spnl"><h3>Top gainers, live</h3><div class="scroll"><table id="tm-gain"></table></div></div>
    <div class="spnl"><h3>Top losers, live</h3><div class="scroll"><table id="tm-lose"></table></div></div>
    </div>
@@ -289,10 +288,10 @@ function works(){const el=$("tm-works"),L=window.LAB;if(!el||!L||!L.best)return;
 /* ---------- Bird's-eye view of every screener section ---------- */
 function eye(){const el=$("tm-eye");if(!el)return;const cards=[];
   const card=(t,n,names,d,go)=>cards.push(`<div class="eye"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}</div>`);
-  [["dd-rising",""],["dd-dips",""],["dd-invest",""],["dd-barg",""],["dd-movers",""],["dd-swing",""]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
+  [["dd-rising",""],["dd-dips",""],["dd-movers",""],["dd-swing",""]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
     const names=[...new Set([...x.querySelectorAll("[data-s]")].map(b=>b.dataset.s))].slice(0,6),cnt=(x.querySelector("[id^=n-]")||{}).textContent||names.length;
     card(((x.querySelector(".ddt")||{}).textContent||id).trim(),cnt,names,d)});
-  if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10}catch(e){return false}});
+  if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.filter(p=>["best","setup","flow","osq","lead","downco","downmkt"].includes(p[0])).forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10}catch(e){return false}});
     try{rows.sort(p[4])}catch(e){}card(p[1],rows.length+" stocks",rows.slice(0,6).map(x=>x.s),p[2])});
   el.innerHTML=cards.join("")}
 function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});

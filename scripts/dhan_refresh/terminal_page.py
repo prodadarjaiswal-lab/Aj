@@ -180,7 +180,15 @@ CLEAN_CSS = """
 #tm-proof,#az-body .row:has(#az-proof),
 #screener #deskSum .vr,#screener #deskSum .miss,#screener #deskSum details,
 #screener p.note[id^="b-"],#dd-track,#dd-board,#dd-fresh,#dd-quant,#dd-jr,
-.tab[data-t="screener"]{display:none!important}
+#deskSum,#screener #dd-rising,#screener #dd-swing,#screener #dd-dips,#screener #dd-movers,#screener #dd-rsum,
+#presets [data-pre=best],#presets [data-pre=setup],#presets [data-pre=flow],#presets [data-pre=osq],#presets [data-pre=lead],
+#presets [data-pre=downco],#presets [data-pre=downmkt]{display:none!important}
+@media (max-width:520px){.tabs{flex-wrap:wrap;justify-content:flex-start}.tabs .tab{padding-inline:10px}}
+#vm .mtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+#vm .mt{border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+#vm .mt span{color:var(--mute);font-size:12px}#vm .mt b{font:600 1.1rem var(--mono)}#vm .mt small{color:var(--mute);font-size:11.5px}
+#vm h3{margin:12px 0 6px;font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;border-left:3px solid var(--warn);padding-left:8px}
+#vm td.up,#vm b.up{color:var(--up)}#vm td.down,#vm b.down{color:var(--down)}
 #term .eyeg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
 #term .eye{border:1px solid var(--line);border-radius:4px;padding:10px;background:var(--panel);min-width:0}
 #term .eye h4{margin:0 0 6px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
@@ -190,6 +198,67 @@ CLEAN_CSS = """
 #term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 #term ul.wk li{display:flex;gap:10px;align-items:baseline;font-size:13px}
 #term ul.wk b{font-family:var(--mono);min-width:56px;text-align:right}#term ul.wk small{color:var(--mute)}
+"""
+
+
+def macro_summary(root: Path) -> dict:
+    """Value-tab macro block from the NSE terminal data (docs/nse-terminal.html): rates, rupee, oil, inflation,
+    global markets, FII/DII flows and sector valuations against their own history."""
+    import refresh as R
+    try:
+        n = R.read_nset((root / "docs/nse-terminal.html").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out = {"asof": str(n.get("asof", ""))[:16], "tiles": [], "glob": [], "sectors": [], "flows": None}
+    lab = {"usdinr": ("USD/INR", "", 2), "in10y": ("India 10-year", "%", 2), "us10y": ("US 10-year", "%", 2),
+           "brent": ("Brent crude", " $", 1), "cpi_yoy": ("India CPI inflation", "%", 2)}
+    for k, (name, unit, dp) in lab.items():
+        v = (n.get("macro") or {}).get(k) or []
+        if len(v) >= 13:
+            out["tiles"].append({"name": name, "v": round(v[-1][1], dp), "unit": unit, "m": v[-1][0], "y": round(v[-1][1] - v[-13][1], dp)})
+    for name, x in ((n.get("glob") or {}).get("series") or {}).items():
+        r = x.get("rows") or []
+        if len(r) > 22:
+            out["glob"].append({"name": name, "v": r[-1][1], "d": r[-1][0], "m1": r[-1][1] / r[-22][1] - 1})
+    for x in n.get("sectors") or []:
+        if not (x.get("pe_med") and x.get("snap_pe") and x.get("snap_close") and x.get("ltp")):
+            continue
+        pe = x["snap_pe"] * x["ltp"] / x["snap_close"]          # NSE's last published P/E scaled to today's price
+        if True:
+            out["sectors"].append({"name": x["name"], "pe": round(pe, 1), "med": round(x["pe_med"], 1), "prem": pe / x["pe_med"] - 1,
+                                   "state": x.get("state"),
+                                   "chg": (x["ltp"] / x["prev"] - 1) if x.get("ltp") and x.get("prev") else None})
+    out["sectors"].sort(key=lambda z: z["prem"])
+    fd = n.get("fiidii") or {}
+    if fd:
+        import datetime as _dt
+        def key(d):
+            try:
+                return _dt.datetime.strptime(d, "%d-%b-%Y")
+            except Exception:
+                return _dt.datetime.min
+        last = sorted(fd, key=key)[-1]
+        out["flows"] = {"d": last, "fii": (fd[last].get("FII/FPI") or {}).get("net"), "dii": (fd[last].get("DII") or {}).get("net")}
+    if n.get("gsec"):
+        out["gsec"] = round(n["gsec"], 2)
+    return out
+
+
+VALUE_HTML = r"""
+<div class="pnl" id="vm"><h2>Value and macro</h2><div id="vm-body"></div></div>
+"""
+
+VALUE_JS = r"""
+(function(){const M=window.MACRO||{},el=document.getElementById("vm-body");if(!el)return;
+const f=(x,d=2)=>x==null?"–":Number(x).toLocaleString("en-IN",{maximumFractionDigits:d,minimumFractionDigits:d});
+const p=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%";
+let h="";
+if((M.tiles||[]).length)h+=`<h3>India macro</h3><div class="mtiles">${M.tiles.map(t=>`<div class="mt"><span>${esc(t.name)}</span><b>${f(t.v)}${esc(t.unit)}</b><small>${esc(t.m)} · ${t.y>0?"+":""}${f(t.y)} on a year ago</small></div>`).join("")}${M.flows?`<div class="mt"><span>FII net, ${esc(M.flows.d)}</span><b class="${M.flows.fii>0?"up":"down"}">₹${f(M.flows.fii,0)} Cr</b><small>DII ₹${f(M.flows.dii,0)} Cr</small></div>`:""}</div>`;
+if((M.sectors||[]).length)h+=`<h3>Sector valuations (P/E vs own median)</h3><div class="tw"><table><tr><th>Sector</th><th class="n">P/E</th><th class="n">Median</th><th class="n">vs median</th><th class="n">Day</th></tr>${M.sectors.map(s=>`<tr><td>${esc(s.name)}${s.state?`<div class="sm">${esc(s.state)}</div>`:""}</td><td class="n">${f(s.pe,1)}</td><td class="n">${f(s.med,1)}</td><td class="n ${s.prem<0?"up":"down"}">${p(s.prem,0)}</td><td class="n ${s.chg>0?"up":s.chg<0?"down":""}">${p(s.chg,2)}</td></tr>`).join("")}</table></div><p class="note">Green = cheaper than its own history. P/E = NSE's last published index P/E scaled to today's close (${esc(M.asof||"")}).</p>`;
+if((M.glob||[]).length)h+=`<h3>Global</h3><div class="mtiles">${M.glob.map(g=>`<div class="mt"><span>${esc(g.name)}</span><b>${f(g.v,g.v<50?2:0)}</b><small class="${g.m1>0?"up":"down"}">${p(g.m1)} in a month · ${esc(g.d)}</small></div>`).join("")}</div>`;
+el.innerHTML=h||'<p class="note">Macro data appears after the next refresh.</p>';
+try{const q=PRESETS.find(p=>p[0]==="vq");if(q)q[3]=x=>x.value==="cheap"&&(x.pe_sec||0)>0;const b=document.querySelector('#presets [data-pre=vq]');if(b)b.click()}catch(e){}
+})();
 """
 
 
@@ -314,10 +383,14 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     for a, b in (("Best evidence", "Top picks"), ("Tested setups today", "Setups today"),
                  ("Turning bullish (tested signals)", "Turning bullish"), ("Dips in proven stocks", "Dips in strong stocks")):
         html = html.replace(a, b)
+    html = html.replace('<section id="screener" class="wrap" style="gap:10px" hidden>',
+                        '<section id="screener" class="wrap" style="gap:10px" hidden>' + VALUE_HTML, 1)
+    html = html.replace('data-t="screener" aria-selected="false">Screen</button>', 'data-t="screener" aria-selected="false">Value</button>', 1)
     j = html.rfind("</body>")
     j = j if j >= 0 else len(html)
+    mac_js = json.dumps(macro_summary(root), separators=(",", ":")).replace("</", "<\\/")
     lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
-    html = html[:j] + f"<script>window.LAB={lab_js};</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    html = html[:j] + f"<script>window.LAB={lab_js};window.MACRO={mac_js};</script>\n<script>\n" + VALUE_JS + "\n</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
     # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
     html = html.replace('<div class="tabs" role="tablist">',
                         '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)
