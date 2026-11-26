@@ -1,0 +1,213 @@
+{
+ "asof": "2026-11-26",
+ "type": "choppy",
+ "label": "Choppy market: Nifty and its 200-day average disagree (a turn may be under way)",
+ "since": "2026-11-05",
+ "use": [
+  {
+   "k": "drop5d_10",
+   "name": "Down 10%+ in 5 days",
+   "abn": 0.01494,
+   "net": 0.02895,
+   "t": 1.94,
+   "n": 1212,
+   "in_abn": 0.0105,
+   "in_t": 1.52,
+   "win": 0.498,
+   "grade": "leaning"
+  }
+ ],
+ "avoid": [
+  {
+   "k": "near_hi52",
+   "name": "Within 3% of the 52-week high, first day",
+   "abn": -0.03269,
+   "net": -0.02666,
+   "t": -1.83,
+   "n": 573,
+   "in_abn": -0.0053,
+   "in_t": -0.84,
+   "win": 0.464,
+   "grade": "avoid"
+  },
+  {
+   "k": "hi52",
+   "name": "New 52-week closing high",
+   "abn": -0.02921,
+   "net": -0.02277,
+   "t": -2.25,
+   "n": 515,
+   "in_abn": -0.01095,
+   "in_t": -1.75,
+   "win": 0.45,
+   "grade": "avoid"
+  },
+  {
+   "k": "rsi14_x70",
+   "name": "RSI(14) crosses above 70 (momentum)",
+   "abn": -0.02122,
+   "net": -0.017,
+   "t": -1.52,
+   "n": 570,
+   "in_abn": -0.00494,
+   "in_t": -0.72,
+   "win": 0.432,
+   "grade": "avoid"
+  },
+  {
+   "k": "hi52_vol",
+   "name": "New 52-week closing high on 1.5x average volume",
+   "abn": -0.02067,
+   "net": -0.01456,
+   "t": -1.81,
+   "n": 433,
+   "in_abn": -0.01634,
+   "in_t": -1.9,
+   "win": 0.469,
+   "grade": "avoid"
+  },
+  {
+   "k": "rs_hi",
+   "name": "Relative strength line vs Nifty at a 1-year high",
+   "abn": -0.01674,
+   "net": -0.01035,
+   "t": -1.61,
+   "n": 731,
+   "in_abn": -0.00534,
+   "in_t": -0.99,
+   "win": 0.471,
+   "grade": "avoid"
+  },
+  {
+   "k": "x_sma200",
+   "name": "Close crosses above the 200-day average",
+   "abn": -0.01303,
+   "net": -0.00613,
+   "t": -1.74,
+   "n": 1011,
+   "in_abn": -0.00208,
+   "in_t": -0.42,
+   "win": 0.444,
+   "grade": "avoid"
+  },
+  {
+   "k": "supertrend_up",
+   "name": "Supertrend(10, 3) turns up",
+   "abn": -0.00572,
+   "net": -0.00231,
+   "t": -1.6,
+   "n": 752,
+   "in_abn": -0.00652,
+   "in_t": -0.92,
+   "win": 0.452,
+   "grade": "avoid"
+  },
+  {
+   "k": "rs_x50",
+   "name": "Relative strength line crosses above its 50-day average",
+   "abn": -0.00479,
+   "net": 0.00072,
+   "t": -1.7,
+   "n": 2197,
+   "in_abn": -0.0074,
+   "in_t": -2.98,
+   "win": 0.44,
+   "grade": "avoid"
+  }
+ ],
+ "proven": 0,
+ "fired": {
+  "drop5d_10": [
+   "IIFL",
+   "LLOYDSME",
+   "HFCL",
+   "TTML",
+   "STLTECH"
+  ]
+ },
+ "warned": {
+  "rs_x50": [
+   "ZENSARTECH",
+   "RKFORGE",
+   "TCS",
+   "GLAND",
+   "360ONE",
+   "KFINTECH",
+   "HEGAM",
+   "HEROMOTOCO",
+   "TECHM",
+   "ACE",
+   "BRIGADE",
+   "COHANCE",
+   "BSE",
+   "JWL",
+   "DOMS",
+   "MCX",
+   "LODHA",
+   "WIPRO",
+   "HCLTECH",
+   "WOCKPHARMA",
+   "ANTHEM",
+   "DEEPAKFERT"
+  ],
+  "near_hi52": [
+   "RKFORGE",
+   "360ONE",
+   "TECHM",
+   "ACE",
+   "NAVINFLUOR",
+   "JSWINFRA",
+   "PRESTIGE",
+   "CRAFTSMAN",
+   "BAJAJHLDNG",
+   "MCX",
+   "ACUTAAS"
+  ],
+  "rsi14_x70": [
+   "TCS",
+   "HDFCBANK",
+   "ACE",
+   "BRIGADE",
+   "GODREJPROP",
+   "PRESTIGE",
+   "DOMS",
+   "RELIANCE",
+   "TORNTPHARM",
+   "ANANDRATHI",
+   "ANTHEM"
+  ],
+  "hi52": [
+   "TECHM",
+   "ACE",
+   "UNOMINDA",
+   "PRESTIGE",
+   "ABDL",
+   "BAJAJHLDNG",
+   "MCX",
+   "ANGELONE",
+   "ACUTAAS",
+   "ANANDRATHI"
+  ],
+  "hi52_vol": [
+   "ACE",
+   "PRESTIGE",
+   "BAJAJHLDNG",
+   "MCX",
+   "ANANDRATHI"
+  ],
+  "x_sma200": [
+   "INFY",
+   "LTM",
+   "SBILIFE",
+   "TDPOWERSYS",
+   "CAMS",
+   "ABREL",
+   "LICI"
+  ],
+  "supertrend_up": [
+   "SAGILITY",
+   "WIPRO",
+   "CHOICEIN"
+  ]
+ }
+}

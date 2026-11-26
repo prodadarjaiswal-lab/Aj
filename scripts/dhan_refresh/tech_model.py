@@ -57,6 +57,7 @@ NAMES = {
 }
 YEARS = 11          # Dhan daily history used by every back-test (was 6; longer history gives the 6-12 month rules more samples)
 WARN = ("extended", "downtrend")
+LAST: tuple | None = None
 DIPS = ("qdrop10", "qdrop", "qdrop25", "qdd", "qdd_hold")          # judged over 21 days, not 10: recoveries take longer
 
 
@@ -510,7 +511,9 @@ def _git_show(root: Path, branch: str, path: str) -> str | None:
 
 def run_full(dhan, root: Path) -> dict:
     """Daily: re-run the back-test on YEARS of Dhan history, promote or drop signals, write today's signals and the desk file."""
+    global LAST
     data, nifty, end = fetch(dhan, root, YEARS)
+    LAST = (data, nifty)                                 # the journal (journal.py) reuses this history after the track record
     ser = {}
     res = backtest(data, nifty, series=ser)
     res.update({"asof": nifty["d"][-1], "from": nifty["d"][0], "stocks": len(data), "names": NAMES,
