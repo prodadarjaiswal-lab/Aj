@@ -273,9 +273,28 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
    <div class="spnl"><h3>Top gainers, live</h3><div class="scroll"><table id="tm-gain"></table></div></div>
    <div class="spnl"><h3>Top losers, live</h3><div class="scroll"><table id="tm-lose"></table></div></div>
    </div>
-   <p class="note">Tap any name to analyze. <button class="lnk" id="tm-proof">How the picks were tested</button></p>`;
-  const pb=$("tm-proof");if(pb)pb.onclick=()=>{try{tab("analyze")}catch(e){}const p=$("proof");if(p){p.hidden=false;const b=$("az-proof");if(b)b.textContent="Hide proof";p.scrollIntoView()}};
+   <div id="tm-works"></div>
+   <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div>
+   <div class="eyeg" id="tm-eye"></div>
+   <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p>`;
+  try{works()}catch(e){console.error("works",e)}
+  try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
+/* ---------- What works in this market (desk journal's indicator back-test) ---------- */
+function works(){const el=$("tm-works"),L=window.LAB;if(!el||!L||!L.best)return;
+  const row=x=>`<li><b class="${x.abn>0?"up":"down"}">${P(x.abn,1)}</b><span>${E(x.name)}<small> · ${x.n} cases · ${E(x.verdict)}</small></span></li>`;
+  el.innerHTML=`<div class="sgrid"><div class="spnl"><h3>What has worked in ${E(L.market)} markets</h3><ul class="wk">${L.best.map(row).join("")||'<li class="note">None.</li>'}</ul></div>
+   <div class="spnl"><h3>What has done worst in ${E(L.market)} markets</h3><ul class="wk">${L.worst.map(row).join("")||'<li class="note">None.</li>'}</ul></div></div>
+   <p class="note">Extra 21-day return over the average stock, last 3 years. ${E(L.note)}</p>`}
+/* ---------- Bird's-eye view of every screener section ---------- */
+function eye(){const el=$("tm-eye");if(!el)return;const cards=[];
+  const card=(t,n,names,d,go)=>cards.push(`<div class="eye"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}</div>`);
+  [["dd-rising",""],["dd-dips",""],["dd-invest",""],["dd-barg",""],["dd-movers",""],["dd-swing",""]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
+    const names=[...new Set([...x.querySelectorAll("[data-s]")].map(b=>b.dataset.s))].slice(0,6),cnt=(x.querySelector("[id^=n-]")||{}).textContent||names.length;
+    card(((x.querySelector(".ddt")||{}).textContent||id).trim(),cnt,names,d)});
+  if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10}catch(e){return false}});
+    try{rows.sort(p[4])}catch(e){}card(p[1],rows.length+" stocks",rows.slice(0,6).map(x=>x.s),p[2])});
+  el.innerHTML=cards.join("")}
 function sumLive(){document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
   document.querySelectorAll("#tm-sum [data-lc]").forEach(td=>{const d=dayChg(td.dataset.lc);td.textContent=d.c==null?"–":P(d.c,2);td.className="n "+(d.c>0?"up":d.c<0?"down":"")});
   const L=STK.map(s=>({s,...dayChg(s)})).filter(z=>z.c!=null);const g=$("tm-gain"),l=$("tm-lose"),ad=$("tm-adv");

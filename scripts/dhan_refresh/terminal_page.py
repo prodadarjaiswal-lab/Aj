@@ -174,6 +174,47 @@ AZ_CSS = """
 #term tr.go{cursor:pointer}
 """
 
+# A clean terminal (ADARSH, 26 Nov 2026): back-test proof, "missing: survives the many-signals test" notes, scoreboards and
+# track records are hidden here and live in the desk journal (journal/JOURNAL.md, built by journal.py) instead.
+CLEAN_CSS = """
+#tm-proof,#az-body .row:has(#az-proof),
+#screener #deskSum .vr,#screener #deskSum .miss,#screener #deskSum details,
+#screener p.note[id^="b-"],#dd-track,#dd-board,#dd-fresh,#dd-quant,#dd-jr,
+.tab[data-t="screener"]{display:none!important}
+#term .eyeg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+#term .eye{border:1px solid var(--line);border-radius:4px;padding:10px;background:var(--panel);min-width:0}
+#term .eye h4{margin:0 0 6px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+#term .eye h4 span{color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
+#term .eyen{display:flex;flex-wrap:wrap;gap:5px}#term .eyen .chip{padding:3px 8px;font-size:12px}
+#term .eye p.sm{margin:6px 0 0}
+#term ul.wk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+#term ul.wk li{display:flex;gap:10px;align-items:baseline;font-size:13px}
+#term ul.wk b{font-family:var(--mono);min-width:56px;text-align:right}#term ul.wk small{color:var(--mute)}
+"""
+
+
+def lab_summary(root: Path, correction: bool) -> dict | None:
+    """What the desk journal's indicator back-test says works in today's kind of market (journal/indicator-lab.json)."""
+    lab = _load(root / "journal/indicator-lab.json")
+    if not lab or not lab.get("indicators"):
+        return None
+    side = "weak" if correction else "up"
+    rows = []
+    for k, r in lab["indicators"].items():
+        o, i_ = r.get(f"out_{side}") or {}, r.get(f"in_{side}") or {}
+        if o.get("n", 0) < 100 or o.get("abn") is None or i_.get("abn") is None:
+            continue
+        both = (o["abn"] > 0) == (i_["abn"] > 0)
+        v = {"keep": "passed every check", "avoid": "tested warning"}.get(r.get("verdict"), "same sign in both periods" if both else "flipped between periods")
+        rows.append({"k": k, "name": r["name"], "abn": o["abn"], "n": o["n"], "both": both, "verdict": v})
+    best = sorted([x for x in rows if x["abn"] > 0 and x["both"]], key=lambda x: -x["abn"])[:6]
+    worst = sorted([x for x in rows if x["abn"] < 0 and x["both"]], key=lambda x: x["abn"])[:4]
+    kept = len(lab.get("keep") or [])
+    note = (f"From the desk journal: {lab['tested']} indicators back-tested on Dhan data {lab['from']} to {lab['asof']}, "
+            f"last 3 years shown, 21-day return vs the average stock. {kept} of {lab['tested']} passed every check including the "
+            f"many-ideas test{'' if kept else ', so these are leads, not proven signals'}.")
+    return {"market": "falling" if correction else "rising", "best": best, "worst": worst, "note": note}
+
 AZ_JS = Path(__file__).parent / "terminal_analyze.js"
 
 
@@ -243,7 +284,7 @@ def _patch_tabs(html: str) -> str:
     html = html.replace("const last=(lf&&lf.last)||t.c||r.last||",
                         "const last=(typeof LIVE!==\"undefined\"&&LIVE.eq[sym]&&LIVE.eq[sym].ltp)||(lf&&lf.last)||t.c||r.last||", 1)
     html = html.replace('<section id="proof"', AZ_HTML + PORTFOLIO + '<section id="proof"', 1)
-    html = html.replace("</style>", AZ_CSS + "\n</style>", 1)
+    html = html.replace("</style>", AZ_CSS + CLEAN_CSS + "\n</style>", 1)
     i = html.rfind("</script>")
     return html[:i] + "\n" + PF_JS + "\n" + ALLSEL_JS + "\n" + html[i:]
 
@@ -270,9 +311,13 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     i = html.rfind("</script>")
     html = html[:i + len("</script>")] + "\n<script>\n" + script + "\n</script>" + html[i + len("</script>"):]
     html = _patch_tabs(html)
+    for a, b in (("Best evidence", "Top picks"), ("Tested setups today", "Setups today"),
+                 ("Turning bullish (tested signals)", "Turning bullish"), ("Dips in proven stocks", "Dips in strong stocks")):
+        html = html.replace(a, b)
     j = html.rfind("</body>")
     j = j if j >= 0 else len(html)
-    html = html[:j] + "<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
+    lab_js = json.dumps(lab_summary(root, bool(working(root).get("correction"))), separators=(",", ":")).replace("</", "<\\/")
+    html = html[:j] + f"<script>window.LAB={lab_js};</script>\n<script>\n" + AZ_JS.read_text(encoding="utf-8").replace("</", "<\\/") + "\n</script>\n" + html[j:]
     # Terminal look: dark by default; the button in the tab bar switches light/dark and the choice is kept in this browser.
     html = html.replace('<div class="tabs" role="tablist">',
                         '<div class="tabs" role="tablist"><button class="tab" id="thbtn" title="Light or dark" aria-label="Switch light or dark">Light</button>', 1)
