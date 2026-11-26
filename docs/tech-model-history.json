@@ -107,5 +107,24 @@
    "no longer passes in weak markets: Oversold: RSI(14) under 30 (trader-scanner)",
    "no longer passes in rising markets: Downtrend: below a falling 200-day average and 50-day below 200-day (warning)"
   ]
+ },
+ {
+  "asof": "2026-11-26",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "volbreak",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [
+   "gap"
+  ],
+  "changes": [
+   "now passes in rising markets: Volume breakout above the 20-day high (existing setup)"
+  ]
  }
 ]
