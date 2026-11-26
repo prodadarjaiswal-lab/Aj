@@ -235,6 +235,13 @@ def build(out: Path) -> dict:
     data["usw"] = {}
     qkeep = ("q", "pat_yoy", "rev_yoy", "rev_qoq", "margin", "margin_chg", "flags", "turnaround")
     data["qr"] = {**(data["qr"] or {}), "stocks": {s_: {k: v for k, v in x.items() if k in qkeep} for s_, x in ((data["qr"] or {}).get("stocks") or {}).items()}}
+    cd = _j(ROOT / "docs/chart-data.json", {})                              # previous session's close per stock, so the live
+    if cd.get("d"):                                                          # day change after the close is not 0.00%
+        data["rs"]["pcd"] = cd["d"][-1]
+        for sym, x in ((data["rs"] or {}).get("stocks") or {}).items():
+            c = ((cd.get("s") or {}).get(sym) or {}).get("c") or []
+            if len(c) > 1 and c[-2]:
+                x["pc"] = c[-2]
     for x in ((data["rs"] or {}).get("stocks") or {}).values():             # unrounded ratios from Dhan: 2 decimals is what the page shows
         for k in ("pe_sec", "d_fii", "d_dii"):
             if isinstance(x.get(k), float):
