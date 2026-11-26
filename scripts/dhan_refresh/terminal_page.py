@@ -311,15 +311,25 @@ if(V){const pc=V.pct;const val=pc==null?["Not enough history","warn"]:pc<0.33?["
   <li>Foreign investors (FII) net ${V.fii_sum>0?"bought":"sold"} <b class="${V.fii_sum>0?"good":"bad"}">₹${f(Math.abs(V.fii_sum),0)} Cr</b> over the last ${V.fii_days} reported days.</li>
   ${up200!=null?`<li>${Math.round(up200*100)}% of Nifty 500 stocks are above their 200-day average${up200<0.4?" (weak breadth: selling is broad)":up200>0.65?" (broad strength)":""}.</li>`:""}</ul>
   <p class="note">How to read it: in India, rallies have tended to start when the market is cheap and foreign money turns to buying, rather than "high keeps going higher" as in the US. This view combines the two. It is a rule of thumb, not a tested signal: the old NSE terminal's back-test found the Nifty's cheapness predicted the next 12 months only weakly (correlation ${f(V.ts12,2)}).</p>`}
-/* 2. being sold cheap */
-const cheap=L.filter(x=>x.value==="cheap"&&(x.pe_sec||0)>0&&(x.r3m||0)<=-0.08&&(x.roce||0)>=12&&(x.turnover_cr||0)>=10).sort((a,b)=>(a.r3m||0)-(b.r3m||0)).slice(0,15);
-/* value-trap guard (ADARSH 27 Nov): a cheap stock that is still falling usually keeps falling, so only "cheap and turning"
-   (last month up, RSI 45+, not in a downtrend) is a candidate; the rest are shown greyed as "wait" */
-const turning=x=>(x.r1m||0)>0&&(x.rsi||0)>=45&&!(x.warn||[]).includes("downtrend");
-const tile=(x,ok)=>{const inst=((x.d_fii||0)+(x.d_dii||0))>0;return `<button class="vt${ok?"":" wait"}" data-s="${esc(x.s)}"><b>${esc(x.s)}${inst?' <span class="good">★</span>':""}</b><span class="big ${ok?"good":"bad"}">${ok?p(x.r1m,0)+" 1M":p(x.r3m,0)+" 3M"}</span><small>${f(x.pe_sec,2)}× sector P/E · ROCE ${f(x.roce,0)}%</small><small>${ok?"turned up after "+p(x.r3m,0)+" in 3M":"still falling: wait"}</small></button>`};
-const ct=cheap.filter(turning),cw=cheap.filter(x=>!turning(x));
-h+=`<h3>Cheap and turning up</h3><p class="note">Quality stocks (ROCE 12%+) cheaper than their sector that fell 8%+ in 3 months and have <b>started to recover</b> (up over the last month, RSI 45+, not in a downtrend). Buying cheap stocks that are still falling is the classic value trap, so those wait below. ★ = institutions added last quarter. Tap a tile to analyze.</p><div class="vtg">${ct.map(x=>tile(x,true)).join("")||'<p class="note">None has turned yet: cheap stocks are still falling. Wait.</p>'}</div>
-${cw.length?`<details class="vwait"><summary>Cheap but still falling (${cw.length}): wait for a turn</summary><div class="vtg">${cw.map(x=>tile(x,false)).join("")}</div></details>`:""}`;
+/* 2. Damodaran value screen (ADARSH 27 Nov): fundamentals only, no price momentum. Technical lives on Terminal/Stocks.
+   cost of equity = risk-free + beta x India's implied ERP (CAPM); ROE = P/B / P/E; growth = ROE x retention (capped 12%);
+   value = two-stage justified P/E (5 years at g, then stable growth with excess returns fading toward the cost of equity) */
+/* ERP: Damodaran's published India premium (mature-market premium plus India country risk, about 7%), or the Nifty's implied premium if higher */
+const RF=(V&&V.rf)||0.056,ERP=Math.max(0.07,(V&&V.erp)||0);
+const CYC=/oil|gas|petro|metal|mining|steel|alumin|coal|power|shipping|transport services|sugar|cement|fertili/i;
+const dam=x=>{if(!(x.pe>0)||!(x.pb>0))return null;const roe=x.roce>0?Math.min(x.pb/x.pe,x.roce/100):x.pb/x.pe,b=Math.min(1.6,Math.max(0.6,x.beta||1)),ke=RF+b*ERP;
+  const pay=Math.min(1,Math.max(0,(x.dy||0)*x.pe/100)),gs=Math.min(0.05,ke-0.01),roeS=Math.max(ke,Math.min(roe,ke+0.05));
+  const jpe=g=>{let v=0;for(let t=1;t<=5;t++)v+=Math.pow(1+g,t)*Math.max(0,1-g/roe)/Math.pow(1+ke,t);return v+Math.pow(1+g,5)*(1+gs)*(1-gs/roeS)/((ke-gs)*Math.pow(1+ke,5))};
+  const g=Math.max(0,Math.min(0.12,roe*(1-pay))),vp=jpe(g)/x.pe;let lo=-0.1,hi=0.6;for(let i=0;i<40;i++){const m=(lo+hi)/2;(jpe(m)<x.pe?lo=m:hi=m)}
+  return {roe,ke,g,vp,gi:(lo+hi)/2,spread:roe-ke}};
+const dm=L.map(x=>Object.assign(x,{dm:dam(x)})).filter(x=>x.dm&&(x.turnover_cr||0)>=10&&!CYC.test((x.industry||"")+" "+(x.ind||"")));
+const pass=x=>x.dm.spread>=0.03&&x.dm.vp>=1.25&&(x.de==null||x.de<=1.5);
+const cheap=dm.filter(pass).sort((a,b)=>b.dm.vp-a.dm.vp).slice(0,15);
+const dear=dm.filter(x=>x.dm.vp<=0.5&&x.dm.gi>x.dm.g+0.1).sort((a,b)=>a.dm.vp-b.dm.vp).slice(0,6);
+const tile=(x,ok)=>{const d=x.dm;return `<button class="vt${ok?"":" wait"}" data-s="${esc(x.s)}"><b>${esc(x.s)}</b><span class="big ${ok?"good":"bad"}">${ok?"+"+Math.round((d.vp-1)*100)+"%":Math.round((d.vp-1)*100)+"%"} to value</span><small>ROE ${p(d.roe,0)} vs cost of equity ${p(d.ke,0)}</small><small>${d.gi<-0.09?"price assumes it shrinks":"price needs "+p(d.gi,0)+" growth"}; it funds ${p(d.g,0)}</small></button>`};
+h+=`<h3>Undervalued on Damodaran's tests</h3><p class="note">Every tile passes three fundamental tests, no price charts involved: <b>it earns more than its cost of capital</b> (return on equity, the lower of P/B ÷ P/E and ROCE, at least 3 points above its cost of equity = risk-free ${p(RF,1)} + beta × India equity risk premium ${p(ERP,1)}); <b>its value is 25%+ above the price</b> (two-stage model: 5 years growing at ROE × retained profit, capped at 12%, then ${p(Math.min(0.05,RF+ERP-0.01),0)} with excess returns fading to the cost of equity); and <b>debt/equity is 1.5 or less</b>. Cyclicals (oil, metals, power, cement and similar) are left out because their current profits may be a peak. Ranked by the gap to value. Tap a tile to analyze.</p><div class="vtg">${cheap.map(x=>tile(x,true)).join("")||'<p class="note">No stock passes all three today.</p>'}</div>
+${dear.length?`<details class="vwait"><summary>Priced for a story (${dear.length}): the price needs 10+ points more growth than the company funds</summary><div class="vtg">${dear.map(x=>tile(x,false)).join("")}</div></details>`:""}
+<p class="note">Value is a 1–3 year call, not a timing signal. Our back-test of cheapness on the Nifty 50 (2023–26) could not prove that cheap beats dear over 12 months, so size these as long-term holdings and diversify (Damodaran: 30–40 names).</p>`;
 /* 3. what the price asks for (reverse DCF from the old NSE terminal) */
 const G=(M.growth||{}).rows||[];if(G.length){const room=G.slice(0,8),stretch=G.slice(-6).reverse();
   const mx=Math.max(...G.map(r=>Math.abs(r.g_impl-r.g_sus)).filter(isFinite),0.01);
@@ -333,7 +343,7 @@ if((M.glob||[]).length)h+=`<h3>Global</h3><div class="mtiles">${M.glob.map(g=>`<
 el.innerHTML=h||'<p class="note">Macro data appears after the next refresh.</p>';
 el.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.s)}});
 /* the Nifty 500 screener lives on the Terminal tab */
-try{const q=PRESETS.find(p=>p[0]==="vq");if(q)q[3]=x=>x.value==="cheap"&&(x.pe_sec||0)>0}catch(e){}
+try{const q=PRESETS.find(p=>p[0]==="vq");if(q)q[3]=x=>{const d=x.dm||dam(x);return !!d&&d.spread>=0.03&&d.vp>=1.25&&(x.de==null||x.de<=1.5)}}catch(e){}
 })();
 """
 
