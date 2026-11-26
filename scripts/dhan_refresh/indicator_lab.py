@@ -448,22 +448,17 @@ def summarize(rows):
             "years": len(years)}
 
 
-MTYPES = {"rising": "Rising market: Nifty above a rising 200-day average",
-          "falling": "Falling market: Nifty below a falling 200-day average",
-          "choppy": "Choppy market: Nifty and its 200-day average disagree (a turn may be under way)"}
+MTYPES = {"rising": "Rising market: Nifty above its 200-day average and up 3%+ over 63 sessions",
+          "flat": "Flat / slow market: Nifty within +/-3% over 63 sessions",
+          "turning": "Turning market: a pullback inside an uptrend or a bounce inside a downtrend",
+          "falling": "Falling market: Nifty below its 200-day average and down 3%+ over 63 sessions"}
 
 
 def market_types(ncl) -> list:
-    """The market type on each date, from the Nifty 50 alone (known on that day, no look-ahead)."""
-    m200 = sma(ncl, 200)
-    out = []
-    for t in range(len(ncl)):
-        if t < 220 or np.isnan(m200[t]) or np.isnan(m200[t - 20]):
-            out.append("choppy")
-            continue
-        above, rising = ncl[t] > m200[t], m200[t] > m200[t - 20]
-        out.append("rising" if above and rising else "falling" if not above and not rising else "choppy")
-    return out
+    """The market type on each date (None before there is enough history), known at that day's close.
+    One classifier for the whole terminal: market_view.regimes (the Market view card uses the same one)."""
+    import market_view
+    return market_view.regimes([float(x) if x == x else None for x in ncl])
 
 
 def playbook(lab: dict, mt: str | None = None) -> dict:
@@ -475,7 +470,9 @@ def playbook(lab: dict, mt: str | None = None) -> dict:
                 charges out of sample, 60+ cases over 6+ months. A lead, not proven: it has not survived the many-ideas test.
       avoid   - in this market type: negative before and after the cut-off, out-of-sample t <= -1.5.
     """
-    mt = mt or (lab.get("market") or {}).get("type") or "choppy"
+    mt = mt or (lab.get("market") or {}).get("type")
+    if mt not in MTYPES:
+        return {"asof": lab.get("asof"), "type": None, "use": [], "avoid": [], "proven": 0}
     use, avoid = [], []
     for k, r in (lab.get("indicators") or {}).items():
         o, i_ = r.get("out_" + mt) or {}, r.get("in_" + mt) or {}
@@ -647,7 +644,7 @@ def run(data: dict, nifty: dict, asof: str | None = None) -> dict:
         since -= 1
     out_days = [t for t in range(N) if dates[t] >= cut]
     return {"asof": asof or dates[-1], "from": dates[0], "cutoff": cut,
-            "market": {"type": mtype[N - 1], "since": dates[since], "label": MTYPES[mtype[N - 1]],
+            "market": {"type": mtype[N - 1], "since": dates[since], "label": MTYPES.get(mtype[N - 1], "not enough history"),
                        "share_out": {mt: round(sum(1 for t in out_days if mtype[t] == mt) / max(1, len(out_days)), 3) for mt in MTYPES}}, "stocks": int((ok.any(axis=1)).sum()),
             "tested": K, "horizon_days": H, "cost": COST, "alpha": ALPHA,
             "base": {p: summarize(base_rows[p]) for p in ("in", "out")},

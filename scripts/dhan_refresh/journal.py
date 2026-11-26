@@ -269,7 +269,7 @@ def render(root: Path, lab: dict, ledger: dict, log: list, picks: dict, today: d
              f"**{last.get('asof', 'n/a')}**. This file is rebuilt automatically every run. Research software, not advice.\n")
     L.append("## Today in one paragraph\n")
     L.append(last.get("summary", "No run logged yet.") + "\n")
-    if play:
+    if play and play.get("type"):
         L += render_playbook(play, log)
     # indicator lab
     ind = lab.get("indicators", {}) if lab else {}
@@ -406,7 +406,7 @@ def run(root: Path, data: dict, nifty: dict, tech: dict | None = None, with_lab:
             _w(jd / "lab-today.json", today)
         except Exception as e:
             msgs.append(f"lab-today failed: {str(e)[:120]}")
-        if play:
+        if play and play.get("type"):
             # the terminal reads this file: today's market type, what the back-test favours and warns against,
             # and the stocks where those indicators fired on the last session
             play = dict(play, fired=(today or {}).get("use", {}), warned=(today or {}).get("avoid", {}))
@@ -435,7 +435,7 @@ def run(root: Path, data: dict, nifty: dict, tech: dict | None = None, with_lab:
             for k in sorted(was - now):
                 changes.append(f"{lab['indicators'].get(k, {}).get('name', k)} removed from {side}")
     prev = log[-1] if log else {}
-    if play:
+    if play and play.get("type"):
         if prev.get("market") and prev.get("market") != play["type"]:
             changes.append(f"market type changed from {prev['market']} to {play['type']}: the playbook switched to the {play['type']}-market results")
         pu = set(prev.get("play_use") or [])

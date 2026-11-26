@@ -85,7 +85,7 @@ def test_add_plans_marks_calls():
 def test_market_types_and_playbook():
     up = np.linspace(100, 200, 400)
     mt = L.market_types(np.concatenate([up, up[::-1]]))
-    assert mt[399] == "rising" and mt[-1] == "falling"
+    assert mt[0] is None and mt[399] == "rising" and mt[-1] == "falling"
     lab = {"asof": "2026-11-26", "market": {"type": "rising", "since": "2026-01-01"}, "indicators": {
         "a": {"name": "A", "verdict": "drop", "out_rising": {"n": 200, "months": 20, "abn": 0.01, "t_abn": 2.0, "net": 0.004},
               "in_rising": {"n": 500, "abn": 0.008, "t_abn": 2.5}},
@@ -111,6 +111,6 @@ def test_journal_writes_playbook(tmp_path):
     data, nifty = _panel(60, 1600, 3, plant=True)
     out = J.run(tmp_path, data, nifty, {})
     pb = json.loads((tmp_path / "journal/playbook.json").read_text())
-    assert pb["type"] in ("rising", "falling", "choppy") and "fired" in pb
+    assert pb["type"] in ("rising", "falling", "flat", "turning") and "fired" in pb
     assert "Today's playbook" in (tmp_path / "journal/JOURNAL.md").read_text()
     assert "playbook:" in out

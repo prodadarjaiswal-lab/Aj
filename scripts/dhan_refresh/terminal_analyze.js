@@ -281,7 +281,7 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   sumLive()}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */
 function works(){const el=$("tm-works"),Y=window.PLAY,L=window.LAB;if(!el)return;
-  if(Y&&Y.type){const nm={rising:"Rising",falling:"Falling",choppy:"Choppy"}[Y.type]||Y.type;
+  if(Y&&Y.type){const nm={rising:"Rising",falling:"Falling",flat:"Flat / slow",turning:"Turning"}[Y.type]||Y.type;
     const row=x=>`<li><b class="${x.abn>0?"up":"down"}">${P(x.abn,1)}</b><span>${E(x.name)}<small> · ${E(x.grade)} · ${x.n} cases${(Y.fired[x.k]||Y.warned[x.k]||[]).length?` · fired today on ${(Y.fired[x.k]||Y.warned[x.k]).length}`:""}</small></span></li>`;
     el.innerHTML=`<div class="mtype"><b>${E(nm)} market</b> since ${E(D_(Y.since))} <span class="sm">${E(Y.label||"")}</span></div>
      <div class="sgrid"><div class="spnl"><h3>Back-test favours now</h3><ul class="wk">${Y.use.map(row).join("")||'<li class="note">Nothing has a clear edge in this market type. Fewer trades is the honest answer.</li>'}</ul></div>
@@ -301,7 +301,7 @@ const TWIN={"dd-rising":["supertrend_up","macd_up","ema20_50","x_sma50","adx_x20
 function twinEv(id){const Y=window.PLAY;if(!Y||!Y.ev)return null;const xs=(TWIN[id]||[]).map(k=>Y.ev[k]).filter(Boolean);if(!xs.length)return null;
   const n=xs.reduce((a,x)=>a+x[1],0);return{abn:xs.reduce((a,x)=>a+x[0]*x[1],0)/n,n}}
 /* ---------- Bird's-eye view of every screener section ---------- */
-function eye(){const el=$("tm-eye");if(!el)return;const cards=[],Y=window.PLAY,mt=Y&&Y.type?({rising:"rising",falling:"falling",choppy:"choppy"}[Y.type]||Y.type):"";
+function eye(){const el=$("tm-eye");if(!el)return;const cards=[],Y=window.PLAY,mt=Y&&Y.type?({rising:"rising",falling:"falling",flat:"flat",turning:"turning"}[Y.type]||Y.type):"";
   const badge=ev=>ev?`<p class="sm bt ${ev.abn>0.002?"up":ev.abn<-0.002?"down":""}">Back-test in ${E(mt)} markets: ${P(ev.abn,1)} vs the average stock (${ev.n} cases)</p>`:"";
   const card=(t,n,names,d,ev,cls)=>cards.push({ev,h:`<div class="eye${cls?" "+cls:""}"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}${badge(ev)}</div>`});
   const liquid=s=>typeof RS==="undefined"||!RS[s]||(RS[s].turnover_cr||0)>=10;
