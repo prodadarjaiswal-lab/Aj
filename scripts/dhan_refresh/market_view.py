@@ -574,7 +574,7 @@ def ideas(days: list, X: dict, reg: list, cut: str) -> list:
                          "buy it and sell beta x Nifty futures (or the reverse). Exit when the gap closes or after 21 sessions.",
                 "hedge": "Market-neutral: the Nifty leg cancels the market move.", "cases": pooled, "live": live,
                 "sizing": "Needs two futures legs (a Nifty lot is roughly Rs 15 lakh of exposure), so it is above a "
-                          "Rs 1 lakh account; paper-trade it or use the option version later."})
+                          "Rs 5 lakh account; paper-trade it or use the option version later."})
     bank = X.get("Nifty Bank")
     if bank:
         bf = []
@@ -586,7 +586,7 @@ def ideas(days: list, X: dict, reg: list, cut: str) -> list:
                     "plain": "In a flat market, buy Bank Nifty and sell beta x Nifty for one month (the hedged form of "
                              "'Bank Nifty is the safest index in a slow market').",
                     "hedge": "Market-neutral pair.", "cases": bf, "live": [{"k": "Nifty Bank", "beta": round(beta(bank, N, len(days) - 1) or 0, 2), "side": 1}] if reg[-1] == "flat" else [],
-                    "sizing": "Two futures legs, above a Rs 1 lakh account."})
+                    "sizing": "Two futures legs, above a Rs 5 lakh account."})
     v = X.get("India VIX")
     if v:
         ct = condor_trades(days, N, v)
@@ -598,7 +598,7 @@ def ideas(days: list, X: dict, reg: list, cut: str) -> list:
                     "cases": [(t["d"], t["r"]) for t in ct], "live": [today] if today else [],
                     "pts": {"mean": round(sum(t["pnl"] for t in ct) / len(ct), 1) if ct else None,
                             "worst": min((t["pnl"] for t in ct), default=None)},
-                    "sizing": "Max loss per lot = max loss points x lot size, far above the Rs 1,000 per-trade limit; "
+                    "sizing": "Max loss per lot = max loss points x lot size, far above the Rs 5,000 per-trade limit; "
                               "it only fits that limit as a much narrower spread.",
                     "note": "Priced with Black-Scholes off India VIX with a 15% haircut for skew and fills (no real option "
                             "history yet); per-trade figures are return on the capped loss."})
