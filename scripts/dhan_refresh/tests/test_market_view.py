@@ -120,3 +120,28 @@ def test_pair_trade_closes_the_gap():
     ts = MV.pair_trades(days, a, n)
     t = next(t for t in ts if t["d"] == days[300])
     assert t["side"] == 1 and t["r"] > 0.09
+
+
+def test_tight_condor_and_paper_log():
+    c = MV.condor(26000, 16, wing=100)
+    assert c["lc"] - c["sc"] == 100 and c["sp"] - c["lp"] == 100 and 0 < c["max_loss"] < 100
+    days = [f"2026-01-{i:02d}" for i in range(1, 29)] + [f"2026-02-{i:02d}" for i in range(1, 29)]
+    N = [26000.0] * len(days)
+    v = [16.0] * len(days)
+    log = MV.paper_log(None, days[:10], N[:10], v[:10])
+    assert len(log["trades"]) == 2 and all(t["exit"] is None for t in log["trades"])
+    log = MV.paper_log(log, days[:40], N[:40], v[:40])
+    s = log["summary"]["nifty_condor_tight"]
+    assert s["closed"] == 1 and s["won"] == 1 and s["open"]["d"] == days[39]
+
+
+def test_timing_rules():
+    days = [f"2026-{m:02d}-{d:02d}" for m in range(1, 4) for d in range(1, 22)]
+    c = [100.0 + i for i in range(len(days))]
+    pos = MV.positions("month_turn", days, c, None)
+    assert pos[20] == 1 and pos[21] == 1 and pos[22] == 1 and pos[23] == 0      # last day, 1st, 2nd held; 3rd closes it
+    series, cap = _data()
+    series["India VIX"] = {"d": series["Nifty 50"]["d"], "c": [16.0 + (i % 50) for i in range(2600)]}
+    v = MV.build(series, cap)
+    assert {o["rule"] for o in v["timing"]} == set(MV.RULES)
+    assert all(o["oos"]["strat"] and o["oos"]["hold"] for o in v["timing"])
