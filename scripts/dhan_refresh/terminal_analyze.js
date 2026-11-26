@@ -290,7 +290,7 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
     const r=document.getElementById("research");if(r){const d2=document.createElement("details");d2.className="tm-tables";d2.innerHTML='<summary>Full Nifty 500 screener (filters and presets)</summary>';w.appendChild(d2);setTimeout(()=>d2.appendChild(r),0)}}}catch(e){console.error("fold",e)}
   try{works()}catch(e){console.error("works",e)}
   try{eye()}catch(e){console.error("eye",e)}
-  try{movers();bestStocks();setTimeout(()=>{try{picksTerm();restructure()}catch(e){console.error("best",e)}try{news()}catch(e){console.error("news",e)}},0)}catch(e){console.error("focus",e)}
+  try{movers();bestStocks();setTimeout(()=>{try{picksTerm();restructure()}catch(e){console.error("best",e)}try{news()}catch(e){console.error("news",e)}try{pages()}catch(e){console.error("pages",e)}},0)}catch(e){console.error("focus",e)}
   sumLive()}
 /* the calmer-half stock list from market_view.py, on the Stocks tab; labelled by its own out-of-sample verdict */
 /* Terminal tab: what is likely next, in four tiles, then how the desk trades (ADARSH 27 Nov: forward-looking, decisive) */
@@ -302,7 +302,7 @@ function nextView(){const host=document.querySelector("#term .twrap");if(!host||
   t.push(`<div><h4>Market type</h4><b class="big">${E(String(V.label||V.regime_text||Y.label||"–").split(":")[0])}</b><p>Nifty ${pc(V.r63!=null?V.r63:V.nifty_r63)} over 3 months, ${pc(V.vs200!=null?V.vs200:V.nifty_vs200)} vs its 200-day.</p></div>`);
   if(vx)t.push(`<div><h4>Expected range</h4><b class="big">±${vx.day_pts} pts tomorrow</b><p>±${vx.month_pts} pts over a month (India VIX ${F(vx.vix,1)}). ${Math.round((vx.p_move15||0)*100)}% chance of a 1.5%+ day.</p></div>`);
   if(val)t.push(`<div><h4>Valuation</h4><b class="big ${val[1]}">${val[0]}</b><p>${E(val[2])} Foreign investors ${mv.fii_sum>0?"buying":"selling"} lately.</p></div>`);
-  t.push(`<div><h4>Today's call</h4><b class="big">${E(K.stance||"–")}</b><p>${E(String(K.why||"").replace("The watch list below","The watch list on the Ideas tab"))}</p></div>`);
+  {const R=setupRule(),tp=techPicks(12),dv=(window.DAMV||[]);t.push(`<div><h4>Favourable now</h4><b class="big up">${R.use.length?E(R.use.map(k=>SETUPS[k].split(" (")[0]).join(", ")):"Strongest trends"}</b><p>${tp.length} technical setups with a positive edge (Technical tab)${dv.length?`, ${dv.length} value stock${dv.length>1?"s":""} at a discount (Value tab)`:""}.</p></div>`)}
   if(fav.length||bad.length)t.push(`<div><h4>What tends to work in this market</h4><p>${fav.length?"Leaning: "+E(fav.join("; "))+".":""} ${bad.length?"Avoid: "+E(bad[0])+".":""}</p><p class="sm">Leads from the nightly back-test, not proven. Picks below.</p></div>`);
   const ph=(K.process&&K.process.length?K.process:["Start from a market belief or published research","Test it on data it was never fitted on","Size from the Rs 5,000 loss limit and volatility, never from conviction","Every trade has a stop, an exit date and a hedge","No edge today means no trade: sitting out is a position"]);
   const d=document.createElement("div");d.id="tm-next";d.className="tm-idx";
@@ -345,9 +345,9 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
   const memo=m=>`<div class="spnl idea"><h3>${E(m.etf||m.idx)} <span class="pill ${cv[m.conv]}">${m.conv==="low"?"Watch":m.conv+" conviction"}</span></h3>
     <p class="sm"><b>Thesis.</b> ${E(m.why)}${m.src?` <small>(${E(m.src)})</small>`:""}</p>
     <p class="sm"><b>Evidence.</b> Last 3 years, never used to fit it: ${pc(m.ev.raw_mean,2)} a month vs holding, right ${sh(m.ev.hit)} of ${m.ev.months} months${m.safer?", with a smaller worst fall":""}.</p>
-    ${m.conv==="low"?`<p class="sm"><b>Not traded:</b> the evidence is not strong enough yet.</p>`:`<p><b>Trade.</b> Buy about ${rs(m.notional)} of ${E(m.etf||m.idx)} near ${F(m.px,0)} (index). Stop ${F(m.stop,0)} (−${(m.stop_pct*100).toFixed(1)}%), risk ${rs(m.risk_rs)}.</p>
+    ${m.conv==="low"?`<p class="sm"><b>Watch:</b> evidence not strong enough to size yet.</p>`:`<p><b>Trade.</b> Buy about ${rs(m.notional)} of ${E(m.etf||m.idx)} near ${F(m.px,0)} (index). Stop ${F(m.stop,0)} (−${(m.stop_pct*100).toFixed(1)}%), risk ${rs(m.risk_rs)}.</p>
     <p class="sm"><b>Exit.</b> ${E(m.exit)} ${m.hedge&&m.hedge.text?"<b>Hedge.</b> "+E(m.hedge.text):""} ${m.note?E(m.note):""}</p>`}</div>`;
-  const dk=DK?`<div class="head"><h2>${E(DK.headline||DK.stance)}</h2></div>
+  const dk=DK?`<div class="head"><h2>Index trade memos</h2></div>
     ${(DK.next||[]).length?`<p class="sm"><b>Next trigger:</b> ${DK.next.map(E).join(" Or: ")}</p>`:""}
     ${DK.memos.length?`<div class="sgrid">${DK.memos.map(memo).join("")}</div>`:""}
     <p class="note">Sizing: worst case ${rs(DK.limit_rs)} a trade on ${rs(DK.capital)}. Built every evening from the data: thesis, test on unseen data, size from volatility, stop and exit before entry, correlated trades share one budget.</p>`:"";
@@ -490,7 +490,7 @@ function restructure(){const tw=document.querySelector("#term .twrap"),best=$("t
   const vb=document.querySelector('.tab[data-t="screener"]');if(vb)vb.textContent="News";
   const mk=(id,title,inner)=>{const d=document.createElement("details");d.className="sec";d.id=id;d.innerHTML=`<summary><h2>${title}</h2></summary>`;if(inner){inner.classList.remove("tm-stk","tm-ide");d.appendChild(inner)}return d};
   const K=(window.MVIEW||{}).desk||{};
-  const ide=mk("sec-ide",`Trading ideas: ${E(K.stance||"what works now")}`,$("tm-mview"));
+  const ide=mk("sec-ide","Index trade ideas and their tests",$("tm-mview"));
   const tech=mk("sec-tech","Technicals: every screen",$("tm-stkw")),val=mk("sec-val","Value: Damodaran detail and macro",$("vm"));
   const nx=$("tm-next");if(nx)nx.parentNode.insertBefore(ide,nx.nextSibling);
   const h=best.querySelectorAll(".head"),g=best.querySelectorAll(".pcg");
@@ -513,6 +513,40 @@ function news(){const sc=document.getElementById("screener"),N=window.NEWS||{};i
    <label class="sm"><input type="checkbox" id="news-all"> show routine filings too</label>`;
   const a=$("news-all");if(a)a.onchange=()=>{$("news-list").innerHTML=rows(a.checked)};
   box.addEventListener("click",e=>{const b=e.target.closest("[data-mk]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.mk)}})}
+
+/* which setup to use in which market (ADARSH 27 Nov): the lab twin's out-of-sample 21-day return vs the average stock, per market type */
+SETUPS.rsi2_dip="RSI(2) under 5 (deep dip)";SETUPS.momentum70="RSI(14) crosses above 70 (momentum)";
+function setupRule(){const Y=window.PLAY||{},S=Y.setups||{},mt=Y.type||"rising",use=[],skip=[];
+  Object.keys(S).forEach(k=>{const v=S[k][mt]||[0,0];(v[0]>=0.002&&v[1]>=60?use:skip).push(k)});use.sort((a,b)=>S[b][mt][0]-S[a][mt][0]);return{mt,use,skip,S}}
+const _scanAt=scanAt;scanAt=function(c,i){const o=_scanAt(c,i);if(i<25)return o;const r2=(()=>{let g=0,l=0;for(let k=i-1;k<=i;k++){const d=c[k]-c[k-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+g/l)})();
+  if(r2<5)o.push("rsi2_dip");const a=rsiW(c,i),b=rsiW(c,i-1);if(a!=null&&b!=null&&b<70&&a>=70)o.push("momentum70");return o};
+let TP=null;const _techPicks=techPicks;techPicks=function(n){if(!TP){const R=setupRule();const all=_techPicks(60);
+  TP=all.filter(z=>R.use.includes(z.k)||(!R.S[z.k]&&z.h.w>z.h.l)).concat(all.filter(z=>!R.use.includes(z.k)&&R.S[z.k]&&z.m.avgR>0.5&&z.h.w>z.h.l))}return TP.slice(0,n)};
+function pages(){const tw=document.querySelector("#term .twrap");if(!tw||$("pg-term"))return;
+  const pg={};["term","tech","val","news"].forEach(k=>{const d=document.createElement("div");d.id="pg-"+k;d.className="twrap";d.style.display=k==="term"?"":"none";pg[k]=d});
+  const R=setupRule(),S=R.S,TY=["rising","flat","turning","falling"],pc=x=>(x>0?"+":"")+(x*100).toFixed(1)+"%";
+  const rows=Object.keys(S).map(k=>`<tr><td>${E(SETUPS[k]||k)}</td>${TY.map(t=>{const v=S[k][t];return `<td class="n ${v[0]>=0.002?"g":v[0]<=-0.002?"b":""}${t===R.mt?" on":""}">${v[1]>=60?pc(v[0]):"–"}</td>`}).join("")}<td>${R.use.includes(k)?'<b class="up">Use now</b>':'<span class="sm">Skip now</span>'}</td></tr>`).join("");
+  const tp=techPicks(12);
+  pg.tech.innerHTML=`<div class="panel"><div class="head"><h2>Which setup to use now</h2><span class="sm">market: <b>${E(R.mt)}</b></span></div>
+   <div class="scroll"><table class="rt"><tr><th>Setup</th>${TY.map(t=>`<th class="n">${t}</th>`).join("")}<th></th></tr>${rows}</table></div>
+   <p class="sm">Return over the next 21 sessions vs the average Nifty 500 stock, last 3 years only (out of sample), from the nightly back-test of ${E(String((window.PLAY||{}).tested||78))} indicators on Dhan data. A setup is used when it beat the average stock by 0.2%+ in today's kind of market over 60+ cases. Bull flags have no lab test yet, so they need their own past record to be positive.</p></div>
+   <div class="head"><h2>Best setups now</h2><span class="sm">Time Machine odds · up to 15 sessions</span></div><div class="pcg">${tp.length?tp.map(tcard).join(""):'<p class="note">Setups that suit this market have not fired on the last close; the strongest trends are in the screens below.</p>'}</div>
+   <p class="sm">Scanner rules from the trader skills on daily closes. Entry at the last close, stop under the setup, target 2× the risk, quantity from the Rs 5,000 max loss. Time Machine: 10,000 replays of 15 sessions from the stock's own last 120 daily moves, minus ~0.25% delivery charges; "past fires" is the real record on that stock over 6 months.</p>`;
+  const st=$("sec-tech");if(st){st.open=false;pg.tech.appendChild(st)}
+  const vm=$("vm");if(vm){const vs=$("sec-val");pg.val.appendChild(vm);if(vs)vs.remove()}
+  const nw=$("newsx");if(nw)pg.news.appendChild(nw);
+  const best=$("tm-best");if(best)best.remove();
+  const fav=document.createElement("div");fav.id="tm-fav";const dv=(window.DAMV||[]).slice(0,2);
+  fav.innerHTML=`<div class="head"><h2>Favourable now</h2><span class="sm">tap a card to analyze</span></div><div class="pcg">${tp.slice(0,3).map(tcard).join("")}${dv.map(z=>pcard(z,"v")).join("")}</div>`;
+  [...tw.children].forEach(x=>pg.term.appendChild(x));const nx=$("tm-next");if(nx)nx.parentNode.insertBefore(fav,nx.nextSibling);
+  ["term","tech","val","news"].forEach(k=>tw.appendChild(pg[k]));
+  /* four tabs: Terminal, Technical, Value, News; Analyze opens from any name */
+  const bar=document.querySelector(".tabs");document.querySelectorAll(".tabs .tab[data-t]").forEach(b=>b.style.display="none");
+  const names={term:"Terminal",tech:"Technical",val:"Value",news:"News"},btn={};
+  Object.entries(names).forEach(([k,n])=>{const b=document.createElement("button");b.className="tab";b.textContent=n;b.setAttribute("aria-selected",k==="term"?"true":"false");btn[k]=b;bar.appendChild(b);
+    b.onclick=()=>{try{tab("term")}catch(e){}Object.entries(pg).forEach(([j,d])=>d.style.display=j===k?"":"none");Object.entries(btn).forEach(([j,x])=>x.setAttribute("aria-selected",j===k?"true":"false"));
+      document.querySelectorAll(".tabs .tab[data-t]").forEach(x=>x.setAttribute("aria-selected","false"));try{history.replaceState(null,"","#"+k)}catch(e){}window.scrollTo(0,0)}});
+  const h=location.hash.slice(1),go={tech:"tech",technical:"tech",stk:"tech",stocks:"tech",val:"val",value:"val",screener:"val",news:"news",term:"term",ide:"term"}[h];if(go&&btn[go])btn[go].click()}
 function sumLive(){document.querySelectorAll("#tm-eye .chip[data-mk]").forEach(b=>{const d=dayChg(b.dataset.mk);b.classList.toggle("cu",d.c>0);b.classList.toggle("cd",d.c<0);if(d.c!=null)b.title=(d.c>0?"+":"")+(d.c*100).toFixed(2)+"% today"});document.querySelectorAll("#tm-sum [data-lv]").forEach(td=>{const d=dayChg(td.dataset.lv);td.textContent=d.ltp==null?"–":F(d.ltp)});
   document.querySelectorAll("#tm-sum [data-lc]").forEach(td=>{const d=dayChg(td.dataset.lc);td.textContent=d.c==null?"–":P(d.c,2);td.className="n "+(d.c>0?"up":d.c<0?"down":"")});
   const L=STK.map(s=>({s,...dayChg(s)})).filter(z=>z.c!=null);const g=$("tm-gain"),l=$("tm-lose"),ad=$("tm-adv");
