@@ -261,7 +261,7 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   const lt=Object.keys(VMT).map(s=>{const on=(VMT[s].on||[]).filter(k=>VTEST.includes(k));if(on.length<2||!INS[s])return null;const h=window.azHorizons(s);return h&&h[2].v[1]==="good"?{s,on,h,r:RS[s]||{}}:null})
     .filter(Boolean).sort((a,b)=>b.on.length-a.on.length||((a.r.pe_sec||9)-(b.r.pe_sec||9))).slice(0,12);
   const up200=STK.filter(k=>RS[k].vs200>0).length;
-  el.innerHTML=`<div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
+  el.innerHTML=`<div id="tm-mview" class="tm-idx"></div><div class="tm-stk" id="tm-stkw"><div class="head"><h2>Screener · Nifty 500</h2><span class="pill ${WK.correction?"fail":"pass"}">${E(WK.label||"–")}</span></div>
    <div class="sumbar" id="tm-breadth"><span><b>${PK.length}</b> setups today</span><span><b>${R.length}</b> buy now</span><span><b>${up200}</b> of ${STK.length} above 200-day</span><span id="tm-adv"></span></div>
    <div class="sgrid">
    <div class="spnl wide"><h3>Screener picks</h3><div class="scroll"><table><tr><th>Stock</th><th>Setup</th><th class="n">Live</th><th class="n">Day</th><th class="n">3M vs Nifty</th><th class="n">RSI</th><th>Value</th><th>3M</th><th>6M</th><th>1Y</th></tr>
@@ -272,15 +272,26 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
    <div class="spnl"><h3>Top gainers, live</h3><div class="scroll"><table id="tm-gain"></table></div></div>
    <div class="spnl"><h3>Top losers, live</h3><div class="scroll"><table id="tm-lose"></table></div></div>
    </div>
-   <div id="tm-mview"></div>
+   <div id="tm-lowrisk"></div>
    <div id="tm-works"></div>
    <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div>
    <div class="eyeg" id="tm-eye"></div>
-   <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p>`;
+   <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p></div>`;
   try{mview()}catch(e){console.error("mview",e)}
+  try{lowrisk()}catch(e){console.error("lowrisk",e)}
+  /* index first: market view and ideas above the markets board; the board and the ticker strip belong to the Terminal half */
+  try{const tw=document.querySelector("#term .twrap"),mv=$("tm-mview"),mk=$("tm-mk");const mp=mk&&mk.closest("section");
+    if(mp)mp.classList.add("tm-idx");el.classList.add("tm-stk");const st=$("tm-strip");if(st)st.classList.add("tm-idx");
+    if(tw&&mv&&mp)tw.insertBefore(mv,mp)}catch(e){console.error("layout",e)}
   try{works()}catch(e){console.error("works",e)}
   try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
+/* the calmer-half stock list from market_view.py, on the Stocks tab; labelled by its own out-of-sample verdict */
+function lowrisk(){const el=$("tm-lowrisk"),V=window.MVIEW;if(!el||!V||!(V.screen||[]).length)return;const ok=V.screen_v==="HOLDS";
+  const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
+  el.innerHTML=`<div class="spnl wide"><h3>Low risk, high return ${ok?'<span class="pill pass">Tested: holds</span>':'<span class="pill warn">Watch, not proven</span>'}</h3>
+   <p class="sm">Calmer half of the Nifty 500, best 12-month return per unit of risk. Back-test: ${pc(V.screen_m,2)} a month vs Nifty after charges, right ${sh(V.screen_hit)} of months since ${E(D_(V.oos_from))}${ok?"":", not significant"}.</p>
+   <div class="eyen">${V.screen.slice(0,12).map(r=>`<button class="chip" data-mk="${E(r.s)}">${E(r.s)}</button>`).join("")}</div></div>`}
 /* ---------- Market view (market_view.py): verdict first, Roast Room 26 Nov: no forecast the data cannot back ---------- */
 function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
   const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
