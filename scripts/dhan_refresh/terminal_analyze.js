@@ -274,11 +274,12 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
    </div>
    <div id="tm-lowrisk"></div>
    <div id="tm-works"></div>
-   <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div>
+   <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div><p class="note">Each card says why its stocks are there. Stocks that already ran (25%+ in a month, RSI 80+ or flagged overextended) are left out, so the cards point at what can still move. In a rising market the back-test shows strength tends to continue, so fresh highs stay in. Names turn green or red with today's live move.</p>
    <div class="eyeg" id="tm-eye"></div>
    <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p></div>`;
   try{mview()}catch(e){console.error("mview",e)}
   try{lowrisk()}catch(e){console.error("lowrisk",e)}
+  setTimeout(()=>{try{nextView()}catch(e){console.error("next",e)}},0)
   /* index first: market view and ideas above the markets board; the board and the ticker strip belong to the Terminal half */
   try{const tw=document.querySelector("#term .twrap"),mv=$("tm-mview"),mk=$("tm-mk");const mp=mk&&mk.closest("section");
     if(mp)mp.classList.add("tm-idx");el.classList.add("tm-stk");const st=$("tm-strip");if(st)st.classList.add("tm-idx");
@@ -291,6 +292,23 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   try{eye()}catch(e){console.error("eye",e)}
   sumLive()}
 /* the calmer-half stock list from market_view.py, on the Stocks tab; labelled by its own out-of-sample verdict */
+/* Terminal tab: what is likely next, in four tiles, then how the desk trades (ADARSH 27 Nov: forward-looking, decisive) */
+function nextView(){const host=document.querySelector("#term .twrap");if(!host||$("tm-next"))return;const V=window.MVIEW||{},Y=window.PLAY||{},M=window.MACRO||{},K=V.desk||{};
+  const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%";const vx=V.vix,mv=(M.view||{}),q=mv.pct;
+  const val=q==null?null:q<0.33?["Expensive","down","Don't chase; add only on dips."]:q>0.67?["Cheap","up","Accumulate quality on weakness."]:["Fair","","Be selective."];
+  const fav=(Y.use||[]).slice(0,2).map(x=>x.name),bad=(Y.avoid||[]).slice(0,1).map(x=>x.name);
+  const t=[];
+  t.push(`<div><h4>Market type</h4><b class="big">${E(String(V.label||V.regime_text||Y.label||"–").split(":")[0])}</b><p>Nifty ${pc(V.r63!=null?V.r63:V.nifty_r63)} over 3 months, ${pc(V.vs200!=null?V.vs200:V.nifty_vs200)} vs its 200-day.</p></div>`);
+  if(vx)t.push(`<div><h4>Expected range</h4><b class="big">±${vx.day_pts} pts tomorrow</b><p>±${vx.month_pts} pts over a month (India VIX ${F(vx.vix,1)}). ${Math.round((vx.p_move15||0)*100)}% chance of a 1.5%+ day.</p></div>`);
+  if(val)t.push(`<div><h4>Valuation</h4><b class="big ${val[1]}">${val[0]}</b><p>${E(val[2])} Foreign investors ${mv.fii_sum>0?"buying":"selling"} lately.</p></div>`);
+  t.push(`<div><h4>Today's call</h4><b class="big">${E(K.stance||"–")}</b><p>${E(String(K.why||"").replace("The watch list below","The watch list on the Ideas tab"))}</p></div>`);
+  if(fav.length||bad.length)t.push(`<div><h4>What tends to work in this market</h4><p>${fav.length?"Leaning: "+E(fav.join("; "))+".":""} ${bad.length?"Avoid: "+E(bad[0])+".":""}</p><p class="sm">Leads from the nightly back-test, not proven. Picks on the Stocks tab.</p></div>`);
+  const ph=(K.process&&K.process.length?K.process:["Start from a market belief or published research","Test it on data it was never fitted on","Size from the Rs 5,000 loss limit and volatility, never from conviction","Every trade has a stop, an exit date and a hedge","No edge today means no trade: sitting out is a position"]);
+  const d=document.createElement("div");d.id="tm-next";d.className="tm-idx";
+  d.innerHTML=`<div class="head"><h2>What's likely next</h2><span class="sm">close of ${E(D_(V.asof))}</span></div><div class="nx">${t.join("")}</div>
+   <details style="margin-top:10px"><summary><b>How we trade (the desk's philosophy)</b></summary><ol class="phil">${ph.map(x=>`<li>${E(x)}</li>`).join("")}</ol></details>
+   <p class="note">Ideas and their tests: Ideas tab. Stock picks: Stocks tab.</p>`;
+  const mk=$("tm-mk"),sec=mk&&mk.closest("section");if(sec&&sec.nextSibling)host.insertBefore(d,sec.nextSibling);else host.appendChild(d)}
 function lowrisk(){const el=$("tm-lowrisk"),V=window.MVIEW;if(!el||!V||!(V.screen||[]).length)return;const ok=V.screen_v==="HOLDS";
   const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
   el.innerHTML=`<div class="spnl wide"><h3>Low risk, high return ${ok?'<span class="pill pass">Tested: holds</span>':'<span class="pill warn">Watch, not proven</span>'}</h3>
@@ -362,19 +380,20 @@ const TWIN={"dd-rising":["supertrend_up","macd_up","ema20_50","x_sma50","adx_x20
 function twinEv(id){const Y=window.PLAY;if(!Y||!Y.ev)return null;const xs=(TWIN[id]||[]).map(k=>Y.ev[k]).filter(Boolean);if(!xs.length)return null;
   const n=xs.reduce((a,x)=>a+x[1],0);return{abn:xs.reduce((a,x)=>a+x[0]*x[1],0)/n,n}}
 /* ---------- Bird's-eye view of every screener section ---------- */
+const ranAlready=s=>{const r=(typeof RS!=="undefined"&&RS[s])||{};return (r.r1m||0)>0.25||(r.rsi||0)>=80||(r.warn||[]).includes("extended")};
 function eye(){const el=$("tm-eye");if(!el)return;const cards=[],Y=window.PLAY,mt=Y&&Y.type?({rising:"rising",falling:"falling",flat:"flat",turning:"turning"}[Y.type]||Y.type):"";
   const badge=ev=>ev?`<p class="sm bt ${ev.abn>0.002?"up":ev.abn<-0.002?"down":""}">Back-test in ${E(mt)} markets: ${P(ev.abn,1)} vs the average stock (${ev.n} cases)</p>`:"";
   const card=(t,n,names,d,ev,cls)=>cards.push({ev,h:`<div class="eye${cls?" "+cls:""}"><h4>${E(t)} <span>${E(String(n))}</span></h4><div class="eyen">${names.length?names.map(s=>`<button class="chip" data-mk="${E(s)}">${E(s)}</button>`).join(""):'<span class="sm">none today</span>'}</div>${d?`<p class="sm">${E(d)}</p>`:""}${badge(ev)}</div>`});
-  const liquid=s=>typeof RS==="undefined"||!RS[s]||(RS[s].turnover_cr||0)>=10;
+  const liquid=s=>(typeof RS==="undefined"||!RS[s]||(RS[s].turnover_cr||0)>=10)&&!ranAlready(s);
   /* 1. the playbook's own picks: stocks where an indicator the back-test favours in this market type fired on the last session */
   if(Y&&Y.type){const sc={};Y.use.forEach(x=>(Y.fired[x.k]||[]).forEach(s=>{if(!liquid(s))return;(sc[s]=sc[s]||{s,v:0,k:[]}).v+=x.abn;sc[s].k.push(x.name)}));
     const top=Object.values(sc).sort((a,b)=>b.v-a.v);
     const w=new Set();Y.avoid.forEach(x=>(Y.warned[x.k]||[]).forEach(s=>w.add(s)));
     cards.push({ev:{abn:9},h:`<div class="eye pb"><h4>Back-test picks for a ${E(mt)} market <span>${top.length} stocks</span></h4><div class="eyen">${top.length?top.slice(0,8).map(z=>`<button class="chip" data-mk="${E(z.s)}" title="${E(z.k.join("; "))}">${E(z.s)}</button>`).join(""):'<span class="sm">none fired on the last session</span>'}</div><p class="sm">Fired on the last session: ${E([...new Set(top.slice(0,8).flatMap(z=>z.k))].slice(0,3).join("; ")||"–")}. Turnover Rs 10 Cr+ a day.${w.size?` ${w.size} stocks tripped a warning, so check before buying them.`:""}</p></div>`})}
-  [["dd-rising",""],["dd-dips",""],["dd-movers",""],["dd-swing",""]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
-    const names=[...new Set([...x.querySelectorAll("[data-s]")].map(b=>b.dataset.s))].slice(0,6),cnt=(x.querySelector("[id^=n-]")||{}).textContent||names.length;
+  [["dd-rising","Basis: a desk signal that passed its own back-test turned bullish on the last close."],["dd-dips","Basis: a stock that beat the Nifty by 20%+ over 2 years has pulled back; buy-the-dip setups."],["dd-movers","Basis: the biggest moves of the last session and the likely reason (news, results, sector)."],["dd-swing","Basis: order flow and auction levels (VWAP, value area) from the last session."]].forEach(([id,d])=>{const x=document.getElementById(id);if(!x)return;
+    const names=[...new Set([...x.querySelectorAll("[data-s]")].map(b=>b.dataset.s))].filter(s=>!ranAlready(s)).slice(0,6),cnt=(x.querySelector("[id^=n-]")||{}).textContent||names.length;
     card(((x.querySelector(".ddt")||{}).textContent||id).trim(),cnt,names,d,twinEv(id))});
-  if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.filter(p=>["best","setup","flow","osq","lead","downco","downmkt"].includes(p[0])).forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10}catch(e){return false}});
+  if(typeof PRESETS!=="undefined"&&typeof RS!=="undefined")PRESETS.filter(p=>["best","setup","flow","osq","lead","downco","downmkt"].includes(p[0])).forEach(p=>{let rows=Object.entries(RS).map(([s,x])=>Object.assign({s},x)).filter(x=>{try{return p[3](x)&&(x.turnover_cr||0)>=10&&!ranAlready(x.s)}catch(e){return false}});
     try{rows.sort(p[4])}catch(e){}card(p[1],rows.length+" stocks",rows.slice(0,6).map(x=>x.s),p[2],twinEv(p[0]),p[0]==="best"?"best":"")});
   /* order: playbook picks, then Top picks, then screens by their back-test in today's market type (no evidence last) */
   const key=c=>c.ev?c.ev.abn:-1;
