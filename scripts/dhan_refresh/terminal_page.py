@@ -93,7 +93,7 @@ def build(root: Path = ROOT) -> str:
     """The Terminal tab as a page of its own."""
     t = TEMPLATE.read_text(encoding="utf-8")
     for k, v in _data_js(root).items():
-        t = t.replace(f"/*{k}*/null", v, 1)
+        t = t.replace(f"/*{k}*/null", f"/*{k}*/{v}/*{k}*/", 1)   # end markers: page_feed.py swaps in newer data
     return t
 
 
@@ -475,6 +475,8 @@ def build_site(site: Path, root: Path = ROOT) -> dict:
     for must in ('data-t="term"', 'id="term"', '"term","screener"', 'h==="term"', 'data-t="pf"', 'id="allsel"', 'id="az"', '"pf","az"'):
         if must not in html:
             raise RuntimeError(f"desk page changed shape; could not insert the Terminal tab ({must})")
+    import page_feed                                    # newer nightly data from aj-live, no republish needed
+    html = page_feed.inject(html)
     out.write_text(html, encoding="utf-8")
     files = {f"d/{f.name}": str(f) for f in sorted((site / "d").glob("*.json"))}
     return {**info, "page": str(out), "files": len(files)}

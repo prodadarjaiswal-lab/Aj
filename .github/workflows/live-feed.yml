@@ -1,7 +1,11 @@
 name: Live prices (market hours)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {}        # the outside timer (cron-job.org, 09:00 IST) or a manual click
+  schedule:                    # backup clock; GitHub may fire these late or not at all. run_guard.py
+    - cron: "15,30,45 3 * * 1-5"     # stops any that are not needed (08:45-09:15 IST)
+    - cron: "0,15,30,45 4 * * 1-5"   # 09:30-10:15 IST
+    - cron: "0 6,8 * * 1-5"          # 11:30 and 13:30 IST, in case the morning ones were dropped
 
 permissions:
   contents: write
@@ -12,15 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355   # GitHub allows 6 h per job; a second run is started at 14:45 IST to cover the close
     concurrency:
-      group: live-${{ github.event.schedule || 'manual' }}
+      group: live-feed            # one streaming run at a time; extra starts wait, then stop at the guard
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v5
+      - name: Is this run needed?
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/dhan_refresh/run_guard.py live
       - uses: actions/setup-python@v6
+        if: steps.guard.outputs.go == 'true'
         with:
           python-version: "3.11"
       - run: pip install requests==2.32.3 pyotp==2.9.0 numpy==2.1.3
+        if: steps.guard.outputs.go == 'true'
       - name: Stream prices to the live branch
+        if: steps.guard.outputs.go == 'true'
         env:
           DHAN_CLIENT_ID: ${{ secrets.DHAN_CLIENT_ID }}
           DHAN_PIN: ${{ secrets.DHAN_PIN }}
@@ -39,6 +51,7 @@ jobs:
           echo "UNTIL=$UNTIL" >> "$GITHUB_ENV"
           python live_poller.py --until $UNTIL --every 5
       - name: Hand over to a fresh run if the market is still open
+        if: steps.guard.outputs.go == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

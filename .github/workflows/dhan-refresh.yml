@@ -1,12 +1,19 @@
 name: Dhan nightly refresh
 
 on:
-  workflow_dispatch:           # "Run workflow" button for a manual run
+  workflow_dispatch:           # "Run workflow" button, the outside timer (cron-job.org, 16:20 IST) or a Claude task
     inputs:
       journal_only:
         description: "Only rebuild the desk journal and indicator back-test (no desk refresh, no Telegram)"
         type: boolean
         default: false
+      page_only:
+        description: "Only rebuild the terminal page's data and send it to aj-live (no refresh, no Telegram)"
+        type: boolean
+        default: false
+  schedule:                    # backup clock; run_guard.py stops it if a refresh already ran since the close
+    - cron: "30 11 * * 1-5"    # 17:00 IST
+    - cron: "30 14 * * 1-5"    # 20:00 IST
 
 permissions:
   contents: write
@@ -16,6 +23,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    if: ${{ !inputs.journal_only && !inputs.page_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.guard.outputs.go }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Is this run needed?
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/dhan_refresh/run_guard.py refresh
+
+  page:
+    if: ${{ inputs.page_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Send the page's data to aj-live
+        env:
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+        run: bash scripts/dhan_refresh/push_page_feed.sh
+
   journal:
     if: ${{ inputs.journal_only }}
     runs-on: ubuntu-latest
@@ -43,7 +79,8 @@ jobs:
           git push
 
   refresh:
-    if: ${{ !inputs.journal_only }}
+    needs: guard
+    if: needs.guard.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -86,6 +123,11 @@ jobs:
           git commit -m "Nightly Dhan refresh $(TZ=Asia/Kolkata date +%F)"
           git pull -q --rebase --autostash -X theirs origin "$GITHUB_REF_NAME" || { git rebase --abort 2>/dev/null || true; git pull -q --no-rebase --autostash -X ours origin "$GITHUB_REF_NAME"; }
           git push
+      - name: Send the page's data to aj-live (the open page loads it; no republish needed)
+        env:
+          PUBLIC_LIVE_TOKEN: ${{ secrets.PUBLIC_LIVE_TOKEN }}
+          PUBLIC_LIVE_REPO: ${{ vars.PUBLIC_LIVE_REPO || 'prodadarjaiswal-lab/aj-live' }}
+        run: bash scripts/dhan_refresh/push_page_feed.sh
       - name: Tell the owner if this failed
         if: failure()
         env:
