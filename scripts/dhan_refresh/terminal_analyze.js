@@ -334,6 +334,11 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
     <div class="scroll"><table><tr><th>Rule</th>${[...new Set(TM.map(o=>o.idx))].map(i=>`<th>${E(i)}</th>`).join("")}</tr>
     ${rules.map(r=>{const xs=TM.filter(o=>o.rule===r);return`<tr><td class="sm"><b>${E(xs[0].t)}</b><br><small>${E(xs[0].src||"")}</small></td>${[...new Set(TM.map(o=>o.idx))].map(i=>tcell(xs.find(o=>o.idx===i))).join("")}</tr>`}).join("")}</table></div>
     <p class="note">Rule vs simply holding the same index, last 3 years: return a year and worst fall. Holds = beat holding after the many-ideas correction; Safer = smaller worst fall with at least the same Sharpe, before and after the cut, without being proven to earn more. Out of the market = T-bill rate.</p></details>`:"";
+  const WK=V.weekly,wr=WK?WK.rows||[]:[],wpos=wr.filter(o=>o.v!=="FAILS"&&(o.oos||0)>0);
+  const wk=WK?`<details class="spnl wide"><summary><b>Weekly candles, ${E(D_(WK.from))} to ${E(D_(WK.asof))}:</b> ${WK.held.length?WK.held.length+" of "+wr.length+" ideas hold":"none of "+wr.length+" ideas holds"}${wpos.length?"; "+wpos.length+" lean positive, not proven":""}.</summary><h3>Every idea re-run on weekly candles (${F(WK.weeks,0)} weeks)</h3>
+    <div class="scroll"><table><tr><th>Idea</th><th>Verdict</th><th>Before</th><th>Last 3 years</th><th>Right</th></tr>
+    ${wr.map(o=>`<tr><td class="sm">${E(o.t)}${o.live?" · <b>fires now</b>":""}</td><td><span class="pill ${tag[o.v]||""}">${E(o.v==="HOLDS"?"Holds":o.v==="FAILS"?"Fails":"Unproven")}</span></td><td>${pc(o.is,2)}</td><td>${pc(o.oos,2)}</td><td>${sh(o.hit)} of ${o.m} mo</td></tr>`).join("")}</table></div>
+    <p class="note">Same ideas, same many-ideas correction, on weekly bars (1 month = 4 weeks, 200 days = 40 weeks). Average per case, in the idea's own direction. Weekly market type: ${E(WK.regime||"n/a")}.</p></details>`:"";
   const pp=V.paper,ppl=pp?["nifty_condor","nifty_condor_tight"].filter(k=>pp[k]).map(k=>`${k==="nifty_condor"?"Wide":"Narrow"} condor: ${pp[k].closed} closed, ${pp[k].won} won, ${F(pp[k].pts,0)} pts${pp[k].open?`, open since ${E(D_(pp[k].open.d))}`:""}`).join(" · "):"";
   const DK=V.desk,cv={high:"pass",medium:"warn",low:""},rs=x=>"₹"+F(x,0);
   const memo=m=>`<div class="spnl idea"><h3>${E(m.etf||m.idx)} <span class="pill ${cv[m.conv]}">${m.conv==="low"?"Watch":m.conv+" conviction"}</span></h3>
@@ -355,7 +360,7 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
    ${dk}
    ${idc?`<div class="head"><h2>Trading ideas</h2><span class="sm">hedged, index legs only, tested on data they were never fitted on</span></div><div class="sgrid">${idc}</div>`:""}
    ${ppl?`<p class="sm">Paper record since ${E(D_(pp.since))} (no hindsight): ${ppl}</p>`:""}
-   <div class="sgrid">${tm}
+   <div class="sgrid">${tm}${wk}
    <details class="spnl wide"><summary><b>Popular beliefs, tested</b> <span class="sm">${held} of ${V.beliefs.length} proven</span></summary><h3>Popular beliefs, tested on data since ${E(D_(V.oos_from))} they were never fitted on</h3><ul class="wk">${bl}</ul></details>
    ${rk}</div>`}
 /* ---------- What works in this market (desk journal's indicator back-test) ---------- */
