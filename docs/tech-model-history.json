@@ -126,5 +126,22 @@
   "changes": [
    "now passes in rising markets: Volume breakout above the 20-day high (existing setup)"
   ]
+ },
+ {
+  "asof": "2026-11-27",
+  "rising": [
+   "hi52v",
+   "nr7",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [],
+  "changes": [
+   "no longer passes in weak markets: Gap up of 3% or more that holds into the close on 2x volume",
+   "no longer passes in rising markets: Volume breakout above the 20-day high (existing setup)"
+  ]
  }
 ]

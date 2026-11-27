@@ -34,5 +34,38 @@
    "xs_rev1",
    "above200_rising"
   ]
+ },
+ {
+  "asof": "2026-11-27",
+  "run_ist": "27 Nov 2026 16:55",
+  "stocks": 497,
+  "rising": [
+   "hi52v",
+   "nr7",
+   "don55",
+   "rsnew",
+   "qdrop10",
+   "qdrop",
+   "flag"
+  ],
+  "weak": [],
+  "plans": 50,
+  "called": 0,
+  "lab_keep": [],
+  "changes": [],
+  "summary": "Nifty 50 closed at 25,607.2 (above its 200-day average, so the desk used its rising-market rules). 497 stocks loaded from Dhan. Desk signals passing its own back-test: 7 for rising markets, 0 for weak markets. Trade plans printed: 50, real calls (every check passed): 0. Indicator lab: 0 kept of 78. All plans so far: 684 (31 closed, 653 open).",
+  "market": "rising",
+  "play_use": [
+   "hi52_vol",
+   "rs_hi",
+   "roc10_10",
+   "vol2_up"
+  ],
+  "play_avoid": [
+   "bb_reenter",
+   "xs_mom12_low",
+   "xs_rev1",
+   "above200_rising"
+  ]
  }
 ]
