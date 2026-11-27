@@ -536,9 +536,7 @@ function pages(){const tw=document.querySelector("#term .twrap");if(!tw||$("pg-t
   const vm=$("vm");if(vm){const vs=$("sec-val");pg.val.appendChild(vm);if(vs)vs.remove()}
   const nw=$("newsx");if(nw)pg.news.appendChild(nw);
   const best=$("tm-best");if(best)best.remove();
-  const fav=document.createElement("div");fav.id="tm-fav";const dv=(window.DAMV||[]).slice(0,2);
-  fav.innerHTML=`<div class="head"><h2>Favourable now</h2><span class="sm">tap a card to analyze</span></div><div class="pcg">${tp.slice(0,3).map(tcard).join("")}${dv.map(z=>pcard(z,"v")).join("")}</div>`;
-  [...tw.children].forEach(x=>pg.term.appendChild(x));const nx=$("tm-next");if(nx)nx.parentNode.insertBefore(fav,nx.nextSibling);
+  [...tw.children].forEach(x=>pg.term.appendChild(x));
   ["term","tech","val","news"].forEach(k=>tw.appendChild(pg[k]));
   /* four tabs: Terminal, Technical, Value, News; Analyze opens from any name */
   const bar=document.querySelector(".tabs");document.querySelectorAll(".tabs .tab[data-t]").forEach(b=>b.style.display="none");
@@ -556,4 +554,34 @@ function sumLive(){document.querySelectorAll("#tm-eye .chip[data-mk]").forEach(b
 try{sum()}catch(e){console.error("sum",e)}
 /* the Nifty 500 screener (all presets and filters) sits on the Terminal tab, above the at-a-glance cards */
 try{const r=document.getElementById("research"),t=document.getElementById("tm-eye");if(r&&t)t.parentNode.insertBefore(r,t.previousElementSibling)}catch(e){console.error("move screener",e)}
+
+/* ---------- 27 Nov (ADARSH): Recommendations next to "Markets today" (Value picks | Technical picks, kept separate),
+   and a Damodaran-style valuation of indices and their ETFs on the Terminal tab ---------- */
+const ETF_IDX={NIFTYBEES:"Nifty 50",BANKBEES:"Nifty Bank",ITBEES:"Nifty IT",PSUBNKBEES:"Nifty PSU Bank"};
+function ivRows(){const I=((window.MACRO||{}).idxval)||[];return I.map(x=>Object.assign({},x,{etf:Object.keys(ETF_IDX).find(k=>ETF_IDX[k]===x.name)||null,
+  v:x.pct>0.67?["Cheap","up"]:x.pct<0.33?["Expensive","down"]:["Fair","warn"]})).sort((a,b)=>b.pct-a.pct)}
+function recs(){const mv=$("tm-move");if(!mv||$("tm-rec"))return;
+  const row=document.createElement("div");row.id="tm-row";mv.parentNode.insertBefore(row,mv);row.appendChild(mv);
+  const vp=(window.DAMV||[]).slice(0,4),near=vp.length?[]:(window.DAMN||[]).slice(0,3),seen=new Set(),tp=techPicks(12).filter(z=>!seen.has(z.s)&&seen.add(z.s)).slice(0,4),IV=ivRows(),cheapIdx=IV.filter(x=>x.v[0]==="Cheap").slice(0,2),bestIdx=cheapIdx.length?[]:IV.slice(0,1);
+  const ch=s=>{const d=dayChg(s);return `<span class="dv ${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":P(d.c,2)}</span>`};
+  const vr=z=>`<button class="rk" data-mk="${E(z.s)}"><span class="rn">${E(z.s)}</span>${ch(z.s)}<span class="rl">${E(z.line)}</span></button>`;
+  const ir=x=>`<button class="rk" data-mk="${E(x.etf||x.name)}"><span class="rn">${E(x.etf?x.etf+" ("+x.name+")":x.name)}</span>${ch(x.etf||x.name)}<span class="rl">${x.v[0]}: risk premium cheaper than ${Math.round(x.pct*100)}% of its history · P/E ${F(x.pe,1)} vs usual ${F(x.med,1)}</span></button>`;
+  const tr=z=>`<button class="rk" data-mk="${E(z.s)}"><span class="rn">${E(z.s)}</span>${ch(z.s)}<span class="rl">${E(SETUPS[z.k]||z.k)} · target first ${Math.round(z.m.tf*100)}%, stop first ${Math.round(z.m.sf*100)}% · ${z.m.avgR>0?"+":""}${z.m.avgR.toFixed(2)}R</span><span class="rl">Entry ${F(z.pl.e)} · <b class="down">Stop ${F(z.pl.st)}</b> · <b class="up">Target ${F(z.pl.tg)}</b> · Qty ${z.qty}</span></button>`;
+  const d=document.createElement("div");d.id="tm-rec";d.className="pnl";
+  d.innerHTML=`<div class="head"><h2>Recommendations</h2><span class="sm">tap any to analyze</span></div>
+   <div class="rt2"><div class="rtile"><h4>Value picks <span class="sm">Damodaran tests · hold 1–3 years</span></h4>${vp.map(vr).join("")}${near.length?`<p class="sm">No stock passes all three value tests today. Closest: earn well above their cost of capital, low debt, priced below value, but by less than 25%.</p>${near.map(vr).join("")}`:""}${cheapIdx.map(ir).join("")}${bestIdx.length?`<p class="sm">No index is cheap against its own history. Least expensive:</p>${bestIdx.map(ir).join("")}`:""}</div>
+   <div class="rtile"><h4>Technical picks <span class="sm">setups · up to 15 sessions</span></h4>${tp.map(tr).join("")||'<p class="sm">No setup that suits this market fired on the last close.</p>'}</div></div>
+   <p class="sm">Value and technical are separate lists. Qty from Rs ${F(((window.CFG||{}).max_loss_per_trade)||5000,0)} max loss on Rs ${F(((window.CFG||{}).capital)||500000,0)} capital. Detail: Value and Technical tabs.</p>`;
+  row.appendChild(d)}
+function idxVal(){const host=$("tm-row");if(!host||$("tm-iv"))return;const R=ivRows();if(!R.length)return;const M=window.MACRO||{};
+  const etfNote={JUNIORBEES:"Next 50: no index P/E feed yet",CPSEETF:"CPSE: no index P/E feed yet",MON100:"Nasdaq 100: US index, not valued here",GOLDBEES:"Gold: no earnings, so it can only be priced, not valued",SILVERBEES:"Silver: no earnings, priced not valued",LIQUIDBEES:"Liquid: cash, earns about the overnight rate"};
+  const d=document.createElement("div");d.id="tm-iv";d.className="pnl";
+  d.innerHTML=`<div class="head"><h2>What indices and ETFs are worth</h2><span class="sm">10-year bond ${M.gsec!=null?F(M.gsec,2)+"%":"–"} · cheapest first</span></div>
+   <div class="scroll"><table class="rt"><tr><th>Index</th><th>ETF</th><th class="n">P/E (usual)</th><th class="n">Earnings yield</th><th class="n">Risk premium (usual)</th><th class="n">Cheaper than</th><th>Verdict</th></tr>
+   ${R.map(x=>`<tr class="go" data-mk="${E(x.etf||x.name)}"><td>${E(x.name.replace(/^Nifty /,"Nifty "))}</td><td>${x.etf?`<button class="lnk" data-mk="${E(x.etf)}">${E(x.etf)}</button>`:'<span class="sm">–</span>'}</td><td class="n">${F(x.pe,1)} <span class="sm">(${F(x.med,1)})</span></td><td class="n">${(x.ey*100).toFixed(1)}%</td><td class="n">${(x.erp*100).toFixed(1)}% <span class="sm">(${(x.erp_med*100).toFixed(1)}%)</span></td><td class="n">${Math.round(x.pct*100)}% of ${x.n} months</td><td><b class="${x.v[1]}">${x.v[0]}</b></td></tr>`).join("")}</table></div>
+   <p class="sm">Damodaran's way to value a market: the risk premium is the earnings yield (1 ÷ P/E) plus the growth the index can sustain (ROE × retained profit) minus the risk-free rate (the 10-year bond less India's default spread, ${R[0].rf!=null?(R[0].rf*100).toFixed(1)+"%":"–"}). A higher premium than usual means you are paid more to own stocks, so the index is cheaper. Each index is ranked against its own monthly history, because sectors like FMCG always trade at high P/Es. Cheap = cheaper than two-thirds of its history, Expensive = dearer than two-thirds. P/E is NSE's last published figure scaled to today's price (${E(M.asof||"")}). An index ETF is worth what its index is worth. ${Object.values(etfNote).join(". ")}.</p>`;
+  host.parentNode.insertBefore(d,host.nextSibling);
+  d.addEventListener("click",e=>{const b=e.target.closest("[data-mk]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.mk)}})}
+setTimeout(()=>{try{recs();idxVal()}catch(e){console.error("recs",e)}
+  const r=$("tm-rec");if(r)r.addEventListener("click",e=>{const b=e.target.closest("[data-mk]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.mk)}})},20);
 })();

@@ -225,6 +225,12 @@ details.sec{margin:14px 0 4px}details.sec>summary{cursor:pointer;list-style:none
 #term .pill.warn{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}#term .pill.fail{background:color-mix(in srgb,var(--down) 18%,transparent);color:var(--down)}
 #tm-mview ul.wk .pill{min-width:78px;text-align:center}#tm-mview tr.hi td{background:color-mix(in srgb,var(--up) 8%,transparent)}
 #tm-mview details summary{cursor:pointer}#tm-mview .sumbar{margin:0 0 8px}
+#tm-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px;align-items:start}#tm-row>.pnl{min-width:0;margin:0}
+#tm-rec .rt2{display:flex;flex-direction:column;gap:10px}#tm-rec .rtile{border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--panel)}
+#tm-rec h4{margin:0 0 6px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}#tm-rec h4 .sm{text-transform:none;letter-spacing:0;font-weight:400}
+#tm-rec .rk{display:grid;grid-template-columns:1fr auto;gap:2px 8px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:6px 0;color:inherit;font:inherit;cursor:pointer}
+#tm-rec .rk:first-of-type{border-top:0}#tm-rec .rk:hover .rn{color:var(--accent)}#tm-rec .rn{font:600 13px var(--mono)}#tm-rec .dv{font:12px var(--mono);text-align:right}#tm-rec .rl{grid-column:1/-1;font-size:12px;color:var(--mute)}
+#tm-iv b.up{color:var(--up)}#tm-iv b.down{color:var(--down)}#tm-iv b.warn{color:var(--warn)}
 """
 
 
@@ -282,6 +288,22 @@ def macro_summary(root: Path) -> dict:
                        "pct": round(pct, 3) if pct is not None else None, "n_hist": len(hist), "rf": nf.get("rf"),
                        "g_sus": nf.get("g_sus"), "fii_sum": round(sum(flows), 0), "fii_days": len(flows),
                        "ts12": (bt.get("nifty_ts") or {}).get("12"), "ic12": (bt.get("12") or {}).get("ic"), "t12": (bt.get("12") or {}).get("t")}
+    # index and ETF valuation (ADARSH 27 Nov), Damodaran style: earnings yield against the 10-year bond and the
+    # implied equity risk premium (earnings yield + sustainable growth - bond) against the index's own monthly history
+    iv = []
+    for x in n.get("sectors") or []:
+        if not (x.get("snap_pe") and x.get("snap_close") and x.get("ltp") and x.get("erp_snap") is not None):
+            continue
+        pe_now = x["snap_pe"] * x["ltp"] / x["snap_close"]
+        erp_now = x["erp_snap"] - (1 / x["snap_pe"] - 1 / pe_now)
+        hist = sorted(v[1] if isinstance(v, list) else v for v in (x.get("erp_sorted") or []) if v is not None)
+        if len(hist) < 24:
+            continue
+        iv.append({"name": x["name"], "pe": round(pe_now, 1), "med": x.get("pe_med"), "ey": round(1 / pe_now, 4),
+                   "rf": round(x.get("rf") or 0, 4), "g": round(x.get("g_sus") or 0, 4), "erp": round(erp_now, 4),
+                   "erp_med": round(x.get("erp_med") or 0, 4), "pct": round(sum(1 for v in hist if v < erp_now) / len(hist), 3),
+                   "n": len(hist), "pb": x.get("pb"), "dy": x.get("dy")})
+    out["idxval"] = iv
     stk = ((n.get("fund") or {}).get("stk") or {})
     rows = []
     for sym, x in stk.items():
@@ -330,6 +352,8 @@ const dm=L.map(x=>Object.assign(x,{dm:dam(x)})).filter(x=>x.dm&&(x.turnover_cr||
 const pass=x=>x.dm.spread>=0.03&&x.dm.vp>=1.25&&(x.de==null||x.de<=1.5);
 const cheap=dm.filter(pass).sort((a,b)=>b.dm.vp-a.dm.vp).slice(0,15);
 window.DAMV=cheap.map(x=>({s:x.s,line:`+${Math.round((x.dm.vp-1)*100)}% to value · ROE ${p(x.dm.roe,0)} vs cost ${p(x.dm.ke,0)}`}));
+/* nearest misses for the Terminal's Value picks tile when nothing passes: earns its cost of capital, low debt, best value/price */
+window.DAMN=dm.filter(x=>!pass(x)&&x.dm.vp>=1&&x.dm.spread>=0.03&&(x.de==null||x.de<=1.5)).sort((a,b)=>b.dm.vp-a.dm.vp).slice(0,4).map(x=>({s:x.s,vp:x.dm.vp,line:`${x.dm.vp>=1?"+":""}${Math.round((x.dm.vp-1)*100)}% to value · ROE ${p(x.dm.roe,0)} vs cost ${p(x.dm.ke,0)}`}));
 const dear=dm.filter(x=>x.dm.vp<=0.5&&x.dm.gi>x.dm.g+0.1).sort((a,b)=>a.dm.vp-b.dm.vp).slice(0,6);
 const tile=(x,ok)=>{const d=x.dm;return `<button class="vt${ok?"":" wait"}" data-s="${esc(x.s)}"><b>${esc(x.s)}</b><span class="big ${ok?"good":"bad"}">${ok?"+"+Math.round((d.vp-1)*100)+"%":Math.round((d.vp-1)*100)+"%"} to value</span><small>ROE ${p(d.roe,0)} vs cost of equity ${p(d.ke,0)}</small><small>${d.gi<-0.09?"price assumes it shrinks":"price needs "+p(d.gi,0)+" growth"}; it funds ${p(d.g,0)}</small></button>`};
 h+=`<h3>Undervalued on Damodaran's tests</h3><p class="note">Every tile passes three fundamental tests, no price charts involved: <b>it earns more than its cost of capital</b> (return on equity, the lower of P/B ÷ P/E and ROCE, at least 3 points above its cost of equity = risk-free ${p(RF,1)} + beta × India equity risk premium ${p(ERP,1)}); <b>its value is 25%+ above the price</b> (two-stage model: 5 years growing at ROE × retained profit, capped at 12%, then ${p(Math.min(0.05,RF+ERP-0.01),0)} with excess returns fading to the cost of equity); and <b>debt/equity is 1.5 or less</b>. Cyclicals (oil, metals, power, cement and similar) are left out because their current profits may be a peak. Ranked by the gap to value. Tap a tile to analyze.</p><div class="vtg">${cheap.map(x=>tile(x,true)).join("")||'<p class="note">No stock passes all three today.</p>'}</div>
