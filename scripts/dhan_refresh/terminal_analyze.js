@@ -246,7 +246,8 @@ const qi=$("az-q");qi.addEventListener("change",()=>{if(find(qi.value))open(qi.v
 $("az-quick").innerHTML=["Nifty 50","Nifty Bank","NIFTYBEES","GOLD","SILVER","CRUDEOIL"].filter(k=>INS[k]).map(k=>`<button class="chip" data-az="${E(k)}">${E(INS[k].name.replace(/ \(.*$/,""))}</button>`).join("");
 document.addEventListener("click",e=>{const b=e.target.closest("[data-az]");if(b)window.azGo(b.dataset.az)});
 $("az-proof").onclick=()=>{const p=$("proof");p.hidden=!p.hidden;$("az-proof").textContent=p.hidden?"Show proof":"Hide proof";if(!p.hidden)p.scrollIntoView()};
-document.addEventListener("tlive",()=>{if(CUR&&!$("az").hidden&&Date.now()-LAST>15000)render();sumLive()});
+document.addEventListener("tlive",()=>{if(CUR&&!$("az").hidden&&Date.now()-LAST>15000)render();sumLive();try{if($("tm-move"))movers()}catch(e){console.error("movers",e)}try{if($("tm-next"))nextView()}catch(e){console.error("next",e)}try{mvLive()}catch(e){console.error("mv",e)}
+  document.querySelectorAll("[data-lc]").forEach(el=>{const d=dayChg(el.dataset.lc);if(d.c==null)return;el.textContent=(d.live?F(d.ltp)+" ":"")+P(d.c,1);el.className=d.c>0?"up":d.c<0?"down":""})});
 {let s=null;try{s=localStorage.getItem("az-last")}catch(e){}open(s&&find(s)?s:"Nifty 50")}
 
 /* ---------- Terminal summary: what worked, in one place ---------- */
@@ -277,7 +278,7 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
    <div class="head" style="margin-top:6px"><h2>Every screen at a glance</h2></div><p class="note">Each card says why its stocks are there. Stocks that already ran (25%+ in a month, RSI 80+ or flagged overextended) are left out, so the cards point at what can still move. In a rising market the back-test shows strength tends to continue, so fresh highs stay in. Names turn green or red with today's live move.</p>
    <div class="eyeg" id="tm-eye"></div>
    <p class="note">Tap any name to analyze it. Back-tests and proof live in the desk journal.</p></div>`;
-  try{mview()}catch(e){console.error("mview",e)}
+  try{mview();mvLive()}catch(e){console.error("mview",e)}
   try{lowrisk()}catch(e){console.error("lowrisk",e)}
   setTimeout(()=>{try{nextView()}catch(e){console.error("next",e)}},0)
   /* index first: market view and ideas above the markets board; the board and the ticker strip belong to the Terminal half */
@@ -294,7 +295,12 @@ function sum(){const el=$("tm-sum");if(!el)return;const R=WK.stocks||[],PK=picks
   sumLive()}
 /* the calmer-half stock list from market_view.py, on the Stocks tab; labelled by its own out-of-sample verdict */
 /* Terminal tab: what is likely next, in four tiles, then how the desk trades (ADARSH 27 Nov: forward-looking, decisive) */
-function nextView(){const host=document.querySelector("#term .twrap");if(!host||$("tm-next"))return;const V=window.MVIEW||{},Y=window.PLAY||{},M=window.MACRO||{},K=V.desk||{};
+function nextView(){const host=document.querySelector("#term .twrap");if(!host)return;const old=$("tm-next");const V0=window.MVIEW||{},Y=window.PLAY||{},M=window.MACRO||{},K=V0.desk||{};
+  /* live: Nifty's 3-month and 200-day figures and the VIX ranges move with today's prices */
+  const IX=(MK.groups||{}).Indices||[],nr=IX.find(r=>r.k==="Nifty 50"),vr=IX.find(r=>/VIX/.test(r.name)),nq=nr&&mkChg(nr),vq=vr&&mkChg(vr);
+  const nk=nq&&nr.last&&nq.last?nq.last/nr.last:1,vk=vq&&vr.last&&vq.last?vq.last/vr.last:1,isL=!!(window.TLIVE&&(nk!==1||vk!==1));
+  const adj=x=>x==null?x:(1+x)*nk-1,V=Object.assign({},V0,{r63:adj(V0.r63!=null?V0.r63:V0.nifty_r63),vs200:adj(V0.vs200!=null?V0.vs200:V0.nifty_vs200)});
+  if(V0.vix)V.vix=Object.assign({},V0.vix,{vix:V0.vix.vix*vk,day_pts:Math.round(V0.vix.day_pts*vk*nk),month_pts:Math.round(V0.vix.month_pts*vk*nk)});
   const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%";const vx=V.vix,mv=(M.view||{}),q=mv.pct;
   const val=q==null?null:q<0.33?["Expensive","down","Don't chase; add only on dips."]:q>0.67?["Cheap","up","Accumulate quality on weakness."]:["Fair","","Be selective."];
   const fav=(Y.use||[]).slice(0,2).map(x=>x.name),bad=(Y.avoid||[]).slice(0,1).map(x=>x.name);
@@ -305,10 +311,11 @@ function nextView(){const host=document.querySelector("#term .twrap");if(!host||
   {const R=setupRule(),tp=techPicks(12),dv=(window.DAMV||[]);t.push(`<div><h4>Favourable now</h4><b class="big up">${R.use.length?E(R.use.map(k=>SETUPS[k].split(" (")[0]).join(", ")):"Strongest trends"}</b><p>${tp.length} technical setups with a positive edge (Technical tab)${dv.length?`, ${dv.length} value stock${dv.length>1?"s":""} at a discount (Value tab)`:""}.</p></div>`)}
   if(fav.length||bad.length)t.push(`<div><h4>What tends to work in this market</h4><p>${fav.length?"Leaning: "+E(fav.join("; "))+".":""} ${bad.length?"Avoid: "+E(bad[0])+".":""}</p><p class="sm">Leads from the nightly back-test, not proven. Picks below.</p></div>`);
   const ph=(K.process&&K.process.length?K.process:["Start from a market belief or published research","Test it on data it was never fitted on","Size from the Rs 5,000 loss limit and volatility, never from conviction","Every trade has a stop, an exit date and a hedge","No edge today means no trade: sitting out is a position"]);
-  const d=document.createElement("div");d.id="tm-next";d.className="tm-idx";
-  d.innerHTML=`<div class="head"><h2>What's likely next</h2><span class="sm">close of ${E(D_(V.asof))}</span></div><div class="nx">${t.join("")}</div>
+  const d=old||document.createElement("div");d.id="tm-next";d.className="tm-idx";const wasOpen=old&&old.querySelector("details")&&old.querySelector("details").open;
+  d.innerHTML=`<div class="head"><h2>What's likely next</h2><span class="sm">${isL?`live ${E(String(window.TLIVE_T).slice(11,19))} IST · models from close of ${E(D_(V0.asof))}`:`close of ${E(D_(V0.asof))}`}</span></div><div class="nx">${t.join("")}</div>
    <details style="margin-top:10px"><summary><b>How we trade (the desk's philosophy)</b></summary><ol class="phil">${ph.map(x=>`<li>${E(x)}</li>`).join("")}</ol></details>
    `;
+  if(old){if(wasOpen)d.querySelector("details").open=true;return}
   const mk=$("tm-mk"),sec=mk&&mk.closest("section");if(sec&&sec.nextSibling)host.insertBefore(d,sec.nextSibling);else host.appendChild(d)}
 function lowrisk(){const el=$("tm-lowrisk"),V=window.MVIEW;if(!el||!V||!(V.screen||[]).length)return;const ok=V.screen_v==="HOLDS";
   const pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
@@ -356,8 +363,7 @@ function mview(){const el=$("tm-mview"),V=window.MVIEW;if(!el||!V)return;
     ${V.risk.map(r=>`<tr><td>${E(r.k)}</td><td class="n ${r.ret>0?"up":"down"}">${pc(r.ret)}</td><td class="n">${sh(r.vol)}</td><td class="n"><b>${r.sharpe==null?"–":F(r.sharpe,2)}</b></td><td class="n down">${pc(r.maxdd,0)}</td><td class="n">${r.beta==null?"–":F(r.beta,2)}</td><td class="n">${r.corr==null?"–":F(r.corr,2)}</td></tr>`).join("")}</table></div>
     <p class="note">Sharpe uses a 6.5% risk-free rate. Next-session direction from market type was also tested: right ${sh(V.next&&V.next.accuracy)} of days vs ${sh(V.next&&V.next.always_up)} for always saying up, so no next-day call is shown. Sector rotation by market type: ${pc(V.rot&&V.rot.mean,2)} a month, right ${sh(V.rot&&V.rot.hit)}.</p></details>`:"";
   el.innerHTML=`<div class="head" style="margin-top:6px"><h2>Market view</h2></div>
-   <div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · close of ${E(D_(V.asof))}</span></div>
-   ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}
+   <div id="mv-live"></div>
    ${dk}
    ${idc?`<div class="head"><h2>Trading ideas</h2><span class="sm">hedged, index legs only, tested on data they were never fitted on</span></div><div class="sgrid">${idc}</div>`:""}
    ${ppl?`<p class="sm">Paper record since ${E(D_(pp.since))} (no hindsight): ${ppl}</p>`:""}
@@ -423,18 +429,30 @@ function swingScore(s){const r=RS[s];if(!r||(r.turnover_cr||0)<10||ranAlready(s)
   if(r.rsi!=null&&(r.rsi<45||r.rsi>72))sc-=0.7;if(!why.length)return null;return{s,sc,why:[...new Set(why)].slice(0,3)}}
 function bestSwing(n=5,pool){return (pool||STK).map(swingScore).filter(Boolean).sort((a,b)=>b.sc-a.sc).slice(0,n)}
 function pcard(z,kind){const p=plan(z.s),d=dayChg(z.s),r=RS[z.s]||{};
-  return `<button class="pc" data-mk="${E(z.s)}"><div class="pct"><b>${E(z.s)}</b><span class="${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":P(d.c,1)}</span></div>${spark(z.s)}
+  return `<button class="pc" data-mk="${E(z.s)}"><div class="pct"><b>${E(z.s)}</b><span data-lc="${E(z.s)}" class="${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":(d.live?F(d.ltp)+" ":"")+P(d.c,1)}</span></div>${spark(z.s)}
    <p class="sm">${E(kind==="v"?z.line:z.why.join(" · "))}</p>${kind==="v"?"":p?`<div class="pl"><span>Buy ~${F(p.last)}</span><span class="down">Stop ${F(p.stop)}</span><span class="up">Target ${F(p.tgt)}</span><span>Qty ${p.qty}</span></div>`:""}</button>`}
-function movers(){const tw=document.querySelector("#term .twrap");if(!tw||$("tm-move"))return;const all=[];
-  Object.entries(MK.groups||{}).forEach(([g,rows])=>rows.forEach(r=>{if(/VIX|Liquid/i.test(r.name))return;const x=INS[r.k],L=x&&live(x);const c=L&&r.prev?L.ltp/r.prev-1:r.chg;if(c!=null)all.push({k:r.k,n:r.name,g,c,m:r.r21})}));
+/* live day change for a board row: live price vs the feed's previous close (a[4]), else the last close baked into the page */
+/* the nightly market view with Nifty and VIX figures moved to today's live prices */
+function LVIEW(){const V0=window.MVIEW||{},IX=(MK.groups||{}).Indices||[],nr=IX.find(r=>r.k==="Nifty 50"),vr=IX.find(r=>/VIX/.test(r.name)),nq=nr&&mkChg(nr),vq=vr&&mkChg(vr);
+  const nk=window.TLIVE&&nq&&nr.last&&nq.last?nq.last/nr.last:1,vk=window.TLIVE&&vq&&vr.last&&vq.last?vq.last/vr.last:1,adj=x=>x==null?x:(1+x)*nk-1;
+  const V=Object.assign({},V0,{r63:adj(V0.r63!=null?V0.r63:V0.nifty_r63),vs200:adj(V0.vs200!=null?V0.vs200:V0.nifty_vs200),live:nk!==1||vk!==1});
+  if(V0.vix)V.vix=Object.assign({},V0.vix,{vix:V0.vix.vix*vk,day_pts:Math.round(V0.vix.day_pts*vk*nk),month_pts:Math.round(V0.vix.month_pts*vk*nk)});return V}
+function mvLive(){const el=$("mv-live");if(!el)return;const V=LVIEW(),vx=V.vix,pc=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%",sh=x=>x==null?"–":Math.round(x*100)+"%";
+  el.innerHTML=`<div class="mtype"><b>${E(V.label||"–")}</b> <span class="sm">Nifty ${pc(V.r63)} over 3 months, ${pc(V.vs200)} vs 200-day · ${V.live?`live ${E(String(window.TLIVE_T).slice(11,19))} IST`:`close of ${E(D_(V.asof))}`}</span></div>
+   ${vx?`<div class="sumbar"><span>Tomorrow's range (India VIX ${F(vx.vix,1)}): <b>±${vx.day_pts} pts</b></span><span>Next month: <b>±${vx.month_pts} pts</b></span><span>Chance of a 1.5%+ day: <b>${sh(vx.p_move15)}</b></span><span class="sm">range held ${sh(vx.hit1)} of ${vx.days} days (68% expected)</span></div>`:""}`}
+window.ajDayChg=(...a)=>dayChg(...a);window.ajMkChg=(...a)=>mkChg(...a);
+function mkChg(r){const x=INS[r.k],L=x&&live(x);if(L&&L.ltp){const pc=L.pc||r.last;if(pc)return{last:L.ltp,c:L.ltp/pc-1}}return{last:r.last,c:r.chg}}
+function movers(){const tw=document.querySelector("#term .twrap");if(!tw)return;const old=$("tm-move");const all=[];
+  Object.entries(MK.groups||{}).forEach(([g,rows])=>rows.forEach(r=>{if(/VIX|Liquid/i.test(r.name))return;const c=mkChg(r).c;if(c!=null)all.push({k:r.k,n:r.name,g,c,m:r.r21})}));
   all.sort((a,b)=>b.c-a.c);const up=all.filter(x=>x.c>0).slice(0,5),dn=all.filter(x=>x.c<0).slice(-5).reverse(),mx=Math.max(...all.map(x=>Math.abs(x.c)),0.005);
   const bar=x=>`<button class="dbar" data-mk="${E(x.k)}"><span class="dl">${E(x.n)}</span><span class="dt"><i class="${x.c>0?"gd":"bd"}" style="${x.c>0?"left":"right"}:50%;width:${Math.min(50,Math.abs(x.c)/mx*50)}%"></i></span><span class="dv ${x.c>0?"up":"down"}">${P(x.c,2)}</span></button>`;
   const vx=(MK.groups.Indices||[]).find(r=>/VIX/.test(r.name)),n50=(MK.groups.Indices||[]).find(r=>r.k==="Nifty 50");
-  const d=document.createElement("div");d.id="tm-move";d.className="pnl tm-idx";
-  d.innerHTML=`<div class="head"><h2>Markets today</h2><span class="sm">${n50?`Nifty ${F(n50.last)} <b class="${n50.chg>0?"up":"down"}">${P(n50.chg,2)}</b>`:""}${vx?` · VIX ${F(vx.last,1)}`:""}</span></div>
+  const nq=n50&&mkChg(n50),vq=vx&&mkChg(vx);
+  const d=old||document.createElement("div");d.id="tm-move";d.className="pnl tm-idx";
+  d.innerHTML=`<div class="head"><h2>Markets today</h2><span class="sm">${nq&&nq.last?`Nifty ${F(nq.last)} <b class="${nq.c>0?"up":"down"}">${P(nq.c,2)}</b>`:""}${vq&&vq.last?` · VIX ${F(vq.last,1)}`:""}</span></div>
    <h4 class="sm">Rose the most</h4><div class="dbars">${up.map(bar).join("")||'<p class="sm">none</p>'}</div><h4 class="sm">Fell the most</h4><div class="dbars">${dn.map(bar).join("")||'<p class="sm">none</p>'}</div>
    <p class="sm">Indices, ETFs and MCX together; tap any to analyze.</p>`;
-  tw.insertBefore(d,tw.firstChild);
+  if(old)return;tw.insertBefore(d,tw.firstChild);
   /* the full board and the ticker strip fold away */
   const mk=$("tm-mk"),sec=mk&&mk.closest("section");if(sec){const f=document.createElement("details");f.className="tm-idx tm-tables";f.innerHTML="<summary>All indices, ETFs and MCX</summary>";sec.parentNode.insertBefore(f,sec);f.appendChild(sec)}
   const st=$("tm-strip");if(st)st.style.display="none"}
@@ -465,7 +483,7 @@ function techPicks(n=6){const cap=((window.CFG||{}).capital)||500000,ml=((window
   res.forEach(z=>{z.m=machine(z.c,z.pl);z.h=history(z.c,z.k);const sc=z.pl.e/z.last||1;z.qty=Math.max(0,Math.min(Math.floor(ml/z.pl.R),Math.floor(cap/z.pl.e)))});
   return res.filter(z=>z.m.avgR>0&&z.h.l<=z.h.w+1).sort((a,b)=>b.m.avgR-a.m.avgR).slice(0,n)}
 function tcard(z){const d=dayChg(z.s),m=z.m,w=x=>Math.round(x*100);
-  return `<button class="pc" data-mk="${E(z.s)}"><div class="pct"><b>${E(z.s)}</b><span class="${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":P(d.c,1)}</span></div>
+  return `<button class="pc" data-mk="${E(z.s)}"><div class="pct"><b>${E(z.s)}</b><span data-lc="${E(z.s)}" class="${d.c>0?"up":d.c<0?"down":""}">${d.c==null?"":(d.live?F(d.ltp)+" ":"")+P(d.c,1)}</span></div>
    <p class="sm"><b>${E(SETUPS[z.k])}</b>${z.volx?` · volume ${F(z.volx,1)}× normal`:""}</p>${spark(z.s)}
    <div class="pl"><span>Entry ${F(z.pl.e)}</span><span class="down">Stop ${F(z.pl.st)}</span><span class="up">Target ${F(z.pl.tg)}</span><span>Qty ${z.qty}</span></div>
    <div class="odds" title="10,000 replays over 15 sessions"><i class="gd" style="width:${w(m.tf)}%"></i><i class="bd" style="width:${w(m.sf)}%"></i><i style="width:${w(m.nn)}%"></i></div>

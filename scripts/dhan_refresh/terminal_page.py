@@ -298,11 +298,13 @@ VALUE_HTML = r"""
 """
 
 VALUE_JS = r"""
-(function(){const M=window.MACRO||{},el=document.getElementById("vm-body");if(!el)return;
+/* re-rendered on every live tick (at most every 20 s): P/E and P/B move with the live price, so value gaps are live too */
+window.renderVM=function(){const M=window.MACRO||{},el=document.getElementById("vm-body");if(!el)return;
+const LK=s=>{try{const d=window.ajDayChg?window.ajDayChg(s):null,r=(typeof RS!=="undefined"&&RS[s])||{};return d&&d.live&&d.ltp&&r.last?d.ltp/r.last:1}catch(e){return 1}};
 const f=(x,d=2)=>x==null?"–":Number(x).toLocaleString("en-IN",{maximumFractionDigits:d,minimumFractionDigits:d});
 const p=(x,d=1)=>x==null?"–":(x>0?"+":"")+(x*100).toFixed(d)+"%";
-const RSV=(typeof RS!=="undefined"?RS:{});const L=Object.entries(RSV).map(([s,x])=>Object.assign({s},x));
-let h="";const V=M.view;
+const RSV=(typeof RS!=="undefined"?RS:{});const L=Object.entries(RSV).map(([s,x])=>{const k=LK(s);return Object.assign({s},x,k!==1?{pe:x.pe>0?x.pe*k:x.pe,pb:x.pb>0?x.pb*k:x.pb,live:true}:{})});
+let h="";const V0=M.view,NK=(()=>{try{const G=(window.TMK||{}).groups||{},r=(G.Indices||[]).find(r=>r.k==="Nifty 50"),q=r&&window.ajMkChg&&window.ajMkChg(r);return q&&q.last&&r.last&&window.TLIVE?q.last/r.last:1}catch(e){return 1}})(),V=V0&&Object.assign({},V0,V0.pe&&NK!==1?{pe:V0.pe*NK}:{});
 /* 1. market view */
 if(V){const pc=V.pct;const val=pc==null?["Not enough history","warn"]:pc<0.33?["Expensive","bad"]:pc>0.67?["Cheap","good"]:["Fair value","warn"];
   const fiiBuy=V.fii_sum>0;const up200=L.length?L.filter(x=>(x.vs200||0)>0).length/L.length:null;
@@ -339,17 +341,19 @@ ${dear.length?`<details class="vwait"><summary>Priced for a story (${dear.length
 const G=(M.growth||{}).rows||[];if(G.length){const room=G.slice(0,8),stretch=G.slice(-6).reverse();
   const mx=Math.max(...G.map(r=>Math.abs(r.g_impl-r.g_sus)).filter(isFinite),0.01);
   const bar=r=>{const g=r.g_impl-r.g_sus,w=Math.min(50,Math.abs(g)/mx*50);return `<button class="dbar" data-s="${esc(r.s)}"><span class="dl">${esc(r.s)}</span><span class="dt"><i class="${g<=0?"gd":"bd"}" style="${g<=0?"right":"left"}:50%;width:${w}%"></i></span><span class="dv ${g<=0?"good":"bad"}">${p(g,0)}</span></button>`};
-  h+=`<h3>What the price asks for (Nifty 50)</h3><p class="note">Green bar = the price needs less growth than the company can sustain (room for error). Red = the price asks for more. Tap a name to analyze it. Fundamentals as of ${esc((M.growth||{}).asof||"")}.</p>
+  h+=`<h3>What the price asks for (Nifty 50)</h3><p class="note">Green bar = the price needs less growth than the company can sustain (room for error). Red = the price asks for more. Tap a name to analyze it. Prices and fundamentals as of ${esc((M.growth||{}).asof||"")} (last close; not live).</p>
   <div class="dbars">${room.map(bar).join("")}<div class="dsep"></div>${stretch.map(bar).join("")}</div>`}
 /* 4. macro, sectors, global */
 if((M.tiles||[]).length)h+=`<h3>India macro</h3><div class="mtiles">${M.tiles.map(t=>`<div class="mt"><span>${esc(t.name)}</span><b>${f(t.v)}${esc(t.unit)}</b><small>${esc(t.m)} · ${t.y>0?"+":""}${f(t.y)} on a year ago</small></div>`).join("")}${M.flows?`<div class="mt"><span>FII net, ${esc(M.flows.d)}</span><b class="${M.flows.fii>0?"up":"down"}">₹${f(M.flows.fii,0)} Cr</b><small>DII ₹${f(M.flows.dii,0)} Cr</small></div>`:""}</div>`;
 if((M.sectors||[]).length){const sx=Math.max(...M.sectors.map(x=>Math.abs(x.prem||0)),0.01);h+=`<h3>Sector valuations: cheap or dear vs their own history</h3><div class="dbars">${M.sectors.slice().sort((a,b)=>(a.prem||0)-(b.prem||0)).map(x=>{const w=Math.min(50,Math.abs(x.prem||0)/sx*50);return `<div class="dbar"><span class="dl">${esc(x.name.replace(/^Nifty /,""))}</span><span class="dt"><i class="${x.prem<0?"gd":"bd"}" style="${x.prem<0?"right":"left"}:50%;width:${w}%"></i></span><span class="dv ${x.prem<0?"good":"bad"}">${p(x.prem,0)}</span></div>`}).join("")}</div><p class="note">P/E vs its own median. Green = cheaper than usual. NSE's last published index P/E scaled to today's close (${esc(M.asof||"")}).</p>`}
 if((M.glob||[]).length)h+=`<h3>Global</h3><div class="mtiles">${M.glob.map(g=>`<div class="mt"><span>${esc(g.name)}</span><b>${f(g.v,g.v<50?2:0)}</b><small class="${g.m1>0?"up":"down"}">${p(g.m1)} in a month · ${esc(g.d)}</small></div>`).join("")}</div>`;
-el.innerHTML=h||'<p class="note">Macro data appears after the next refresh.</p>';
-el.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.s)}});
+const lt=String(window.TLIVE_T||"");h=(window.TLIVE&&lt?`<p class="note"><b>Live</b>: P/E, value gaps and the market P/E use prices of ${lt.slice(11,19)} IST. Fundamentals (earnings, book value) are from the last filing.</p>`:"")+h;
+const op=[...el.querySelectorAll("details")].map(d=>d.open);el.innerHTML=h||'<p class="note">Macro data appears after the next refresh.</p>';el.querySelectorAll("details").forEach((d,i)=>{if(op[i])d.open=true});
+if(!el.dataset.bound){el.dataset.bound="1";el.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(b&&window.azGo){e.stopPropagation();azGo(b.dataset.s)}})}
 /* the Nifty 500 screener lives on the Terminal tab */
 try{const q=PRESETS.find(p=>p[0]==="vq");if(q)q[3]=x=>{const d=x.dm||dam(x);return !!d&&d.spread>=0.03&&d.vp>=1.25&&(x.de==null||x.de<=1.5)}}catch(e){}
-})();
+};
+renderVM();(function(){let t=0;document.addEventListener("tlive",()=>{if(Date.now()-t<10000)return;t=Date.now();try{renderVM()}catch(e){console.error("vm",e)}})})();
 """
 
 
