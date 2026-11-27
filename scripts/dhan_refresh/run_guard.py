@@ -74,6 +74,11 @@ def main() -> int:
         repo, tok = os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GH_TOKEN", "")
         if kind == "live":
             runs = _get(repo, f"actions/workflows/{WORKFLOW[kind]}/runs?status=in_progress&per_page=20", tok).get("workflow_runs", [])
+            # a run whose job is only waiting for the concurrency slot also reads "in_progress" (27 Nov: the
+            # 14:12 hand-over saw the 09:00 run that was waiting, stopped itself, and prices ended at 14:12).
+            # Count a run as streaming only if one of its jobs is really running.
+            runs = [r for r in runs if int(r.get("id", 0)) != int(os.environ.get("GITHUB_RUN_ID", "0")) and any(
+                j.get("status") == "in_progress" for j in _get(repo, f"actions/runs/{r['id']}/jobs", tok).get("jobs", []))]
         elif event != "workflow_dispatch":
             commits = recent_commits(repo, tok)
         go, why = decide(kind, event, dt.datetime.now(IST), runs, int(os.environ.get("GITHUB_RUN_ID", "0")), commits)
